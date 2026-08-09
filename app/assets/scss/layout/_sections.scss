@@ -1,0 +1,20 @@
+.ax-section {
+    width: 100vw;
+    min-height: 100vh;
+    position: relative;
+}
+
+.ax-section-title {
+    color: var(--ax-color-text-primary);
+    font-size: clamp(1.15rem, 2vw, 1.9rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-shadow: 0 8px 26px rgba(3, 14, 25, 0.6);
+}
+
+@media (max-width: 768px) {
+    .ax-section-title {
+        font-size: clamp(1rem, 5vw, 1.4rem);
+    }
+}

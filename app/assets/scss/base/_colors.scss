@@ -1,0 +1,27 @@
+:root {
+    --ax-color-bg-main: #020712;
+    --ax-color-bg-surface: #070f18;
+    --ax-color-bg-panel: rgba(9, 22, 34, 0.74);
+    --ax-color-bg-card-light: #eef2f7;
+    --ax-color-bg-card-soft: #f8fbff;
+
+    --ax-color-text-primary: #f2f8ff;
+    --ax-color-text-secondary: #c6dcef;
+    --ax-color-text-muted: #9ab6cf;
+    --ax-color-text-dark: #163558;
+
+    --ax-color-border-soft: rgba(147, 183, 218, 0.3);
+    --ax-color-border-card: rgba(169, 203, 242, 0.36);
+    --ax-card-radius: 18px;
+
+    --ax-color-accent-red: #c52317;
+    --ax-color-accent-red-soft: #ea3f30;
+    --ax-color-accent-red-border: rgba(255, 140, 127, 0.9);
+
+    --ax-color-overlay-dark-strong: rgba(7, 17, 29, 0.92);
+    --ax-color-overlay-dark-medium: rgba(7, 17, 29, 0.78);
+    --ax-color-overlay-dark-soft: rgba(7, 17, 29, 0.45);
+
+    --color-primary: var(--ax-color-bg-main);
+    --color-secondary: var(--ax-color-accent-red);
+}

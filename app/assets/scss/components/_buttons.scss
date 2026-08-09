@@ -1,0 +1,26 @@
+.ax-cta-outline {
+    display: inline-block;
+    border: 1px solid var(--ax-color-accent-red-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ax-color-accent-red-soft);
+    text-decoration: none;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.82rem;
+    padding: 12px 18px;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.ax-cta-outline:hover {
+    background: rgba(234, 63, 48, 0.12);
+    border-color: var(--ax-color-accent-red-soft);
+    color: #ff7366;
+}
+
+.ax-btn-ghost {
+    border: 1px solid var(--ax-color-border-card);
+    background: transparent;
+    color: var(--ax-color-text-primary);
+}

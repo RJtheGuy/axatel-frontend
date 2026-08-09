@@ -1,0 +1,32 @@
+* {
+    font-family: "Montserrat", sans-serif;
+    font-optical-sizing: auto;
+}
+
+body {
+    color: var(--ax-color-text-primary);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--ax-color-text-primary);
+    text-wrap: balance;
+}
+
+p,
+span,
+small {
+    color: inherit;
+}
+
+.section-title {
+    color: var(--ax-color-text-primary);
+    text-shadow: 0 8px 26px rgba(3, 14, 25, 0.6);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+}

@@ -1,0 +1,28 @@
+{
+  "name": "frontend",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@mdi/js": "^7.4.47",
+    "echarts": "^6.1.0",
+    "gsap": "^3.15.0",
+    "nuxt": "^4.4.8",
+    "pinia": "^3.0.4",
+    "sass": "^1.101.0",
+    "simplex-noise": "^4.0.3",
+    "swiper": "^14.0.5",
+    "three": "^0.185.1",
+    "vue": "^3.5.39",
+    "vue-router": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.1"
+  }
+}

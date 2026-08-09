@@ -1,0 +1,21 @@
+html,
+body,
+#__nuxt {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow-x: hidden;
+}
+
+html,
+body {
+    background: var(--ax-color-bg-main);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
