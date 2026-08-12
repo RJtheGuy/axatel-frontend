@@ -1,13 +1,3 @@
-/**
- * Central Wagtail API access.
- *
- * Base URL switches by execution context:
- *   - server (SSR):  http://web:8000/api/v2   — container-to-container
- *   - client:        http://localhost:8001/api/v2 — host-exposed port
- *
- * Both come from runtimeConfig, set via NUXT_API_INTERNAL_BASE /
- * NUXT_PUBLIC_API_BASE in docker-compose.
- */
 
 export function useCms() {
     const config = useRuntimeConfig()

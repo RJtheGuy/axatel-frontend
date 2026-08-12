@@ -1,26 +1,3 @@
-/**
- * Single canonical carousel composable.
- *
- * REPLACES BOTH the old `carousel.ts` and `carousel_with_stop.ts`.
- * Those two exported identically-named symbols (useCarousel,
- * CarouselOptions, CarouselController), so Nuxt auto-import silently
- * dropped one of them and logged a "Duplicated imports" warning on every
- * build. Which implementation a component got depended on whether it used
- * auto-import or an explicit `import ... from "~/composables/carousel"` —
- * two different behaviours in one app, decided by import style.
- *
- * This is the `_with_stop` implementation, kept because it is strictly
- * better on three counts:
- *   1. hover-pause (container mouseenter/mouseleave)
- *   2. ResizeObserver on the track — REQUIRED once the case list is
- *      fetched from the CMS, because the track width changes after mount
- *      when API data arrives. The old carousel.ts computed loopWidth once
- *      and never recovered from a late width change.
- *   3. continuous wrap (position += loopWidth) instead of resetting to 0,
- *      which avoided a visible one-frame pop at the loop boundary.
- *
- * DELETE `app/composables/carousel_with_stop.ts` after dropping this in.
- */
 
 export interface CarouselOptions {
     container: HTMLElement
