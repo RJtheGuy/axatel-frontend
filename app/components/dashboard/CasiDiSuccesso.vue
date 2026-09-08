@@ -38,18 +38,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-// useCarousel is auto-imported from ~/composables/carousel.
-// The previous explicit `import { useCarousel } from "~/composables/carousel"`
-// pinned this component to the old non-hover-pause implementation while
-// the rest of the app auto-imported the _with_stop one. Both files have
-// been merged into a single carousel.ts — see that file's header.
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { useCarousel } from "~/composables/carousel";
 
 type SuccessCase = {
     title: string;
     description: string;
     image?: string;
     slug?: string;
+    content?: string[] | string;
     client?: string;
     category?: string;
     tags?: string[];
@@ -75,7 +72,22 @@ const defaultCases: SuccessCase[] = [
         title: "Angel River",
         description: "Monitoraggio continuo dei livelli idrici con alert predittivi e interventi anticipati.",
         image: ""
-    }
+    },
+    // {
+    //     title: "Bridge Sentinel",
+    //     description: "Controllo strutturale in tempo reale su ponti con soglie dinamiche e storico eventi.",
+    //     image: ""
+    // },
+    // {
+    //     title: "Traffic Pulse",
+    //     description: "Analisi dei flussi urbani per ridurre congestione e tempi di intervento operativo.",
+    //     image: ""
+    // },
+    // {
+    //     title: "Geo Shield",
+    //     description: "Rilevazione impatti geologici e correlazione immediata con mappe di rischio locali.",
+    //     image: ""
+    // }
 ];
 
 const resolvedTitle = computed(() => {
@@ -113,21 +125,26 @@ function slugify(value: string): string {
         .slice(0, 80);
 }
 
-/**
- * Route to the case study page by slug.
- *
- * This used to JSON-stringify the entire case — including a multi-KB
- * HTML body — URI-encode it and pass it as a `payload` query param to
- * /articoli/<slug>. That broke on longer cases (URLs cap out somewhere
- * between 2k and 8k chars depending on browser and server), produced
- * unshareable URLs, and left the article page unindexable.
- *
- * The article page now fetches its own content from the CMS by slug,
- * so the link carries nothing but the slug.
- */
-function buildArticleRoute(item: SuccessCase): string {
+function buildArticleRoute(item: SuccessCase): { path: string; query: { payload: string } } {
     const slug = item.slug && item.slug.length > 0 ? item.slug : slugify(item.title);
-    return `/casi/${slug}`;
+    const payload = encodeURIComponent(
+        JSON.stringify({
+            title: item.title,
+            description: item.description,
+            image: item.image || "",
+            client: item.client || "",
+            category: item.category || "",
+            tags: item.tags || [],
+            content: item.content && item.content.length > 0
+                ? item.content
+                : [item.description]
+        })
+    );
+
+    return {
+        path: `/articoli/${slug}`,
+        query: { payload }
+    };
 }
 
 function emitCaseVisibility(active: boolean): void {
@@ -167,19 +184,6 @@ onMounted(async () => {
     });
 });
 
-// Cases now arrive from the API, which means the track's width can
-// change after the carousel has already measured it. The merged
-// carousel has a ResizeObserver that catches this, but calling
-// updateWidth() explicitly makes the recompute immediate rather than
-// waiting a frame for the observer to fire.
-watch(
-    () => resolvedCases.value.length,
-    async () => {
-        await nextTick();
-        carousel?.updateWidth();
-    }
-);
-
 onUnmounted(() => {
     visibilityObserver?.disconnect();
     carousel?.destroy();
@@ -190,6 +194,7 @@ onUnmounted(() => {
 <style scoped>
 .casi-section {
     position: relative;
+    z-index: 1;
     width: 100vw;
     min-height: 100vh;
     overflow: hidden;
@@ -228,7 +233,7 @@ onUnmounted(() => {
     margin-left: calc(50% - 50vw);
     margin-top: 30vh;
     overflow: hidden;
-    padding: 10px 8vw;
+    padding: 10px 0;
     user-select: none;
 }
 
@@ -393,7 +398,7 @@ onUnmounted(() => {
     .casi-applications {
         height: 58vh;
         margin-top: 30vh;
-        padding: 8px 5vw;
+        padding: 8px 0;
     }
 }
 

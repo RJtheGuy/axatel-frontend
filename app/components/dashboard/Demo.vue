@@ -6,7 +6,7 @@
         <div class="demo-content">
 
             <DashboardDemoAngel
-                :last-alarm="lastAlarm"
+                :alarm-event="alarmEvent"
             />
 
             <DashboardDemoCaroselloVerticali
@@ -28,6 +28,12 @@ type DemoApplication = {
     description: string;
     demo: string | null;
     instruction?: string;
+};
+
+type AlarmEvent = {
+    application: string;
+    origin: { x: number; y: number };
+    getOrigin: () => { x: number; y: number };
 };
 
 const props = defineProps<{
@@ -71,14 +77,14 @@ const applications = (props.applications && props.applications.length > 0)
     ? props.applications
     : defaultApplications;
 
-const lastAlarm = ref<string | null>(null)
+const alarmEvent = ref<AlarmEvent | null>(null)
 
-function onAlarm(application: string){
-    lastAlarm.value = application
+function onAlarm(payload: AlarmEvent){
+    alarmEvent.value = payload
 }
 
 function onNormal(){
-    lastAlarm.value = null
+    // The latest event remains available until the next alarm is emitted.
 }
 </script>
 

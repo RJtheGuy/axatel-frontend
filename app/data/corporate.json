@@ -1,0 +1,14 @@
+{
+    "phone": {
+        "label": "+39 0444 963891",
+        "href": "tel:+390444963891"
+    },
+    "email": {
+        "label": "info@axatel.it",
+        "href": "mailto:info@axatel.it"
+    },
+    "ticketPortal": {
+        "label": "Portale ticket",
+        "href": "/contatti"
+    }
+}

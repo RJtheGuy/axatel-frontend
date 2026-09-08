@@ -2,10 +2,9 @@
     <div>
         <LayoutNavbar/>
         <slot />
-        <DashboardChatBot :config="settings?.chatbot" />
+        <ChatAiChat />
+        <!-- <footer>
+            footer
+        </footer> -->
     </div>
 </template>
-
-<script setup lang="ts">
-const { settings } = useSiteSettings()
-</script>

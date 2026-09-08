@@ -48,7 +48,7 @@ let resizeObserver: ResizeObserver | null = null;
 let width = 1;
 let height = 1;
 let pixelRatio = 1;
-const titleFontFamily = "Montserrat, system-ui, sans-serif";
+const titleFontFamily = '"forma-djr-micro", sans-serif';
 
 function splitTitle(context2d: CanvasRenderingContext2D, title: string, maxWidth: number): string[] {
     const explicitLines = title.replace(/\r\n?/g, "\n").split("\n");

@@ -58,9 +58,14 @@
                         <textarea v-model="form.message" name="message" rows="6" placeholder="Descrivi il progetto, il territorio o l'infrastruttura da monitorare."></textarea>
                     </label>
 
-                    <button class="submit-button" type="submit">Invia richiesta</button>
+                    <button class="submit-button" type="submit" :disabled="submitting">
+                        {{ submitting ? "Invio in corso…" : "Invia richiesta" }}
+                    </button>
                     <p v-if="submitted" class="form-feedback" role="status">
-                        Richiesta preparata. Ti contatteremo usando i riferimenti indicati.
+                        Richiesta inviata. Ti contatteremo usando i riferimenti indicati.
+                    </p>
+                    <p v-if="submitError" class="form-feedback form-feedback--error" role="alert">
+                        {{ submitError }}
                     </p>
                 </form>
             </div>
@@ -71,6 +76,14 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import DashboardTitoloParticelle from "../components/dashboard/TitoloParticelle.vue";
+
+// Contact submission has no dedicated useCms() method (that composable
+// only covers GET-shaped page fetches) — this mirrors its server/client
+// base-URL split exactly rather than introducing a second convention.
+function apiBase(): string {
+    const config = useRuntimeConfig();
+    return import.meta.server ? config.apiInternalBase : config.public.apiBase;
+}
 
 const interests = [
     "Monitoraggio fiumi e livelli idrici",
@@ -84,6 +97,9 @@ const interests = [
 ];
 
 const submitted = ref(false);
+const submitting = ref(false);
+const submitError = ref("");
+
 const form = reactive({
     name: "",
     company: "",
@@ -93,8 +109,34 @@ const form = reactive({
     message: ""
 });
 
-function submitForm(): void {
-    submitted.value = true;
+async function submitForm(): Promise<void> {
+    submitError.value = "";
+    submitted.value = false;
+    submitting.value = true;
+
+    try {
+        await $fetch(`${apiBase()}/contact/`, {
+            method: "POST",
+            body: { ...form }
+        });
+
+        submitted.value = true;
+        form.name = "";
+        form.company = "";
+        form.email = "";
+        form.phone = "";
+        form.interests = [];
+        form.message = "";
+    } catch (error) {
+        // Backend validation error or the endpoint being unreachable —
+        // either way, tell the visitor honestly rather than showing the
+        // "Richiesta inviata" message the old handler always showed.
+        submitError.value =
+            "Non siamo riusciti a inviare la richiesta. Riprova, oppure scrivici direttamente a info@axatel.it.";
+        console.warn("[contact] submission failed", error);
+    } finally {
+        submitting.value = false;
+    }
 }
 </script>
 
@@ -292,6 +334,15 @@ legend {
     margin: 0;
     color: var(--ax-color-text-secondary);
     line-height: 1.5;
+}
+
+.form-feedback--error {
+    color: var(--ax-color-accent-red-soft);
+}
+
+.submit-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 @media (max-width: 900px) {

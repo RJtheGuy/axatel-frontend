@@ -92,10 +92,13 @@ const resolvedTaxValue = computed(() => props.taxValue?.trim() || "00000000000")
 
 <style scoped>
 .footer-section {
+    position: relative;
+    z-index: 1;
     width: 100vw;
     padding: 7vh 8vw 5vh;
-    background: linear-gradient(180deg, rgba(7, 20, 33, 0.88), rgba(3, 10, 18, 0.95));
+    background: linear-gradient(180deg, rgba(3, 11, 20, 0.88), rgba(2, 8, 15, 0.97));
     border-top: 1px solid var(--ax-color-border-soft);
+    box-shadow: inset 0 24px 48px rgba(0, 0, 0, 0.16);
 }
 
 .footer-grid {

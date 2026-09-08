@@ -1,5 +1,13 @@
 <template>
-  <section ref="container" class="applications">
+  <section
+    ref="container"
+    class="applications"
+    @pointerenter="onPointerEnter"
+    @pointerleave="onPointerLeave"
+    @pointerdown="onPointerDown"
+    @pointerup="onPointerEnd"
+    @pointercancel="onPointerEnd"
+  >
     <div ref="track" class="track">
       <DashboardDemoCardVerticale
         v-for="(app, index) in duplicatedApplications"
@@ -31,12 +39,18 @@ type DemoApplication = {
   instruction?: string;
 };
 
+type AlarmEvent = {
+  application: string;
+  origin: { x: number; y: number };
+  getOrigin: () => { x: number; y: number };
+};
+
 const props = defineProps<{
   applications?: DemoApplication[];
 }>();
 
 const emit = defineEmits<{
-    (e:"alarm", application:string):void
+  (e:"alarm", payload:AlarmEvent):void
     (e:"normal", application:string):void
 }>()
 
@@ -44,6 +58,42 @@ const container = ref<HTMLElement | null>(null)
 const track = ref<HTMLElement | null>(null)
 
 let carousel: ReturnType<typeof useCarousel> | null = null
+let mouseHovered = false
+const activePointers = new Set<number>()
+
+const updateCarouselMotion = () => {
+  if (mouseHovered || activePointers.size > 0) {
+    carousel?.pause()
+  } else {
+    carousel?.resume()
+  }
+}
+
+const onPointerEnter = (event: PointerEvent) => {
+  if (event.pointerType !== "mouse") return
+
+  mouseHovered = true
+  updateCarouselMotion()
+}
+
+const onPointerLeave = (event: PointerEvent) => {
+  if (event.pointerType !== "mouse") return
+
+  mouseHovered = false
+  updateCarouselMotion()
+}
+
+const onPointerDown = (event: PointerEvent) => {
+  if (event.pointerType === "mouse") return
+
+  activePointers.add(event.pointerId)
+  updateCarouselMotion()
+}
+
+const onPointerEnd = (event: PointerEvent) => {
+  activePointers.delete(event.pointerId)
+  updateCarouselMotion()
+}
 
 const defaultApplications: DemoApplication[] = [
   {
@@ -90,8 +140,8 @@ const duplicatedApplications = computed(()=>
   [...applications.value,...applications.value]
 )
 
-const onAlarm = (application:string)=>{
-    emit("alarm",application)
+const onAlarm = (payload:AlarmEvent)=>{
+  emit("alarm",payload)
 }
 
 const onNormal = (application:string)=>{
@@ -117,6 +167,7 @@ onMounted(async()=>{
 
 onUnmounted(()=>{
 
+  activePointers.clear()
     carousel?.destroy()
 
 })

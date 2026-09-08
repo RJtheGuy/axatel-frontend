@@ -1,58 +1,61 @@
 <template>
     <main class="cases-page">
-        <DashboardTitoloParticelle class="page-title" title="Tutti i casi" />
-        <section class="cases-shell">
-            <NuxtLink to="/" class="back-link">Torna alla home</NuxtLink>
+        <header class="cases-hero">
+<ArticleParticleHero title="Tutti i casi" :asset-url="resolveImage('/immagini/ala.png')" />        </header>
 
-            <div class="page-kicker">Casi di successo</div>
-            <p class="lead">{{ lead }}</p>
+        <div class="cases-light-stage">
+            <section class="cases-shell">
+                <NuxtLink to="/" class="back-link">Torna alla home</NuxtLink>
 
-            <p v-if="!cases.length" class="empty">
-                Nessun caso di successo pubblicato al momento.
-            </p>
+                <div class="page-kicker">Casi di successo</div>
+                <p class="lead">{{ lead }}</p>
 
-            <div v-else class="cases-grid">
-                <article v-for="item in cases" :key="item.slug" class="case-card">
-                    <NuxtLink :to="`/casi/${item.slug}`" class="case-link" :aria-label="`Leggi ${item.title}`">
-                        <div class="case-media">
-                            <img
-                                v-if="item.image"
-                                :src="item.image"
-                                :alt="item.title"
-                                width="360"
-                                height="220"
-                                loading="lazy"
-                                decoding="async"
-                            />
-                            <div v-else class="case-placeholder">{{ item.category }}</div>
-                        </div>
+                <p v-if="!cases.length" class="empty">
+                    Nessun caso di successo pubblicato al momento.
+                </p>
 
-                        <div class="case-content">
-                            <div class="case-kicker">{{ item.category }}</div>
-                            <h2>{{ item.title }}</h2>
-                            <p>{{ item.description }}</p>
+                <div v-else class="cases-grid">
+                    <article v-for="item in cases" :key="item.slug" class="case-card">
+                        <NuxtLink :to="`/casi/${item.slug}`" class="case-link" :aria-label="`Leggi ${item.title}`">
+                            <div class="case-media">
+                                <img
+                                    v-if="item.image"
+                                    :src="item.image"
+                                    :alt="item.title"
+                                    width="360"
+                                    height="220"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+                                <div v-else class="case-placeholder">{{ item.category }}</div>
+                            </div>
 
-                            <div class="case-meta">
-                                <span>{{ item.client }}</span>
-                                <div class="case-tags">
-                                    <small v-for="tag in item.tags" :key="tag">{{ tag }}</small>
+                            <div class="case-content">
+                                <div class="case-kicker">{{ item.category }}</div>
+                                <h2>{{ item.title }}</h2>
+                                <p>{{ item.description }}</p>
+
+                                <div class="case-meta">
+                                    <span>{{ item.client }}</span>
+                                    <div class="case-tags">
+                                        <small v-for="tag in item.tags" :key="tag">{{ tag }}</small>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </NuxtLink>
-                </article>
-            </div>
-        </section>
+                        </NuxtLink>
+                    </article>
+                </div>
+            </section>
+        </div>
     </main>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-// One level deeper than before — this file moved from pages/casi.vue
-// to pages/casi/index.vue so that pages/casi/[slug].vue can sit beside
-// it. (Left at pages/casi.vue, Nuxt would treat it as a parent layout
-// for the casi/ directory and render nothing without a <NuxtPage />.)
-import DashboardTitoloParticelle from "../../components/dashboard/TitoloParticelle.vue";
+import { useSeoMeta } from "#app";
+import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
+
+const { getPage, getPageBySlug } = useCms();
 
 type CaseItem = {
     title: string;
@@ -63,8 +66,6 @@ type CaseItem = {
     tags: string[];
     slug: string;
 };
-
-const { getPage, getPageBySlug } = useCms();
 
 const { data: casiData } = await useAsyncData("casi-list", () =>
     getPage("casi.CasoSuccessoPage", { order: "-first_published_at" }).catch(() => null)
@@ -93,15 +94,11 @@ const cases = computed<CaseItem[]>(() =>
 );
 
 /*
- * buildArticleRoute() is gone. It used to point at /articoli/<slug> with
- * the whole case JSON-stringified into a `payload` query param — and it
- * passed `content: [item.description]`, i.e. it threw the real article
- * body away and sent the one-line card blurb as the entire article. The
- * same case opened from the homepage carousel showed the full text, so
- * one case rendered two different ways depending on where you clicked.
- *
- * Links now go straight to /casi/<slug>, and pages/casi/[slug].vue
- * fetches the real body from the CMS.
+ * buildArticleRoute() intentionally NOT restored here. It used to point
+ * at /articoli/<slug> with the whole case JSON-stringified into a
+ * `payload` query param, throwing away the real article body in favor
+ * of the one-line card blurb. Links go straight to /casi/<slug>, and
+ * pages/casi/[slug].vue fetches the real body from the CMS.
  */
 
 useSeoMeta({
@@ -117,50 +114,75 @@ useSeoMeta({
 <style scoped>
 .cases-page {
     min-height: 100vh;
-    padding: 12vh 8vw 9vh;
-    background:
-        radial-gradient(circle at 16% 10%, rgba(121, 207, 255, 0.18), transparent 34%),
-        radial-gradient(circle at 86% 22%, rgba(234, 63, 48, 0.1), transparent 32%),
-        var(--ax-color-bg-main);
+    overflow: hidden;
+    background: var(--ax-color-bg-main);
 }
 
-.page-title {
-    max-width: 1180px;
-    margin: 0 auto 10px;
+.cases-hero {
+    position: relative;
+    z-index: 2;
+    min-height: calc(var(--ax-navbar-height, 74px) + 200px);
+    background: #020712;
+}
+
+.cases-hero::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -6vh;
+    left: 0;
+    z-index: 2;
+    height: 8vh;
+    pointer-events: none;
+    background: linear-gradient(180deg, #020712 0%, rgba(2, 7, 18, 0.76) 40%, rgba(2, 7, 18, 0) 100%);
+}
+
+.cases-light-stage {
+    color: #0b355b;
+    background:
+        radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),
+        radial-gradient(circle at 88% 30%, rgba(42, 111, 165, 0.07), transparent 30%),
+        linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f5f8fb 100%);
 }
 
 .cases-shell {
     max-width: 1180px;
     margin: 0 auto;
-    padding: 0;
+    padding: 7vh 0 8vh;
 }
 
 .back-link {
     display: inline-block;
     margin-bottom: 18px;
-    color: var(--ax-color-accent-red-soft);
+    color: #c52317;
     text-decoration: none;
     font-weight: 700;
 }
 
 .page-kicker,
 .case-kicker {
-    color: var(--ax-color-accent-red-soft);
+    color: #c52317;
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
+.page-kicker {
+    padding-left: 14px;
+    border-left: 4px solid #c52317;
+}
+
 .lead {
     max-width: 720px;
     margin: 12px 0 28px;
-    color: var(--ax-color-text-secondary);
-    line-height: 1.58;
+    color: #274e72;
+    font-size: 1.08rem;
+    line-height: 1.62;
 }
 
 .empty {
-    color: var(--ax-color-text-muted);
+    color: #667f97;
     padding: 40px 0;
 }
 
@@ -172,9 +194,10 @@ useSeoMeta({
 
 .case-card {
     overflow: hidden;
-    border: 1px solid var(--ax-color-border-soft);
-    border-radius: 14px;
-    background: rgba(7, 17, 29, 0.34);
+    border: 1px solid rgba(11, 53, 91, 0.14);
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 14px 32px rgba(17, 48, 78, 0.08);
     transition: transform 0.22s ease, border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
 }
 
@@ -189,7 +212,17 @@ useSeoMeta({
 .case-media {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(234, 63, 48, 0.16), rgba(121, 207, 255, 0.12));
+    background: #eaf1f6;
+}
+
+.case-media::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #c52317 0 22%, rgba(197, 35, 23, 0.2) 22% 100%);
 }
 
 .case-media img {
@@ -204,7 +237,7 @@ useSeoMeta({
     height: 100%;
     display: grid;
     place-items: center;
-    color: var(--ax-color-text-primary);
+    color: #0b355b;
     font-weight: 800;
     text-transform: uppercase;
 }
@@ -218,14 +251,14 @@ useSeoMeta({
 
 .case-content h2 {
     margin: 0;
-    color: var(--ax-color-text-primary);
+    color: #0b355b;
     font-size: 1.18rem;
     line-height: 1.22;
 }
 
 .case-content p {
     margin: 0;
-    color: var(--ax-color-text-secondary);
+    color: #274e72;
     line-height: 1.5;
 }
 
@@ -236,7 +269,7 @@ useSeoMeta({
 }
 
 .case-meta > span {
-    color: var(--ax-color-text-muted);
+    color: #667f97;
     font-size: 0.82rem;
     font-weight: 700;
 }
@@ -251,7 +284,7 @@ useSeoMeta({
     border: 1px solid rgba(234, 63, 48, 0.28);
     border-radius: 999px;
     background: rgba(234, 63, 48, 0.12);
-    color: var(--ax-color-text-primary);
+    color: #0b355b;
     padding: 5px 8px;
     font-weight: 700;
 }
@@ -262,18 +295,18 @@ useSeoMeta({
 
 .case-card:hover {
     transform: translateY(-5px);
-    border-color: rgba(255, 140, 127, 0.72);
-    background: rgba(10, 24, 38, 0.58);
-    box-shadow: 0 22px 44px rgba(0, 0, 0, 0.26);
+    border-color: rgba(197, 35, 23, 0.48);
+    background: #ffffff;
+    box-shadow: 0 22px 44px rgba(17, 48, 78, 0.16);
 }
 
 @media (max-width: 768px) {
-    .cases-page {
-        padding: 7vh 5vw;
+    .cases-hero {
+        min-height: calc(var(--ax-navbar-height, 78px) + 28svh);
     }
 
-    .page-title {
-        margin-bottom: 0;
+    .cases-shell {
+        padding: 5vh 5vw 6vh;
     }
 }
 </style>

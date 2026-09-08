@@ -39,6 +39,7 @@
 
         <div
             v-if="showAlarmStrip"
+            ref="alarmStripEl"
             class="alarm-strip"
             role="status"
             aria-live="polite"
@@ -92,9 +93,15 @@
 
     <div class="card-footer">
 
-        <p class="text-secondary text-center instruction-text">
+        <p class="text-secondary text-center instruction-text instruction-desktop">
 
             {{ instruction }}
+
+        </p>
+
+        <p class="text-center instruction-text instruction-mobile">
+
+            {{ mobileInstruction }}
 
         </p>
 
@@ -108,6 +115,7 @@
 import {
     ref,
     computed,
+    nextTick,
     onMounted,
     onBeforeUnmount,
     defineAsyncComponent,
@@ -126,13 +134,14 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-    (e:"alarm", application:string):void
+    (e:"alarm", payload:{ application:string; origin:{ x:number; y:number }; getOrigin:()=>{ x:number; y:number } }):void
     (e:"normal", application:string):void
 }>()
 
 const showAlarmStrip = ref(false)
 const shouldMountDemo = ref(false)
 const cardEl = ref<HTMLElement | null>(null)
+const alarmStripEl = ref<HTMLElement | null>(null)
 let alarmStripTimer: ReturnType<typeof setTimeout> | null = null
 let mountObserver: IntersectionObserver | null = null
 let mountTimer: ReturnType<typeof setTimeout> | null = null
@@ -160,6 +169,14 @@ const demoComponents:Record<string,Component>={
         ()=>import("./gioco/TrafficAlert.vue")
     )
 
+}
+
+const demoLogos: Record<string, string> = {
+    GeoAngel: "/immagini/GeoAngel.png",
+    TrafficAlert: "/immagini/TrafficAlert.png",
+    AngelRiver: "/immagini/AngelRiver.png",
+    AngelRoadSite: "/immagini/AngelRoadsite.png",
+    AngelBridge: "/immagini/AngelBridge.png"
 }
 
 const hasDemo = computed(() => Boolean(props.application.demo && demoComponents[props.application.demo]))
@@ -217,6 +234,10 @@ const logo = computed(() => {
         return props.application.logo
     }
 
+    if (props.application.demo) {
+        return demoLogos[props.application.demo] ?? null
+    }
+
     return null
 
 })
@@ -251,9 +272,49 @@ const instruction = computed(() => {
 
 })
 
-function onAlarm(){
+const mobileInstruction = computed(() => {
+
+    switch (props.application.demo) {
+
+        case "GeoAngel":
+            return "Scorri rapidamente il dito attraverso il sensore centrale"
+
+        case "AngelRiver":
+            return "Tieni premuto sulla demo per far piovere e alzare il livello"
+
+        case "AngelBridge":
+            return "Tieni premuto sulla demo per aprire la crepa"
+
+        case "AngelRoadSite":
+            return "Scorri rapidamente il dito sul cartello per generare l'impatto"
+
+        case "TrafficAlert":
+            return "Tieni premuto sulla demo per aumentare il traffico"
+
+        default:
+            return props.application.instruction ?? "Tocca la demo per interagire"
+
+    }
+
+})
+
+async function onAlarm(){
 
     showAlarmStrip.value = true
+    await nextTick()
+
+    const getOrigin = () => {
+        const source = alarmStripEl.value
+            ?? cardEl.value?.querySelector<HTMLElement>(".card-game")
+            ?? cardEl.value
+        const rect = source?.getBoundingClientRect()
+
+        return {
+            x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2,
+            y: rect ? rect.top + Math.min(rect.height / 2, 16) : window.innerHeight / 2
+        }
+    }
+    const origin = getOrigin()
 
     if (alarmStripTimer) {
         clearTimeout(alarmStripTimer)
@@ -265,7 +326,11 @@ function onAlarm(){
 
     emit(
         "alarm",
-        props.application.name
+        {
+            application: props.application.name,
+            origin,
+            getOrigin
+        }
     )
 
 }
@@ -486,6 +551,10 @@ h2{
     font-size: 0.9rem;
 }
 
+.instruction-mobile {
+    display: none;
+}
+
 @media (max-width: 900px) {
     .card {
         width: 320px;
@@ -511,8 +580,17 @@ h2{
         font-size: 0.74rem;
     }
 
-    .instruction-text {
-        font-size: 0.78rem !important;
+    .instruction-desktop {
+        display: none;
+    }
+
+    .instruction-mobile {
+        display: block;
+        color: var(--color-primary);
+        font-size: 0.88rem;
+        font-weight: 650;
+        line-height: 1.35;
+        opacity: 1;
     }
 }
 
@@ -527,7 +605,9 @@ h2{
     }
 
     .card-footer {
-        padding: 10px 12px;
+        padding: 12px 14px;
+        border-top-color: rgba(197, 35, 23, 0.2);
+        background: rgba(255, 255, 255, 0.88);
     }
 }
 

@@ -1,0 +1,24 @@
+{
+    "Frana": [
+        "Chiama responsabile di zona",
+        "Deviazione stradale",
+        "Limitare l'accesso alla zona fino alla verifica tecnica"
+    ],
+    "Traffico": [
+        "Attivare la segnalazione agli utenti della strada",
+        "Attivare messaggio PMV"
+    ],
+    "Esondazione": [
+        "Chiama responsabile di zona",
+        "Informare il presidio territoriale competente",
+        "Ivia comunicazione social"
+    ],
+    "Lavori in corso": [
+        "Verificare l'integrita della segnaletica di cantiere",
+        "Contattare il responsabile operativo sul posto"
+    ],
+    "Crepa aperta": [
+        "Richiedere un'ispezione tecnica della struttura",
+        "Ridurre i carichi fino alla valutazione del responsabile"
+    ]
+}

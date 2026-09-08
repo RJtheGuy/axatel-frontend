@@ -14,17 +14,19 @@ import { FlowField } from "./FlowField";
 import type { ForceVector } from "./FlowField";
 import { ShapeFactory } from "./ShapeFactory";
 import type { SequenceStage } from "./SequenceManager";
+import { resolveImage } from "../../utils/resolveImage";
 
 export class ParticleSystem {
     public readonly PARTICLE_COUNT: number;
     private readonly MIN_SHARED_PREFIX_WORDS = 5;
     private readonly TEXT_FREE_PARTICLE_STEP = 24;
     private readonly SUFFIX_CARRIER_PARTICLE_STEP = 1;
-    private readonly SUFFIX_TRANSITION_DURATION = 1.1;
-    private readonly SUFFIX_DISSOLVE_RATIO = 0.46;
+    private readonly SUFFIX_TRANSITION_DURATION = 0.38;
+    private readonly SUFFIX_DISSOLVE_RATIO = 0.35;
     private worldHalfWidth = 60;
     private worldHalfHeight = 34;
     private worldCacheKey = "120x68";
+    private readonly canvas: HTMLCanvasElement;
     private readonly positions: Float32Array;
     private readonly velocities: Float32Array;
     private targetPositions: Float32Array | null = null;
@@ -54,6 +56,9 @@ export class ParticleSystem {
     private suffixCarrierParticles: Uint8Array | null = null;
     private dissolvingSuffixParticles: Uint8Array | null = null;
     private suffixTransitionElapsed = 0;
+    // Tempo (s) entro cui una formazione deve risultare completamente composta.
+    private readonly FORMATION_SETTLE_DURATION = 1;
+    private formationElapsed = 0;
 
     private clamp01(value: number): number {
         return Math.min(1, Math.max(0, value));
@@ -81,6 +86,13 @@ export class ParticleSystem {
         }
 
         return shared;
+    }
+
+    private countSuffixCharacters(value: string, prefixWordCount: number): number {
+        return this.toWords(value)
+            .slice(prefixWordCount)
+            .join("")
+            .length;
     }
 
     private isFreeTextParticleIndex(index: number): boolean {
@@ -192,6 +204,7 @@ export class ParticleSystem {
     }
 
     constructor(scene: Scene, canvas: HTMLCanvasElement) {
+        this.canvas = canvas;
         const viewportArea = window.innerWidth * window.innerHeight;
         this.PARTICLE_COUNT = viewportArea > 3_200_000
             ? Math.min(42000, Math.round((viewportArea / 3_200_000) * 24000))
@@ -242,6 +255,11 @@ export class ParticleSystem {
 
     public resize(pixelRatio: number): void {
         this.uniforms.uPixelRatio.value = Math.min(pixelRatio, 1.5);
+    }
+
+    private getPixelsPerWorldUnit(): number {
+        const heightPx = this.canvas.clientHeight || window.innerHeight;
+        return heightPx / Math.max(1, this.worldHalfHeight * 2);
     }
 
     public setMousePosition(x: number, y: number): void {
@@ -329,6 +347,7 @@ export class ParticleSystem {
 
         if (stage.type === "scatter") {
             this.targetPositions = this.createScatterTargets();
+            this.formationElapsed = 0;
             this.lockedPrefixParticles = null;
             this.suffixCarrierParticles = null;
             this.dissolvingSuffixParticles = null;
@@ -338,11 +357,19 @@ export class ParticleSystem {
         }
 
         const text = stage.text || "AXATEL";
-        const cacheKey = `${this.worldCacheKey}:${stage.type}:${text}`;
+        const cacheKey = `${this.worldCacheKey}:${stage.type}:${text}:${stage.asset || ""}`;
         let formation = this.formationCache.get(cacheKey);
 
         if (!formation) {
-            if (stage.type === "logo") {
+            if (stage.type === "composite") {
+                formation = await ShapeFactory.createCompositeFormation(
+                    text,
+                    stage.asset || resolveImage("/immagini/ala.png"),                    this.PARTICLE_COUNT,
+                    this.worldHalfWidth * 2,
+                    this.worldHalfHeight * 2,
+                    this.getPixelsPerWorldUnit()
+                );
+            } else if (stage.type === "logo") {
                 const isCustomLogoAsset = Boolean(stage.text && /^\/immagini\//.test(stage.text));
                 const logoWidth = isCustomLogoAsset
                     ? this.worldHalfWidth * 2 * 0.92
@@ -350,8 +377,7 @@ export class ParticleSystem {
                 const logoHeight = isCustomLogoAsset
                     ? this.worldHalfHeight * 2 * 0.92
                     : this.worldHalfHeight * 2 * 0.42;
-                const logoAssetUrl = isCustomLogoAsset ? stage.text! : "/immagini/Axatel.svg";
-                try {
+                    const logoAssetUrl = isCustomLogoAsset ? stage.text! : resolveImage("/immagini/Axatel.svg");                try {
                     formation = await ShapeFactory.createSvgFormation(
                         logoAssetUrl,
                         this.PARTICLE_COUNT,
@@ -396,8 +422,13 @@ export class ParticleSystem {
         ) {
             const nextPhraseText = (stage.text || "").trim();
             const sharedPrefixWords = this.countSharedPrefixWords(previousPhraseText, nextPhraseText);
+            const previousSuffixLength = this.countSuffixCharacters(previousPhraseText, sharedPrefixWords);
+            const nextSuffixLength = this.countSuffixCharacters(nextPhraseText, sharedPrefixWords);
 
-            if (sharedPrefixWords >= this.MIN_SHARED_PREFIX_WORDS) {
+            if (
+                sharedPrefixWords >= this.MIN_SHARED_PREFIX_WORDS &&
+                nextSuffixLength <= previousSuffixLength
+            ) {
                 const previousSuffixBounds = ShapeFactory.getTextSuffixBounds(
                     previousPhraseText,
                     sharedPrefixWords,
@@ -421,6 +452,7 @@ export class ParticleSystem {
 
         const isNarrowWorld = this.worldHalfWidth / Math.max(1, this.worldHalfHeight) < 0.82;
         this.targetPositions = formation;
+        this.formationElapsed = 0;
         this.uniforms.uOpacity.value = stage.type === "logo" ? 1.0 : isNarrowWorld ? 0.84 : 0.9;
         this.uniforms.uPointSize.value = stage.type === "logo" ? 3.9 : isNarrowWorld ? 2.45 : 2.7;
 
@@ -451,20 +483,32 @@ export class ParticleSystem {
         }
 
         const isForcedLogoStage = this.currentStageType === "logo" && this.currentStageId.startsWith("forced-");
+        const isQuoteLogoStage = this.currentStageId === "forced-quote-logo";
         const logoEndBoost = this.currentStageType === "logo" && !isForcedLogoStage
             ? this.clamp01((stageProgress - 0.78) / 0.22)
             : 0;
         const logoEndBoostEase = logoEndBoost * logoEndBoost;
 
         const hasTarget = this.targetPositions !== null && !this.formationSuppressed;
+
+        if (hasTarget) {
+            this.formationElapsed = Math.min(
+                this.FORMATION_SETTLE_DURATION,
+                this.formationElapsed + delta
+            );
+        }
+
+        // La rampa irrigidisce la molla finché la scritta non è composta entro FORMATION_SETTLE_DURATION.
+        const settleRamp = this.clamp01(this.formationElapsed / this.FORMATION_SETTLE_DURATION);
+        const settleBoost = settleRamp * settleRamp;
         const attraction = hasTarget
-            ? 0.042 + stageProgress * 0.05 + logoEndBoostEase * 0.16
+            ? 0.26 + settleBoost * 0.5 + stageProgress * 0.06 + logoEndBoostEase * 0.16
             : 0.022;
         const friction = hasTarget
-            ? 0.9 - logoEndBoostEase * 0.08
+            ? 0.68 - settleBoost * 0.14 - logoEndBoostEase * 0.08
             : 0.965;
         const maxSpeed = hasTarget
-            ? 0.5 + logoEndBoostEase * 1.6
+            ? 2.2 + logoEndBoostEase * 1.6
             : 0.3;
         const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
         this.resize(pixelRatio);
@@ -473,10 +517,14 @@ export class ParticleSystem {
         const halfY = this.worldHalfHeight;
         const target = hasTarget ? this.targetPositions : null;
         const isLogoStage = this.currentStageType === "logo";
-        const isTextStage = this.currentStageType === "text";
+        const isTextStage = this.currentStageType === "text" || this.currentStageType === "composite";
         const isAnchoredFormationStage = isLogoStage || isTextStage || this.currentStageType === "scatter";
         const allowOutOfViewByScroll = isAnchoredFormationStage && this.anchorOffsetY > 0.0001;
-        const forcedLogoOffsetX = isForcedLogoStage ? halfX * 0.06 : 0;
+        const forcedLogoOffsetX = isQuoteLogoStage
+            ? halfX * 0.48
+            : isForcedLogoStage
+                ? halfX * 0.06
+                : 0;
         const suffixTransitionProgress = this.clamp01(
             this.suffixTransitionElapsed / this.SUFFIX_TRANSITION_DURATION
         );
@@ -504,8 +552,8 @@ export class ParticleSystem {
             this.uniforms.uOpacity.value = holdOpacity * dissolve;
         } else if (isLogoStage) {
             // Forced section logos must remain stable and visible.
-            logoScaleX = 1;
-            logoScaleY = 1;
+            logoScaleX = isQuoteLogoStage ? 0.62 : 1;
+            logoScaleY = isQuoteLogoStage ? 0.62 : 1;
             this.uniforms.uPointSize.value = 3.9;
             this.uniforms.uOpacity.value = 1;
         }

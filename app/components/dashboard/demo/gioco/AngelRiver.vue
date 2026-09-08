@@ -4,6 +4,10 @@
     class="river-card"
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
+    @pointerdown="onPointerDown"
+    @pointerup="onPointerEnd"
+    @pointercancel="onPointerEnd"
+    @lostpointercapture="onPointerCaptureLost"
 >
 
     <div class="rain" :class="{ active: isRaining }"></div>
@@ -59,6 +63,7 @@ const waterLevel = ref(0)
 const isAlarm = ref(false)
 const isRaining = ref(false)
 const maxLevel = ref(0)
+let activePointerId: number | null = null
 
 const levelMeters = computed(() => waterLevel.value / 100 * MAX_METERS)
 const thresholdMeters = computed(() => threshold / 100 * MAX_METERS)
@@ -136,14 +141,44 @@ function tick() {
     updateWater(gsap.ticker.deltaRatio(60) / 60)
 }
 
-function onPointerEnter() {
+function onPointerDown(event: PointerEvent) {
+    if (!event.isPrimary || activePointerId !== null) return
+
+    activePointerId = event.pointerId
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
     isRaining.value = true
 
 }
 
-function onPointerLeave() {
+function onPointerEnter(event: PointerEvent) {
+    if (event.pointerType === "mouse" && activePointerId === null) {
+        isRaining.value = true
+    }
+}
+
+function onPointerLeave(event: PointerEvent) {
+    if (event.pointerType === "mouse" && activePointerId === null) {
+        isRaining.value = false
+    }
+}
+
+function onPointerEnd(event: PointerEvent) {
+
+    if (event.pointerId !== activePointerId) return
 
     isRaining.value = false
+    activePointerId = null
+
+    const target = event.currentTarget as HTMLElement
+    if (target.hasPointerCapture(event.pointerId)) {
+        target.releasePointerCapture(event.pointerId)
+    }
+
+}
+
+function onPointerCaptureLost() {
+    isRaining.value = false
+    activePointerId = null
 
 }
 
@@ -171,6 +206,8 @@ onUnmounted(() => {
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, .95),
         0 10px 22px rgba(21, 41, 74, .12);
+    touch-action: pan-y;
+    user-select: none;
     --panel-ink: #17304f;
     --panel-muted: #5d7592;
     --panel-line: rgba(37, 70, 116, .2);

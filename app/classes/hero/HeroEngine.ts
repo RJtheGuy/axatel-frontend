@@ -159,7 +159,7 @@ export default class HeroEngine {
         });
     }
 
-    public setForcedLogoAsset(assetUrl: string | null): void {
+    public setForcedLogoAsset(assetUrl: string | null, stageId = "forced-logo"): void {
         this.ambientFlow = false;
         const normalized = assetUrl && assetUrl.trim().length > 0 ? assetUrl.trim() : null;
 
@@ -169,9 +169,27 @@ export default class HeroEngine {
         }
 
         this.setForcedStage({
-            id: "forced-logo",
+            id: stageId,
             type: "logo",
             text: normalized,
+            duration: 9999
+        });
+    }
+
+    public setForcedComposite(text: string, assetUrl = "/immagini/ala.png"): void {
+        this.ambientFlow = false;
+        const normalizedText = text.trim();
+
+        if (!normalizedText) {
+            this.setForcedStage(null);
+            return;
+        }
+
+        this.setForcedStage({
+            id: "forced-composite",
+            type: "composite",
+            text: normalizedText,
+            asset: assetUrl,
             duration: 9999
         });
     }
@@ -179,7 +197,8 @@ export default class HeroEngine {
     private setForcedStage(stage: SequenceStage | null): void {
         const sameStage =
             this.forcedStage?.type === stage?.type &&
-            this.forcedStage?.text === stage?.text;
+            this.forcedStage?.text === stage?.text &&
+            this.forcedStage?.asset === stage?.asset;
 
         if (sameStage) {
             return;

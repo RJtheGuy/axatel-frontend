@@ -1,10 +1,11 @@
-export type SequenceStageType = "flow" | "text" | "logo" | "scatter";
+export type SequenceStageType = "flow" | "text" | "logo" | "composite" | "scatter";
 
 export interface SequenceStage {
     id: string;
     type: SequenceStageType;
     duration: number;
     text?: string;
+    asset?: string;
 }
 
 export class SequenceManager {

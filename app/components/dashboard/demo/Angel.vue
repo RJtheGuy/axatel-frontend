@@ -1,9 +1,30 @@
 <template>
-<section class="angel">
+<section ref="angelEl" class="angel">
+    <Teleport to="body">
+        <span
+            v-if="flyingDot"
+            ref="flyingDotEl"
+            class="flying-alarm-dot"
+            :class="{ 'is-waiting': !flyingDot.isFlying }"
+            :style="{
+                left: `${flyingDot.x}px`,
+                top: `${flyingDot.y}px`,
+                color: flyingDot.color
+            }"
+            aria-hidden="true"
+        ></span>
+    </Teleport>
+
     <div class="window">
         <div class="window-header">
             <div class="window-title">
-                Angel BPM
+                <img
+    :src="resolveImage('/immagini/Angel.png')"
+    alt=""
+    width="38"
+    height="38"
+/>
+                <span>Angel BPM</span>
             </div>
 
             <div class="window-buttons">
@@ -25,38 +46,103 @@
                     </button>
                 </div>
 
-                <div class="timeline-list">
-                    <div
-                        v-for="a in alarms"
-                        :key="a.id"
-                        class="alarm-card"
-                        :class="{ 'new-alarm': a.id === latestAlarmId }"
-                    >
-                        <span
-                            class="dot"
-                            :style="{ background: colorFor(a.name) }"
-                        ></span>
+                <div class="timeline-content">
+                    <div class="timeline-list">
+                        <button
+                            v-for="a in alarms"
+                            :key="a.id"
+                            :data-alarm-id="a.id"
+                            type="button"
+                            class="alarm-card"
+                            :class="{
+                                'new-alarm': a.id === latestAlarmId,
+                                'alarm-landed': a.id === landingAlarmId
+                            }"
+                            @click="showProcedure(a)"
+                        >
+                            <span
+                                v-if="landedAlarmIds.has(a.id)"
+                                class="dot"
+                                :style="{ background: colorFor(a.name) }"
+                            ></span>
 
-                        <div class="alarm-info">
-                            <div class="alarm-top">
-                                <span class="alarm-name">
-                                    {{ a.name }}
-                                </span>
+                            <div class="alarm-info">
+                                <div class="alarm-top">
+                                    <span class="alarm-name">
+                                        {{ a.name }}
+                                    </span>
 
-                                <span class="alarm-value">
-                                    {{ a.value }}{{ a.unit }}
-                                </span>
+                                    <span class="alarm-value">
+                                        {{ a.value }}{{ a.unit }}
+                                    </span>
+                                </div>
+
+                                <div class="alarm-time">
+                                    {{ formatTime(a.timestamp) }}
+                                </div>
                             </div>
-
-                            <div class="alarm-time">
-                                {{ formatTime(a.timestamp) }}
-                            </div>
-                        </div>
+                        </button>
                     </div>
+
+                    <Transition name="procedure-panel">
+                        <aside v-if="activeProcedure" class="procedure-sidebar procedure-sidebar-mobile">
+                            <div class="procedure-header">
+                                <div class="procedure-heading">
+                                    <h3 class="text-uppercase">Procedura</h3>
+                                    <p>{{ activeProcedure.name }}</p>
+                                </div>
+
+                                <button
+                                    class="procedure-close"
+                                    type="button"
+                                    aria-label="Chiudi procedure"
+                                    title="Chiudi"
+                                    @click="activeProcedure = null"
+                                >
+                                    Chiudi
+                                </button>
+                            </div>
+
+                            <ol class="procedure-list">
+                                <li v-for="step in activeProcedure.steps" :key="step">
+                                    <span class="procedure-step-icon" aria-hidden="true"></span>
+                                    <span>{{ step }}</span>
+                                </li>
+                            </ol>
+                        </aside>
+                    </Transition>
                 </div>
             </aside>
 
             <main class="graph">
+                <Transition name="procedure-panel">
+                    <aside v-if="activeProcedure" class="procedure-sidebar procedure-sidebar-desktop">
+                        <div class="procedure-header">
+                            <div class="procedure-heading">
+                                <h3 class="text-uppercase">Procedura</h3>
+                                <p>{{ activeProcedure.name }}</p>
+                            </div>
+
+                            <button
+                                class="procedure-close"
+                                type="button"
+                                aria-label="Chiudi procedure"
+                                title="Chiudi"
+                                @click="activeProcedure = null"
+                            >
+                                Chiudi
+                            </button>
+                        </div>
+
+                        <ol class="procedure-list">
+                            <li v-for="step in activeProcedure.steps" :key="step">
+                                <span class="procedure-step-icon" aria-hidden="true"></span>
+                                <span>{{ step }}</span>
+                            </li>
+                        </ol>
+                    </aside>
+                </Transition>
+
                 <div class="empty" v-if="alarms.length === 0">
                     <h2 class="empty-title">
                         Nessun evento rilevato
@@ -99,6 +185,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue"
+import alarmProcedures from "~/data/alarmProcedures.json"
 type ECharts = import("echarts").ECharts
 type EChartsModule = typeof import("echarts")
 
@@ -110,19 +197,42 @@ type Alarm = {
     value: number
 }
 
+type AlarmEvent = {
+    application: string
+    origin: { x: number; y: number }
+    getOrigin: () => { x: number; y: number }
+}
+
+type Procedure = {
+    name: string
+    steps: string[]
+}
+
 const props = defineProps<{
-    lastAlarm?: string | null
+    alarmEvent?: AlarmEvent | null
 }>()
 
 const alarms = ref<Alarm[]>([])
 const latestAlarmId = ref<string | null>(null)
+const landedAlarmIds = ref(new Set<string>())
+const landingAlarmId = ref<string | null>(null)
+const angelEl = ref<HTMLElement | null>(null)
 const chartEl = ref<HTMLElement | null>(null)
 const pieEl = ref<HTMLElement | null>(null)
+const flyingDotEl = ref<HTMLElement | null>(null)
+const flyingDot = ref<{ x: number; y: number; color: string; isFlying: boolean } | null>(null)
+const activeProcedure = ref<Procedure | null>(null)
 
 let chart: ECharts | null = null
 let pieChart: ECharts | null = null
 let echartsModule: EChartsModule | null = null
 let latestAlarmTimer: ReturnType<typeof setTimeout> | null = null
+let flightAnimation: Animation | null = null
+let flightSequence = 0
+let waitingAnchorRaf = 0
+let isProcessingAlarmQueue = false
+const alarmQueue: AlarmEvent[] = []
+const processedAlarmIds = new Set<string>()
 
 const colors: Record<string, string> = {
     "Crepa aperta": "#6f7682",
@@ -130,6 +240,14 @@ const colors: Record<string, string> = {
     Esondazione: "#2f9df4",
     Frana: "#d94841",
     "Lavori in corso": "#ff8a1e"
+}
+
+const alarmNameByApplication: Record<string, string> = {
+    "Geo Angel": "Frana",
+    "Traffic Alert": "Traffico",
+    "Angel River": "Esondazione",
+    "Angel Road Site": "Lavori in corso",
+    "Angel Bridge": "Crepa aperta"
 }
 
 function colorFor(name: string) {
@@ -352,7 +470,7 @@ async function renderPie() {
     pieChart.setOption(buildPieOption())
 }
 
-function refresh() {
+async function refresh() {
     const previousTopId = alarms.value[0]?.id ?? null
 
     alarms.value = JSON.parse(
@@ -372,17 +490,189 @@ function refresh() {
         }, 2600)
     }
 
-    nextTick(async () => {
-        if (alarms.value.length > 0) {
-            await Promise.all([renderChart(), renderPie()])
+    await nextTick()
+
+    if (alarms.value.length > 0) {
+        await Promise.all([renderChart(), renderPie()])
+    }
+
+    return currentTopId
+}
+
+async function waitForNewAlarm(expectedName: string, sequence: number) {
+    const timeoutAt = performance.now() + 10000
+
+    while (sequence === flightSequence && performance.now() < timeoutAt) {
+        const storedAlarms: Alarm[] = JSON.parse(localStorage.getItem("alarms") ?? "[]")
+        const newAlarm = storedAlarms.find((alarm) => (
+            alarm.name === expectedName && !processedAlarmIds.has(alarm.id)
+        ))
+
+        if (newAlarm) {
+            processedAlarmIds.add(newAlarm.id)
+            return newAlarm.id
         }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 80))
+    }
+
+    return null
+}
+
+function followWaitingCard(event: AlarmEvent, sequence: number) {
+    const updatePosition = () => {
+        if (sequence !== flightSequence || !flyingDot.value || flyingDot.value.isFlying) {
+            waitingAnchorRaf = 0
+            return
+        }
+
+        const origin = event.getOrigin()
+        flyingDot.value = {
+            ...flyingDot.value,
+            ...origin
+        }
+        waitingAnchorRaf = requestAnimationFrame(updatePosition)
+    }
+
+    if (waitingAnchorRaf) {
+        cancelAnimationFrame(waitingAnchorRaf)
+    }
+    waitingAnchorRaf = requestAnimationFrame(updatePosition)
+}
+
+function stopFollowingCard() {
+    if (waitingAnchorRaf) {
+        cancelAnimationFrame(waitingAnchorRaf)
+        waitingAnchorRaf = 0
+    }
+}
+
+async function animateAlarm(event: AlarmEvent) {
+    const sequence = flightSequence
+    activeProcedure.value = null
+    landingAlarmId.value = null
+
+    const expectedName = alarmNameByApplication[event.application]
+
+    flyingDot.value = {
+        ...event.origin,
+        color: colorFor(expectedName),
+        isFlying: false
+    }
+    followWaitingCard(event, sequence)
+
+    const newAlarmId = await waitForNewAlarm(expectedName, sequence)
+    if (!newAlarmId || sequence !== flightSequence) {
+        stopFollowingCard()
+        flyingDot.value = null
+        return
+    }
+
+    await refresh()
+    latestAlarmId.value = newAlarmId
+    await nextTick()
+
+    if (sequence !== flightSequence) return
+
+    const target = angelEl.value?.querySelector<HTMLElement>(`[data-alarm-id="${newAlarmId}"]`)
+    if (!target) return
+
+    const targetRect = target.getBoundingClientRect()
+    const targetX = targetRect.left + Math.min(24, targetRect.width / 2)
+    const targetY = targetRect.top + targetRect.height / 2
+    const alarm = alarms.value.find((item) => item.id === newAlarmId)
+    if (!alarm) return
+
+    const departureOrigin = event.getOrigin()
+    stopFollowingCard()
+
+    flyingDot.value = {
+        ...departureOrigin,
+        color: colorFor(alarm.name),
+        isFlying: true
+    }
+
+    await nextTick()
+    if (!flyingDotEl.value || sequence !== flightSequence) return
+
+    flightAnimation?.cancel()
+
+    const deltaX = targetX - departureOrigin.x
+    const deltaY = targetY - departureOrigin.y
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const duration = reducedMotion ? 1 : 1450
+    const arcHeight = Math.max(130, Math.min(240, Math.abs(deltaY) * 0.34))
+
+    flightAnimation = flyingDotEl.value.animate([
+        { transform: "translate(-50%, -50%) scale3d(1, 1, 1)", opacity: 1 },
+        { transform: "translate(-50%, calc(-50% + 12px)) scale3d(1.18, .72, 1)", opacity: 1, offset: 0.1 },
+        { transform: `translate3d(calc(-50% + ${deltaX * 0.5}px), calc(-50% + ${deltaY * 0.42 - arcHeight}px), 0) scale3d(1.2, 1.2, 1)`, opacity: 1, offset: 0.5 },
+        { transform: `translate3d(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px), 0) scale3d(1.2, .72, 1)`, opacity: 1, offset: 0.79 },
+        { transform: `translate3d(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY - 28}px), 0) scale3d(.88, 1.08, 1)`, opacity: 1, offset: 0.9 },
+        { transform: `translate3d(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px), 0) scale3d(.72, .72, 1)`, opacity: 1 }
+    ], {
+        duration,
+        easing: "cubic-bezier(.2, .72, .18, 1)",
+        fill: "forwards"
     })
+
+    try {
+        await flightAnimation.finished
+    } catch {
+        return
+    }
+
+    if (sequence !== flightSequence) return
+
+    flyingDot.value = null
+    landedAlarmIds.value = new Set([...landedAlarmIds.value, alarm.id])
+    landingAlarmId.value = alarm.id
+    activeProcedure.value = {
+        name: alarm.name,
+        steps: alarmProcedures[alarm.name as keyof typeof alarmProcedures] ?? []
+    }
+
+    window.setTimeout(() => {
+        if (landingAlarmId.value === alarm.id) {
+            landingAlarmId.value = null
+        }
+    }, 700)
+}
+
+async function processAlarmQueue() {
+    if (isProcessingAlarmQueue) return
+
+    isProcessingAlarmQueue = true
+
+    while (alarmQueue.length > 0) {
+        const event = alarmQueue.shift()
+        if (event) {
+            await animateAlarm(event)
+        }
+    }
+
+    isProcessingAlarmQueue = false
+}
+
+function showProcedure(alarm: Alarm) {
+    activeProcedure.value = {
+        name: alarm.name,
+        steps: alarmProcedures[alarm.name as keyof typeof alarmProcedures] ?? []
+    }
 }
 
 function resetAlarms() {
+    flightSequence++
+    alarmQueue.length = 0
+    stopFollowingCard()
+    flightAnimation?.cancel()
+    flyingDot.value = null
     localStorage.removeItem("alarms")
 
     alarms.value = []
+    landedAlarmIds.value = new Set()
+    landingAlarmId.value = null
+    processedAlarmIds.clear()
 
     chart?.dispose()
     chart = null
@@ -396,16 +686,23 @@ function onResize() {
     pieChart?.resize()
 }
 
-watch(() => props.lastAlarm, () => {
-    refresh()
+watch(() => props.alarmEvent, (event) => {
+    if (event) {
+        alarmQueue.push(event)
+        processAlarmQueue()
+    }
 })
 
-onMounted(() => {
-    refresh()
+onMounted(async () => {
+    await refresh()
+    landedAlarmIds.value = new Set(alarms.value.map((alarm) => alarm.id))
+    alarms.value.forEach((alarm) => processedAlarmIds.add(alarm.id))
     window.addEventListener("resize", onResize)
 })
 
 onUnmounted(() => {
+    flightSequence++
+    stopFollowingCard()
     window.removeEventListener("resize", onResize)
 
     chart?.dispose()
@@ -417,6 +714,8 @@ onUnmounted(() => {
     if (latestAlarmTimer) {
         clearTimeout(latestAlarmTimer)
     }
+
+    flightAnimation?.cancel()
 })
 
 defineExpose({ refresh })
@@ -466,8 +765,17 @@ defineExpose({ refresh })
 }
 
 .window-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-size: 0.95rem;
     font-weight: 600;
+}
+
+.window-title img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
 }
 
 .window-buttons {
@@ -525,13 +833,33 @@ defineExpose({ refresh })
     gap: 16px;
 }
 
+.timeline-content {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .alarm-card {
+    width: 100%;
     display: flex;
     gap: 12px;
     padding: 14px 16px;
     border-radius: var(--ax-card-radius);
     border: 1px solid rgba(7, 17, 29, 0.09);
     background: rgba(255, 255, 255, 0.46);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.alarm-card:hover,
+.alarm-card:focus-visible {
+    border-color: rgba(197, 35, 23, 0.42);
+    background: rgba(255, 255, 255, 0.72);
+    outline: none;
 }
 
 .alarm-card.new-alarm {
@@ -540,11 +868,18 @@ defineExpose({ refresh })
     animation: newAlarmPulse 0.95s ease-in-out infinite;
 }
 
+.alarm-card.alarm-landed {
+    animation: alarmLanding 0.65s cubic-bezier(.2, .8, .25, 1);
+    transform-origin: 24px 50%;
+}
+
 .dot {
     width: 10px;
     height: 10px;
+    flex: 0 0 10px;
     border-radius: 50%;
     margin-top: 5px;
+    animation: dotMaterialize 0.5s cubic-bezier(.2, .9, .25, 1.25);
 }
 
 .alarm-info {
@@ -563,10 +898,141 @@ defineExpose({ refresh })
 }
 
 .graph {
+    position: relative;
     flex: 1;
     display: flex;
     gap: 28px;
     padding: 24px;
+}
+
+.flying-alarm-dot {
+    position: fixed;
+    z-index: 10000;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.98) 0 7%, rgba(255, 255, 255, 0.45) 8%, transparent 25%),
+        radial-gradient(circle at 38% 34%, color-mix(in srgb, currentColor 68%, white) 0 14%, currentColor 48%, color-mix(in srgb, currentColor 72%, black) 100%);
+    box-shadow:
+        inset -7px -9px 11px rgba(0, 0, 0, 0.3),
+        inset 5px 5px 8px rgba(255, 255, 255, 0.34),
+        0 0 0 7px color-mix(in srgb, currentColor 20%, transparent),
+        0 16px 28px rgba(7, 17, 29, 0.44);
+    filter: saturate(1.18);
+    transform: translate(-50%, -50%);
+    will-change: transform;
+    pointer-events: none;
+}
+
+.flying-alarm-dot.is-waiting {
+    animation: ballReady 0.72s ease-in-out infinite alternate;
+}
+
+.procedure-sidebar {
+    position: absolute;
+    z-index: 20;
+    top: 0;
+    right: 0;
+    width: min(320px, 88%);
+    height: 100%;
+    padding: 20px 18px;
+    border-left: 1px solid rgba(197, 35, 23, 0.18);
+    background: rgb(255, 240, 220);
+    box-shadow: -18px 0 36px rgba(7, 17, 29, 0.16);
+    overflow-y: auto;
+}
+
+.procedure-sidebar-mobile {
+    display: none;
+}
+
+.procedure-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.procedure-heading h3 {
+    margin: 0;
+    color: #141e27;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.procedure-heading p {
+    margin: 3px 0 0;
+    color: #5d6570;
+    font-size: 0.82rem;
+}
+
+.procedure-close {
+    min-height: 36px;
+    padding: 0 13px;
+    border: 1px solid #1f1f1f;
+    background: transparent;
+    color: #1f1f1f;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.procedure-list {
+    margin: 22px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+    list-style: none;
+    counter-reset: procedure-step;
+}
+
+.procedure-list li {
+    min-height: 44px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(197, 35, 23, 0.12);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.82);
+    color: #141e27;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    counter-increment: procedure-step;
+    transition: background 0.18s ease;
+}
+
+.procedure-list li:hover {
+    background: rgb(255, 220, 200);
+}
+
+.procedure-step-icon {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(197, 35, 23, 0.12);
+    color: #c52317;
+    font-weight: 800;
+}
+
+.procedure-step-icon::after {
+    content: counter(procedure-step);
+}
+
+.procedure-panel-enter-active,
+.procedure-panel-leave-active {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.procedure-panel-enter-from,
+.procedure-panel-leave-to {
+    transform: translateX(100%);
+    opacity: 0;
 }
 
 .chart {
@@ -643,6 +1109,40 @@ defineExpose({ refresh })
     }
 }
 
+@keyframes ballReady {
+    from {
+        transform: translate(-50%, -50%) scale(0.88);
+    }
+
+    to {
+        transform: translate(-50%, calc(-50% - 10px)) scale(1.08);
+    }
+}
+
+@keyframes alarmLanding {
+    0%, 100% { transform: translateY(0); }
+    32% { transform: translateY(7px) scaleY(0.96); }
+    62% { transform: translateY(-8px); }
+    82% { transform: translateY(3px); }
+}
+
+@keyframes dotMaterialize {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+
+    58% {
+        opacity: 1;
+        transform: scale(1.65);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 @media (max-width: 900px) {
     .angel {
         min-height: auto;
@@ -668,6 +1168,19 @@ defineExpose({ refresh })
 
     .timeline-list {
         min-height: 14vh;
+    }
+
+    .procedure-sidebar-desktop {
+        display: none;
+    }
+
+    .procedure-sidebar-mobile {
+        display: block;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border-left: 0;
+        box-shadow: none;
     }
 
     .graph {

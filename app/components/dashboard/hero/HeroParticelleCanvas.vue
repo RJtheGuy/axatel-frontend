@@ -1,20 +1,6 @@
 <template>
     <section ref="heroEl" class="hero" :class="{ 'is-engine-ready': engineReady }">
         <canvas ref="canvas"></canvas>
-
-        <div class="overlay">
-            <button
-                class="scroll-invite"
-                type="button"
-                aria-label="Vai alle demo interattive"
-                @click="requestDemoScroll"
-            >
-                <span>Scopri come funziona</span>
-                <svg class="arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path d="M12 5v14M19 12l-7 7-7-7" />
-                </svg>
-            </button>
-        </div>
     </section>
 </template>
 
@@ -37,7 +23,8 @@ const defaultFrasi = [
 ];
 
 const DEFAULT_QUOTE_TEXT = "Tutti noi di Axatel abbiamo un obiettivo in comune:\nabbiamo a cuore ciò che facciamo e l'impatto positivo che generiamo per i nostri partner e per le comunità in cui viviamo e operiamo.\nPer noi e sempre una questione personale";
-const DEFAULT_CASES_LOGO_ASSET = "/immagini/Angel.png";
+const DEFAULT_CASES_LOGO_ASSET = resolveImage("/immagini/angelo.png");
+
 
 const resolveFrasi = (frasi?: string[]): string[] => {
     return frasi && frasi.length > 0 ? frasi : defaultFrasi;
@@ -55,17 +42,13 @@ const resolveCasesLogoAsset = (asset?: string): string => {
     return normalized.length > 0 ? normalized : DEFAULT_CASES_LOGO_ASSET;
 };
 
-function requestDemoScroll(): void {
-    window.dispatchEvent(new CustomEvent("axatel-demo-jump"));
-}
-
 const canvas = ref<HTMLCanvasElement | null>(null);
 const heroEl = ref<HTMLElement | null>(null);
 const engineReady = ref(false);
 const sequence = new SequenceManager(resolveFrasi(props.frasi));
 
 let engine: HeroEngine | null = null;
-type SectionKey = "hero" | "demo" | "quote" | "cases";
+type SectionKey = "hero" | "demo" | "process" | "quote" | "cases";
 
 type SectionElements = Record<SectionKey, Element | null>;
 type SectionRatios = Record<SectionKey, number>;
@@ -80,6 +63,7 @@ let isMounted = false;
 let sectionEls: SectionElements = {
     hero: null,
     demo: null,
+    process: null,
     quote: null,
     cases: null
 };
@@ -103,6 +87,11 @@ function applySectionState(next: SectionKey): void {
     if (!engine || next === activeSection) return;
 
     activeSection = next;
+    window.dispatchEvent(
+        new CustomEvent("axatel-hero-visibility", {
+            detail: { active: next === "hero" }
+        })
+    );
 
     if (next === "hero") {
         engine.setFormationSuppressed(false);
@@ -115,10 +104,14 @@ function applySectionState(next: SectionKey): void {
         return;
     }
 
+    if (next === "process") {
+        engine.setAmbientFlow();
+        return;
+    }
+
     if (next === "quote") {
         engine.setFormationSuppressed(false);
-        engine.setForcedText(resolveQuoteText(props.quoteText));
-        return;
+engine.setForcedLogoAsset(resolveImage("/immagini/ala.png"), "forced-quote-logo");        return;
     }
 
     engine.setFormationSuppressed(false);
@@ -129,6 +122,7 @@ function updateSectionRefs(): void {
     sectionEls = {
         hero: document.querySelector("section.hero"),
         demo: document.querySelector("section.demo-section"),
+        process: document.querySelector("section.spiegazione-section"),
         quote: document.querySelector("section.citazione-section"),
         cases: document.querySelector("section.casi-section")
     };
@@ -138,7 +132,7 @@ function getBestSection(ratios: SectionRatios): { key: SectionKey; ratio: number
     let best: SectionKey = "hero";
     let bestRatio = ratios.hero;
 
-    for (const key of ["demo", "quote", "cases"] as const) {
+    for (const key of ["demo", "process", "quote", "cases"] as const) {
         if (ratios[key] > bestRatio) {
             best = key;
             bestRatio = ratios[key];
@@ -173,15 +167,17 @@ function syncActiveSectionFromViewport(): void {
     const ratios: SectionRatios = {
         hero: visibleRatio(sectionEls.hero),
         demo: visibleRatio(sectionEls.demo),
+        process: visibleRatio(sectionEls.process),
         quote: visibleRatio(sectionEls.quote),
         cases: visibleRatio(sectionEls.cases)
     };
 
     // If refs are stale (all zero), refresh once and recompute.
-    if (ratios.hero === 0 && ratios.demo === 0 && ratios.quote === 0 && ratios.cases === 0) {
+    if (ratios.hero === 0 && ratios.demo === 0 && ratios.process === 0 && ratios.quote === 0 && ratios.cases === 0) {
         updateSectionRefs();
         ratios.hero = visibleRatio(sectionEls.hero);
         ratios.demo = visibleRatio(sectionEls.demo);
+        ratios.process = visibleRatio(sectionEls.process);
         ratios.quote = visibleRatio(sectionEls.quote);
         ratios.cases = visibleRatio(sectionEls.cases);
     }
@@ -211,6 +207,7 @@ async function startEngine(): Promise<void> {
     const initialSection = getBestSection({
         hero: visibleRatio(sectionEls.hero),
         demo: visibleRatio(sectionEls.demo),
+        process: visibleRatio(sectionEls.process),
         quote: visibleRatio(sectionEls.quote),
         cases: visibleRatio(sectionEls.cases)
     }).key;
@@ -327,6 +324,11 @@ watch(
 
 onBeforeUnmount(() => {
     isMounted = false;
+    window.dispatchEvent(
+        new CustomEvent("axatel-hero-visibility", {
+            detail: { active: false }
+        })
+    );
     removeEngineStartIntentListeners();
     window.removeEventListener("scroll", requestSectionSync);
     window.removeEventListener("resize", requestSectionSync);
@@ -408,63 +410,12 @@ canvas{
     z-index:0;
 }
 
-.overlay{
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-    z-index:2;
-}
-
 .hero-cta {
     position: absolute;
     left: 8vw;
     bottom: 12vh;
     pointer-events: auto;
     box-shadow: 0 10px 24px rgba(165, 27, 15, 0.22);
-}
-
-.scroll-invite {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    border: 0;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.4);
-    font: inherit;
-    transform: translateX(-50%);
-    cursor: pointer;
-    pointer-events: auto;
-    padding: 0;
-    transition: color 0.2s ease;
-}
-
-.scroll-invite:hover,
-.scroll-invite:focus-visible {
-    color: rgba(255, 255, 255, 0.82);
-}
-
-.scroll-invite:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.36);
-    outline-offset: 6px;
-    border-radius: 999px;
-}
-
-.scroll-invite span {
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.4rem;
-    font-weight: 400;
-}
-
-.arrow-down {
-    width: 40px;
-    height: 40px;
-    animation: float 2s infinite ease-in-out;
 }
 
 @keyframes particleDrift{
@@ -476,17 +427,6 @@ canvas{
     }
 }
 
-@keyframes float{
-    0%, 100%{
-        transform:translateY(0);
-        opacity:0.4;
-    }
-    50%{
-        transform:translateY(6px);
-        opacity:1;
-    }
-}
-
 @media (max-width: 1024px) {
     .hero-cta {
         left: 6vw;
@@ -495,20 +435,6 @@ canvas{
 }
 
 @media (max-width: 768px) {
-    .scroll-invite {
-        bottom: 30px;
-    }
-
-    .scroll-invite span {
-        font-size: 0.72rem;
-        letter-spacing: 0.24rem;
-    }
-
-    .arrow-down {
-        width: 34px;
-        height: 34px;
-    }
-
     .hero-cta {
         left: 5vw;
         transform: none;

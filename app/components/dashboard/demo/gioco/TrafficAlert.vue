@@ -3,6 +3,10 @@
     class="traffic-card"
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
+    @pointerdown="onPointerDown"
+    @pointerup="onPointerEnd"
+    @pointercancel="onPointerEnd"
+    @lostpointercapture="onPointerCaptureLost"
   >
     <div class="sensor" :class="{ alarm: isAlarm }">
       <div class="core">
@@ -117,6 +121,7 @@ const cars = ref<{
 let nextId = 0
 let energy = 0
 let generating = false
+let activePointerId: number | null = null
 let spawnAccTop = 0
 let spawnAccBottom = 0
 
@@ -331,13 +336,43 @@ function tick(){
   updateAlarmState()
 }
 
-function onPointerEnter(){
+function onPointerDown(event: PointerEvent){
+  if (!event.isPrimary || activePointerId !== null) return
+
+  activePointerId = event.pointerId
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
   energy = Math.min(1, energy + 0.08)
   generating = true
 }
 
-function onPointerLeave(){
+function onPointerEnter(event: PointerEvent){
+  if (event.pointerType !== "mouse" || activePointerId !== null) return
+
+  energy = Math.min(1, energy + 0.08)
+  generating = true
+}
+
+function onPointerLeave(event: PointerEvent){
+  if (event.pointerType === "mouse" && activePointerId === null) {
+    generating = false
+  }
+}
+
+function onPointerEnd(event: PointerEvent){
+  if (event.pointerId !== activePointerId) return
+
+  const target = event.currentTarget as HTMLElement
   generating = false
+  activePointerId = null
+
+  if (target.hasPointerCapture(event.pointerId)) {
+    target.releasePointerCapture(event.pointerId)
+  }
+}
+
+function onPointerCaptureLost(){
+  generating = false
+  activePointerId = null
 }
 
 onMounted(() => {
@@ -373,6 +408,7 @@ onUnmounted(() => {
     inset 0 1px 0 rgba(255, 255, 255, .95),
     0 10px 22px rgba(21, 41, 74, .12);
   user-select: none;
+  touch-action: pan-y;
   --panel-ink: #17304f;
   --panel-muted: #5d7592;
   --panel-line: rgba(37, 70, 116, .2);

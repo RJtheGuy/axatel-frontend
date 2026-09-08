@@ -4,6 +4,10 @@
     class="bridge-card"
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
+    @pointerdown="onPointerDown"
+    @pointerup="onPointerEnd"
+    @pointercancel="onPointerEnd"
+    @lostpointercapture="onPointerCaptureLost"
 >
 
     <div
@@ -112,7 +116,8 @@ const maxValue=ref(0)
 const isAlarm=ref(false)
 
 let closing=false
-let hoverOpen=false
+let pressureOpen=false
+let activePointerId:number|null=null
 let alarmTimer:ReturnType<typeof setTimeout>|null=null
 
 function saveAlarm(){
@@ -202,7 +207,7 @@ function updateValue(){
 
 function tick(){
 
-    if(hoverOpen && !isAlarm.value){
+    if(pressureOpen && !isAlarm.value){
 
         const delta=gsap.ticker.deltaRatio(60)
 
@@ -259,18 +264,54 @@ function tick(){
 
 }
 
-function onPointerEnter(){
-    hoverOpen=true
+function onPointerDown(event:PointerEvent){
+    if(!event.isPrimary || activePointerId!==null) return
+
+    activePointerId=event.pointerId
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+    pressureOpen=true
 }
 
-function onPointerLeave(){
+function onPointerEnter(event:PointerEvent){
+    if(event.pointerType==="mouse" && activePointerId===null){
+        pressureOpen=true
+    }
+}
 
-    hoverOpen=false
+function onPointerLeave(event:PointerEvent){
+    if(event.pointerType!=="mouse" || activePointerId!==null) return
+
+    pressureOpen=false
+    if(!isAlarm.value){
+        closing=true
+    }
+}
+
+function onPointerEnd(event:PointerEvent){
+    if(event.pointerId!==activePointerId) return
+
+    pressureOpen=false
+    activePointerId=null
 
     if(!isAlarm.value){
 
         closing=true
 
+    }
+
+    const target=event.currentTarget as HTMLElement
+    if(target.hasPointerCapture(event.pointerId)){
+        target.releasePointerCapture(event.pointerId)
+    }
+
+}
+
+function onPointerCaptureLost(){
+    pressureOpen=false
+    activePointerId=null
+
+    if(!isAlarm.value){
+        closing=true
     }
 
 }
@@ -308,6 +349,7 @@ onUnmounted(()=>{
         inset 0 1px 0 rgba(255, 255, 255, .95),
         0 10px 22px rgba(21, 41, 74, .12);
     user-select: none;
+    touch-action: pan-y;
     cursor: default;
     --panel-ink: #17304f;
     --panel-muted: #5d7592;

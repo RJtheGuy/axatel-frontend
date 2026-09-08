@@ -1,0 +1,34 @@
+[
+    {
+        "label": "Cosa monitoriamo?",
+        "groups": [
+            { "label": "Ambiente", "links": [{ "label": "Alberi", "href": "/monitoraggio/alberi" }, { "label": "Aria", "href": "/monitoraggio/aria" }, { "label": "Fiumi", "href": "/monitoraggio/fiumi" }, { "label": "Frane", "href": "/monitoraggio/frane" }] },
+            { "label": "Viabilità", "links": [{ "label": "Traffico", "href": "/monitoraggio/traffico" }, { "label": "Cantieri", "href": "/monitoraggio/cantieri" }, { "label": "Gallerie", "href": "/monitoraggio/gallerie" }] },
+            { "label": "Strutture", "links": [{ "label": "Ponti", "href": "/monitoraggio/ponti" }, { "label": "Edifici", "href": "/monitoraggio/edifici" }] }
+        ]
+    },
+    {
+        "label": "Come lo realizziamo?",
+        "groups": [
+            { "label": "Piattaforme", "links": [{ "label": "Gestionale AngelBPM", "href": "/soluzioni/angel-bpm" }, { "label": "Analitici", "href": "/soluzioni/analitici" }] },
+            { "label": "Sensori", "links": [{ "label": "Sensori", "href": "/soluzioni/sensori" }, { "label": "Telecamere intelligenti", "href": "/soluzioni/telecamere-intelligenti" }] },
+            { "label": "Tecnologie", "links": [{ "label": "LoRaWAN", "href": "/soluzioni/lorawan" }, { "label": "Networking", "href": "/soluzioni/networking" }, { "label": "Firmware", "href": "/soluzioni/firmware" }, { "label": "SCADA", "href": "/soluzioni/scada" }, { "label": "PLC", "href": "/soluzioni/plc" }] },
+            { "label": "Servizi", "links": [{ "label": "Progettazione", "href": "/soluzioni/progettazione" }, { "label": "Direzione lavori", "href": "/soluzioni/direzione-lavori" }, { "label": "Control Room", "href": "/soluzioni/control-room" }] }
+        ]
+    },
+    { "label": "Casi di successo", "href": "/casi" },
+    {
+        "label": "Approfondimenti",
+        "groups": [
+            { "label": "Risorse", "links": [{ "label": "Academy", "href": "/approfondimenti/academy" }, { "label": "News", "href": "/approfondimenti/news" }, { "label": "FAQ", "href": "/approfondimenti/faq" }, { "label": "Glossario", "href": "/approfondimenti/glossario" }] }
+        ]
+    },
+    {
+        "label": "Azienda",
+        "groups": [
+            { "label": "Axatel", "links": [{ "label": "Chi siamo?", "href": "/azienda/chi-siamo" }, { "label": "Team", "href": "/azienda/team" }, { "label": "Bilancio di sostenibilità", "href": "/azienda/bilancio-sostenibilita" }] },
+            { "label": "Lavora con noi", "links": [{ "label": "Invia il CV", "href": "/azienda/invia-il-cv" }, { "label": "Diventa Partner", "href": "/azienda/diventa-partner" }] },
+            { "label": "Contatti", "links": [{ "label": "Parla con noi", "href": "/contatti" }] }
+        ]
+    }
+]

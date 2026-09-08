@@ -1,8 +1,11 @@
 <template>
 <div
     class="geo-card"
-    @mousemove="onMouseMove"
-    @mouseleave="onMouseLeave"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerleave="onPointerLeave"
+    @pointerup="onPointerEnd"
+    @pointercancel="onPointerEnd"
 >
 
     <div class="sensor" :class="{ alarm: isAlarm }">
@@ -45,6 +48,7 @@ let lastY = 0
 let lastT = 0
 let wasInside = false
 let peakSpeed = 0
+let activePointerId: number | null = null
 
 function saveAlarm(value: number) {
 
@@ -101,7 +105,23 @@ function triggerAlarm(speed: number) {
 
 }
 
-function onMouseMove(e: MouseEvent) {
+function onPointerDown(event: PointerEvent) {
+    if (!event.isPrimary || activePointerId !== null) return
+
+    activePointerId = event.pointerId
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+    initialized = true
+    lastX = event.clientX
+    lastY = event.clientY
+    lastT = performance.now()
+    wasInside = false
+    peakSpeed = 0
+}
+
+function onPointerMove(e: PointerEvent) {
+
+    if (activePointerId !== null && e.pointerId !== activePointerId) return
+    if (activePointerId === null && e.pointerType !== "mouse") return
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
 
@@ -147,8 +167,13 @@ function onMouseMove(e: MouseEvent) {
 
 }
 
-function onMouseLeave() {
+function onPointerLeave(event: PointerEvent) {
+    if (event.pointerType !== "mouse" || activePointerId !== null) return
 
+    finishImpact()
+}
+
+function finishImpact() {
     if (wasInside) {
         triggerAlarm(peakSpeed)
     }
@@ -156,6 +181,19 @@ function onMouseLeave() {
     peakSpeed = 0
     wasInside = false
     initialized = false
+}
+
+function onPointerEnd(event: PointerEvent) {
+
+    if (event.pointerId !== activePointerId) return
+
+    finishImpact()
+    activePointerId = null
+
+    const target = event.currentTarget as HTMLElement
+    if (target.hasPointerCapture(event.pointerId)) {
+        target.releasePointerCapture(event.pointerId)
+    }
 
 }
 </script>
@@ -174,6 +212,7 @@ function onMouseLeave() {
         inset 0 1px 0 rgba(255, 255, 255, .95),
         0 10px 22px rgba(21, 41, 74, .12);
     user-select: none;
+    touch-action: pan-y;
     cursor: crosshair;
     --panel-ink: #17304f;
     --panel-muted: #5d7592;

@@ -32,7 +32,24 @@ const path = computed(() => {
 
 const { data: page, error } = await useAsyncData(
     () => `flex-${path.value}`,
-    () => findByPath(path.value).catch(() => null),
+    async () => {
+        try {
+            const result = await findByPath(path.value);
+            console.log("[catch-all] findByPath succeeded for", path.value, result ? "(got data)" : "(empty response)");
+            return result;
+        } catch (err: any) {
+            // Was previously swallowed with .catch(() => null) — logging
+            // the real cause instead, since a silent null makes every
+            // failure mode (wrong host, CORS, 404, network error, bad
+            // params) look identical from the outside.
+            console.error("[catch-all] findByPath FAILED for", path.value, {
+                message: err?.message,
+                statusCode: err?.statusCode ?? err?.response?.status,
+                data: err?.data ?? err?.response?._data
+            });
+            return null;
+        }
+    },
     { watch: [path] }
 );
 

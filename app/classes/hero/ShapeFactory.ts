@@ -1,7 +1,12 @@
 export class ShapeFactory {
     private static readonly DRAW_WIDTH = 1600;
     private static readonly DRAW_HEIGHT = 520;
-    private static readonly FONT_FAMILY = "Montserrat, system-ui, sans-serif";
+    private static readonly FONT_FAMILY = '"forma-djr-micro", sans-serif';
+    private static readonly DESKTOP_COMPOSITE_FONT_SIZE = 138;
+    // Dimensioni rese in pixel CSS: su desktop la composizione non scala con il viewport.
+    private static readonly DESKTOP_COMPOSITE_TEXT_PX = 54;
+    private static readonly DESKTOP_COMPOSITE_ASSET_PX = 118;
+    private static readonly DESKTOP_COMPOSITE_GAP_PX = 26;
 
     public static async createSvgFormation(
         svgUrl: string,
@@ -55,7 +60,8 @@ export class ShapeFactory {
             worldHeight,
             {
                 useOpaqueBounds: true,
-                preserveAspect: true
+                preserveAspect: true,
+                ignoreLightPixels: /\.png(?:\?|$)/i.test(svgUrl)
             }
         );
     }
@@ -64,7 +70,13 @@ export class ShapeFactory {
         text: string,
         particleCount: number,
         worldWidth: number,
-        worldHeight: number
+        worldHeight: number,
+        options: {
+            align?: "left" | "center";
+            maxLines?: number;
+            fixedFontSize?: number;
+            maxScale?: number;
+        } = {}
     ): Float32Array {
         const canvas = document.createElement("canvas");
         canvas.width = ShapeFactory.DRAW_WIDTH;
@@ -85,13 +97,14 @@ export class ShapeFactory {
             canvas.width,
             canvas.height,
             isNarrowWorld
-                ? { maxWidthRatio: 0.5, maxLines: 18, maxHeightRatio: 0.98, lineHeightRatio: 0.94, fontWeight: 300 }
+                ? { maxWidthRatio: 0.5, maxLines: options.maxLines ?? 18, maxHeightRatio: 0.98, lineHeightRatio: 0.94, fontWeight: 300, fixedFontSize: options.fixedFontSize }
                 : isDesktopQuote
                     ? { maxWidthRatio: 0.98, maxLines: 8, maxHeightRatio: 0.98, lineHeightRatio: 0.92, fontWeight: 350 }
-                    : { maxWidthRatio: 0.96 }
+                    : { maxWidthRatio: 0.96, maxLines: options.maxLines, fixedFontSize: options.fixedFontSize }
         );
 
-        context.textAlign = "center";
+        const textAlign = options.align ?? "center";
+        context.textAlign = textAlign;
         context.textBaseline = "top";
         context.fillStyle = "#fff";
 
@@ -102,7 +115,7 @@ export class ShapeFactory {
         for (const line of lines) {
             const lineWeight = isNarrowWorld && /^CEO,\s*Axatel$/i.test(line.trim()) ? 350 : isNarrowWorld ? 300 : 350;
             context.font = `${lineWeight} ${fontSize}px ${ShapeFactory.FONT_FAMILY}`;
-            context.fillText(line, canvas.width / 2, y);
+            context.fillText(line, textAlign === "left" ? canvas.width * 0.02 : canvas.width / 2, y);
             y += lineHeight;
         }
 
@@ -113,9 +126,107 @@ export class ShapeFactory {
             worldHeight,
             {
                 useOpaqueBounds: true,
-                preserveAspect: true
+                preserveAspect: true,
+                maxScale: options.maxScale
             }
         );
+    }
+
+    public static async createCompositeFormation(
+        text: string,
+        assetUrl: string,
+        particleCount: number,
+        worldWidth: number,
+        worldHeight: number,
+        pixelsPerWorldUnit = 0
+    ): Promise<Float32Array> {
+        const useMobileLayout = window.innerWidth <= 768 || worldWidth / Math.max(1, worldHeight) < 0.82;
+        const pxPerUnit = pixelsPerWorldUnit > 0
+            ? pixelsPerWorldUnit
+            : window.innerHeight / Math.max(1, worldHeight);
+        const assetParticleCount = Math.round(particleCount * (useMobileLayout ? 0.24 : 0.26));
+        const textParticleCount = particleCount - assetParticleCount;
+        const assetFormation = await ShapeFactory.createSvgFormation(
+            assetUrl,
+            assetParticleCount,
+            useMobileLayout
+                ? worldWidth * 0.28
+                : Math.min(worldWidth * 0.25, (ShapeFactory.DESKTOP_COMPOSITE_ASSET_PX * 1.7) / pxPerUnit),
+            useMobileLayout
+                ? worldHeight * 0.72
+                : Math.min(worldHeight * 0.96, ShapeFactory.DESKTOP_COMPOSITE_ASSET_PX / pxPerUnit)
+        );
+        const textFormation = ShapeFactory.createTextFormation(
+            text,
+            textParticleCount,
+            worldWidth * (useMobileLayout ? 0.6 : 0.46),
+            worldHeight * (useMobileLayout ? 0.72 : 0.72),
+            {
+                align: "left",
+                maxLines: useMobileLayout ? 8 : 5,
+                fixedFontSize: useMobileLayout ? 126 : ShapeFactory.DESKTOP_COMPOSITE_FONT_SIZE,
+                maxScale: useMobileLayout
+                    ? undefined
+                    : (ShapeFactory.DESKTOP_COMPOSITE_TEXT_PX / ShapeFactory.DESKTOP_COMPOSITE_FONT_SIZE) / pxPerUnit
+            }
+        );
+        const result = new Float32Array(particleCount * 3);
+        const assetOffsetY = 0;
+        let assetMinRawX = Number.POSITIVE_INFINITY;
+        let assetMaxRawX = Number.NEGATIVE_INFINITY;
+        let textMinX = Number.POSITIVE_INFINITY;
+        let textMaxX = Number.NEGATIVE_INFINITY;
+        let textMaxY = Number.NEGATIVE_INFINITY;
+
+        for (let index = 0; index < assetParticleCount; index++) {
+            const mirroredX = -assetFormation[index * 3]!;
+            assetMinRawX = Math.min(assetMinRawX, mirroredX);
+            assetMaxRawX = Math.max(assetMaxRawX, mirroredX);
+        }
+
+        for (let index = 0; index < textParticleCount; index++) {
+            textMinX = Math.min(textMinX, textFormation[index * 3]!);
+            textMaxX = Math.max(textMaxX, textFormation[index * 3]!);
+            textMaxY = Math.max(textMaxY, textFormation[index * 3 + 1]!);
+        }
+
+        const safeAssetMinX = Number.isFinite(assetMinRawX) ? assetMinRawX : 0;
+        const safeAssetMaxX = Number.isFinite(assetMaxRawX) ? assetMaxRawX : 0;
+        const safeTextMinX = Number.isFinite(textMinX) ? textMinX : 0;
+        const safeTextMaxX = Number.isFinite(textMaxX) ? textMaxX : 0;
+
+        let assetOffsetX: number;
+        let textOffsetX: number;
+        let textOffsetY: number;
+
+        if (useMobileLayout) {
+            assetOffsetX = -worldWidth * 0.36;
+            textOffsetX = safeAssetMaxX + assetOffsetX + worldWidth * 0.035 - safeTextMinX;
+            textOffsetY = worldHeight * 0.43 - (Number.isFinite(textMaxY) ? textMaxY : 0);
+        } else {
+            const formationGap = ShapeFactory.DESKTOP_COMPOSITE_GAP_PX / pxPerUnit;
+            const textSpan = safeTextMaxX - safeTextMinX;
+            // Il testo resta centrato sull'asse: l'ala viene appoggiata alla sua sinistra.
+            const textStartX = -textSpan / 2;
+            textOffsetX = textStartX - safeTextMinX;
+            assetOffsetX = textStartX - formationGap - safeAssetMaxX;
+            textOffsetY = 0;
+        }
+
+        for (let index = 0; index < assetParticleCount; index++) {
+            const source = index * 3;
+            result[source] = -assetFormation[source]! + assetOffsetX;
+            result[source + 1] = assetFormation[source + 1]! + assetOffsetY;
+        }
+
+        for (let index = 0; index < textParticleCount; index++) {
+            const source = index * 3;
+            const target = (assetParticleCount + index) * 3;
+            result[target] = textFormation[source]! + textOffsetX;
+            result[target + 1] = textFormation[source + 1]! + textOffsetY;
+        }
+
+        return result;
     }
 
     public static getTextSuffixBounds(
@@ -220,6 +331,8 @@ export class ShapeFactory {
         options?: {
             useOpaqueBounds?: boolean;
             preserveAspect?: boolean;
+            ignoreLightPixels?: boolean;
+            maxScale?: number;
         }
     ): Float32Array {
         const context = canvas.getContext("2d");
@@ -242,7 +355,11 @@ export class ShapeFactory {
             for (let x = 0; x < canvas.width; x += step) {
                 const offset = (y * canvas.width + x) * 4;
                 const alpha = imageData[offset + 3]!;
-                if (alpha > threshold) {
+                const isLightPixel = options?.ignoreLightPixels === true &&
+                    imageData[offset]! > 242 &&
+                    imageData[offset + 1]! > 242 &&
+                    imageData[offset + 2]! > 242;
+                if (alpha > threshold && !isLightPixel) {
                     points.push(x, y);
                 }
             }
@@ -290,7 +407,10 @@ export class ShapeFactory {
         const halfHeight = worldHeight / 2;
         const xScale = worldWidth / sourceWidth;
         const yScale = worldHeight / sourceHeight;
-        const uniformScale = Math.min(xScale, yScale);
+        const fitScale = Math.min(xScale, yScale);
+        const uniformScale = options?.maxScale && options.maxScale > 0
+            ? Math.min(fitScale, options.maxScale)
+            : fitScale;
         const pointCount = points.length / 2;
 
         for (let i = 0; i < particleCount; i++) {
@@ -330,6 +450,7 @@ export class ShapeFactory {
             maxHeightRatio?: number;
             lineHeightRatio?: number;
             fontWeight?: number;
+            fixedFontSize?: number;
         } = {}
     ): { lines: string[]; fontSize: number } {
         const explicitLines = text.replace(/\r\n?/g, "\n").split("\n");
@@ -342,7 +463,7 @@ export class ShapeFactory {
         const maxLines = options.maxLines ?? 4;
         const lineHeightRatio = options.lineHeightRatio ?? 1.12;
         const fontWeight = options.fontWeight ?? 350;
-        let fontSize = Math.floor(height * 0.62);
+        let fontSize = options.fixedFontSize ?? Math.floor(height * 0.62);
 
         const buildLines = (size: number): string[] => {
             context.font = `${fontWeight} ${size}px ${ShapeFactory.FONT_FAMILY}`;
@@ -414,6 +535,7 @@ export class ShapeFactory {
 
         let lines = buildLines(fontSize);
         while (
+            options.fixedFontSize === undefined &&
             (
                 lines.length > maxLines ||
                 lines.some((line) => context.measureText(line).width > maxWidth) ||
