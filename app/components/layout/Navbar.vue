@@ -157,7 +157,7 @@ onUnmounted(() => {
         'menu-open': menuOpen
     }"
 >
-    <div class="corporate-bar">
+    <!-- <div class="corporate-bar">
         <div class="corporate-inner">
             <span class="corporate-contacts">
                 <a :href="corporate.phone.href">{{ corporate.phone.label }}</a>
@@ -210,12 +210,12 @@ onUnmounted(() => {
                 </span>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <div class="container">
 
         <NuxtLink class="brand" to="/" aria-label="Axatel, torna alla home" @click="closeMenu">
-<img :src="axatelLogo" width="128" height="30" alt="Axatel Logo" fetchpriority="high" decoding="async">
+            <img :src="axatelLogo" width="128" height="30" alt="Axatel Logo" fetchpriority="high" decoding="async">
         </NuxtLink>
 
         <button
