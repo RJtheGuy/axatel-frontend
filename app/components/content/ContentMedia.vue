@@ -2,7 +2,7 @@
     <img
         v-if="src"
         class="content-media"
-        :src="src"
+        :src="imageUrl(src)"
         :alt="alt || title"
         width="720"
         height="440"
@@ -14,6 +14,8 @@
 </template>
 
 <script setup lang="ts">
+const { imageUrl } = useCmsImage();
+
 defineProps<{
     title: string;
     src?: string;

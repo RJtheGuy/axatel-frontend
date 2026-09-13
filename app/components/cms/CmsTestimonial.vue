@@ -6,7 +6,7 @@
             <img
                 v-if="value.avatar?.url"
                 class="avatar"
-                :src="value.avatar.url"
+                :src="imageUrl(value.avatar.url)"
                 :alt="plainName"
                 width="56"
                 height="56"
@@ -23,6 +23,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
+
+const { imageUrl } = useCmsImage();
 
 const props = defineProps<{
     value: {

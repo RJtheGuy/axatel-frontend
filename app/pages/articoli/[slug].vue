@@ -23,7 +23,7 @@
 
                 <figure v-if="article.image" class="article-media">
                     <img
-                        :src="article.image"
+                        :src="imageUrl(article.image)"
                         :alt="article.title"
                         width="900"
                         height="506"
@@ -82,6 +82,7 @@ type ArticlePayload = Partial<Omit<ArticleData, "content" | "contentHtml">> & {
 };
 
 const route = useRoute();
+const { imageUrl } = useCmsImage();
 const relatedCases = computed(() => successCases.filter((item) => item.slug !== route.params.slug));
 const articleSettings = articleSettingsData as ArticleVisualSettings;
 const titleParticleAsset = computed(() => {

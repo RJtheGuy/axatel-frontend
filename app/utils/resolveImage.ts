@@ -1,11 +1,8 @@
 // app/utils/resolveImage.ts
 //
-// Single source of truth for resolving the old `/immagini/...` static
-// paths (from public/) to real Vite asset URLs now that images live in
-// assets/immagini/ instead. Nuxt auto-imports everything in app/utils/,
-// so `resolveImage(...)` is usable directly in any component template
-// or <script setup>, no import statement needed — this is what
-// Angel.vue's template was already calling before this file existed.
+// Single source of truth for resolving frontend image paths to backend media.
+// Nuxt auto-imports everything in app/utils/, so `resolveImage(...)` is
+// usable directly in any component template or <script setup>.
 //
 // Covers every subfolder under assets/immagini/ (casi-di-successo/,
 // flat top-level files like Angel.png, etc.) in one glob, so every data
@@ -19,15 +16,19 @@ const images = import.meta.glob<string>(
 );
 
 export function resolveImage(pathOrFilename: string | undefined | null): string {
-    if (!pathOrFilename) return "";
+    const config = useRuntimeConfig();
+    const apiBase = import.meta.server ? config.apiInternalBase : config.public.apiBase;
+    const backendOrigin = apiBase.replace(/\/api\/v\d+\/?$/, "");
+    const fallback = `${backendOrigin}/media/frontend/immagini/Axatel.svg`;
 
-    // Already a real URL (e.g. a Wagtail-hosted image from the CMS, or
-    // any other external/absolute source) — pass through untouched.
+    if (!pathOrFilename) return fallback;
+
+    // CMS and external URLs already point to their source of truth.
     if (/^(https?:)?\/\//.test(pathOrFilename) || pathOrFilename.startsWith("data:")) {
         return pathOrFilename;
     }
 
-    // Accepts old-style values in any of these shapes:
+    // Accept old-style values in any of these shapes:
     //   "/immagini/Angel.png"
     //   "immagini/Angel.png"
     //   "Angel.png"
@@ -40,8 +41,8 @@ export function resolveImage(pathOrFilename: string | undefined | null): string 
 
     if (!match) {
         console.warn(`[resolveImage] not found under assets/immagini/: ${pathOrFilename}`);
-        return "";
+        return fallback;
     }
 
-    return match[1];
+    return `${backendOrigin}/media/frontend/immagini/${clean}`;
 }

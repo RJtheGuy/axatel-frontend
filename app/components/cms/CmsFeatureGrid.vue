@@ -5,7 +5,7 @@
 
         <div class="grid">
             <div v-for="(f, i) in features" :key="i" class="feature">
-                <img v-if="f.icon?.url" class="icon" :src="f.icon.url" alt="" width="40" height="40" loading="lazy" />
+                <img v-if="f.icon?.url" class="icon" :src="imageUrl(f.icon.url)" alt="" width="40" height="40" loading="lazy" />
                 <h3 v-html="unwrapParagraph(f.title)"></h3>
                 <div class="description" v-html="f.description"></div>
             </div>
@@ -16,6 +16,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
+
+const { imageUrl } = useCmsImage();
 
 type Feature = { icon?: { url: string }; title: string; description: string };
 

@@ -19,6 +19,12 @@ const navigationItems = computed(() => {
     return Array.isArray(cmsItems) && cmsItems.length > 0 ? cmsItems : fallbackNavigationItems
 })
 
+const headerCta = computed(() => settings.value?.navigation?.cta ?? {
+    visible: true,
+    label: "Parla con un esperto",
+    url: "/contatti",
+})
+
 const hidden = ref(false)
 const solid = ref(false)
 const menuOpen = ref(false)
@@ -240,8 +246,13 @@ onUnmounted(() => {
                 @navigate="closeMenu"
                 @toggle-mobile="toggleMobileItem"
             />
-            <NuxtLink class="nav-cta ax-cta-outline" to="/contatti" @click="closeMenu">
-                Parla con un esperto
+            <NuxtLink
+                v-if="headerCta.visible"
+                class="nav-cta ax-cta-outline"
+                :to="headerCta.url"
+                @click="closeMenu"
+            >
+                {{ headerCta.label }}
             </NuxtLink>
         </nav>
 

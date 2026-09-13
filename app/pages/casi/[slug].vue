@@ -12,7 +12,7 @@
             <img
                 v-if="caso?.cover_image?.url"
                 class="caso-cover"
-                :src="caso.cover_image.url"
+                :src="imageUrl(caso.cover_image.url)"
                 :alt="caso.cover_image.alt || caso.title"
                 :width="caso.cover_image.width"
                 :height="caso.cover_image.height"
@@ -48,6 +48,7 @@ import { computed } from "vue";
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
+const { imageUrl } = useCmsImage();
 
 const slug = computed(() => String(route.params.slug));
 

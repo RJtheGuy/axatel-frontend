@@ -21,7 +21,7 @@
 
                 <figure v-if="post.image" class="post-media">
                     <img
-                        :src="post.image"
+                        :src="imageUrl(post.image)"
                         :alt="post.title"
                         width="900"
                         height="506"
@@ -50,6 +50,7 @@ import ArticleParticleHero from "../../components/articles/ArticleParticleHero.v
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
+const { imageUrl } = useCmsImage();
 
 type BlogPostData = {
     title: string;

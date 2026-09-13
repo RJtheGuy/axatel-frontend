@@ -3,7 +3,7 @@
         <h2 v-if="value.heading" v-html="unwrapParagraph(value.heading)"></h2>
         <div class="grid">
             <article v-for="(card, i) in cards" :key="i" class="card">
-                <img v-if="card.icon?.url" class="icon" :src="card.icon.url" alt="" width="48" height="48" loading="lazy" />
+                <img v-if="card.icon?.url" class="icon" :src="imageUrl(card.icon.url)" alt="" width="48" height="48" loading="lazy" />
                 <h3 v-html="unwrapParagraph(card.title)"></h3>
                 <div class="description" v-html="card.description"></div>
                 <a v-if="card.link_url" class="ax-cta-outline" :href="card.link_url"
@@ -16,6 +16,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
+
+const { imageUrl } = useCmsImage();
 
 type Card = {
     icon?: { url: string };

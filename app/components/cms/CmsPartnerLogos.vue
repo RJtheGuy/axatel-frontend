@@ -11,7 +11,7 @@
             <div v-for="(logo, i) in logos" :key="i" class="logo">
                 <img
                     v-if="logo?.url"
-                    :src="logo.url"
+                    :src="imageUrl(logo.url)"
                     :alt="logo.alt || logo.title || ''"
                     width="160"
                     height="56"
@@ -26,6 +26,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
+
+const { imageUrl } = useCmsImage();
 
 const props = defineProps<{
     value: { heading?: string; logos?: Array<{ url: string; alt?: string; title?: string }> };

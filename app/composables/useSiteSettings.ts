@@ -11,13 +11,17 @@
 
 export interface NavLink {
     label: string
-    url: string
+    href: string
     open_in_new_tab?: boolean
 }
 
 export interface SiteSettings {
     navigation: {
-        links: NavLink[]
+        items: Array<{
+            label: string
+            href?: string | null
+            groups?: Array<{ label: string; links: NavLink[] }>
+        }>
         cta: { visible: boolean; label: string; url: string }
     }
     footer: {
@@ -32,6 +36,7 @@ export interface SiteSettings {
         title: string
         welcome_message: string
         placeholder: string
+        suggestions?: string[]
     }
 }
 

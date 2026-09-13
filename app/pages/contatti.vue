@@ -24,6 +24,17 @@
                 </div>
 
                 <form class="contact-form" @submit.prevent="submitForm">
+                    <div class="form-mode" role="group" aria-label="Tipo di richiesta">
+                        <label class="form-mode-option">
+                            <input v-model="form.submission_type" type="radio" value="contact" />
+                            <span>Richiesta di contatto</span>
+                        </label>
+                        <label class="form-mode-option">
+                            <input v-model="form.submission_type" type="radio" value="candidate" />
+                            <span>Candidatura</span>
+                        </label>
+                    </div>
+
                     <div class="form-grid">
                         <label>
                             Nome e cognome
@@ -56,6 +67,22 @@
                     <label>
                         Messaggio
                         <textarea v-model="form.message" name="message" rows="6" placeholder="Descrivi il progetto, il territorio o l'infrastruttura da monitorare."></textarea>
+                    </label>
+
+                    <label v-if="form.submission_type === 'candidate'">
+                        CV o documento
+                        <input
+                            type="file"
+                            name="attachment"
+                            accept=".pdf,.doc,.docx,.odt,.rtf,.txt"
+                            @change="selectAttachment"
+                        />
+                        <small>PDF, DOC, DOCX, ODT, RTF o TXT. Massimo 10 MB.</small>
+                    </label>
+
+                    <label class="honeypot" aria-hidden="true">
+                        Sito web
+                        <input v-model="form.website" type="text" name="website" tabindex="-1" autocomplete="off" />
                     </label>
 
                     <button class="submit-button" type="submit" :disabled="submitting">
@@ -106,8 +133,16 @@ const form = reactive({
     email: "",
     phone: "",
     interests: [] as string[],
-    message: ""
+    message: "",
+    submission_type: "contact" as "contact" | "candidate",
+    website: "",
+    attachment: null as File | null,
 });
+
+function selectAttachment(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    form.attachment = input.files?.[0] ?? null;
+}
 
 async function submitForm(): Promise<void> {
     submitError.value = "";
@@ -115,9 +150,20 @@ async function submitForm(): Promise<void> {
     submitting.value = true;
 
     try {
+        const body = new FormData();
+        body.append("name", form.name);
+        body.append("company", form.company);
+        body.append("email", form.email);
+        body.append("phone", form.phone);
+        body.append("message", form.message);
+        body.append("submission_type", form.submission_type);
+        body.append("website", form.website);
+        form.interests.forEach((interest) => body.append("interests", interest));
+        if (form.attachment) body.append("attachment", form.attachment);
+
         await $fetch(`${apiBase()}/contact/`, {
             method: "POST",
-            body: { ...form }
+            body
         });
 
         submitted.value = true;
@@ -127,6 +173,9 @@ async function submitForm(): Promise<void> {
         form.phone = "";
         form.interests = [];
         form.message = "";
+        form.submission_type = "contact";
+        form.website = "";
+        form.attachment = null;
     } catch (error) {
         // Backend validation error or the endpoint being unreachable —
         // either way, tell the visitor honestly rather than showing the
@@ -233,6 +282,32 @@ async function submitForm(): Promise<void> {
     gap: 14px;
 }
 
+.form-mode {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.form-mode-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--ax-color-border-soft);
+    border-radius: 999px;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.form-mode-option input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--ax-color-accent-red-soft);
+}
+
+.form-mode-option span {
+    color: var(--ax-color-text-secondary);
+}
+
 label,
 fieldset {
     min-width: 0;
@@ -245,6 +320,14 @@ label {
     font-size: 0.82rem;
     font-weight: 800;
     letter-spacing: 0.02em;
+}
+
+.honeypot {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
 }
 
 input,

@@ -17,7 +17,7 @@
                     <div class="case-media">
                         <img
                             v-if="item.image"
-                            :src="item.image"
+                            :src="imageUrl(item.image)"
                             :alt="item.title"
                             width="420"
                             height="236"
@@ -59,6 +59,8 @@ const props = defineProps<{
     ctaLabel?: string;
     ctaHref?: string;
 }>();
+
+const { imageUrl } = useCmsImage();
 
 const sectionEl = ref<HTMLElement | null>(null);
 const container = ref<HTMLElement | null>(null);

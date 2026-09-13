@@ -1,7 +1,7 @@
 <template>
     <figure v-if="value.image?.url" class="cms-image">
         <img
-            :src="value.image.url"
+            :src="imageUrl(value.image.url)"
             :alt="value.alt_text || value.image.alt || ''"
             :width="value.image.width"
             :height="value.image.height"
@@ -13,6 +13,8 @@
 </template>
 
 <script setup lang="ts">
+const { imageUrl } = useCmsImage();
+
 defineProps<{
     value: {
         image?: { url: string; alt?: string; width?: number; height?: number };

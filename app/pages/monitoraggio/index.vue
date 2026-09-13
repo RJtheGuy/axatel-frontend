@@ -18,9 +18,18 @@
                 <div v-else class="mon-grid">
                     <article v-for="item in topics" :key="item.slug" class="topic-card">
                         <NuxtLink :to="`/monitoraggio/${item.slug}`" class="topic-link" :aria-label="`Leggi ${item.title}`">
-                            <div class="topic-icon" v-if="item.icon">{{ item.icon }}</div>
-                            <h2>{{ item.title }}</h2>
-                            <p>{{ item.description }}</p>
+                            <div class="topic-media">
+                                <img v-if="item.image" :src="imageUrl(item.image)" :alt="item.image_alt || item.title" width="480" height="280" loading="lazy" decoding="async" />
+                                <div v-else class="topic-placeholder">{{ item.category || "Monitoraggio" }}</div>
+                            </div>
+                            <div class="topic-content">
+                                <div v-if="item.category" class="topic-category">{{ item.category }}</div>
+                                <h2>{{ item.title }}</h2>
+                                <p>{{ item.description }}</p>
+                                <div v-if="item.tags.length" class="topic-tags">
+                                    <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
+                                </div>
+                            </div>
                         </NuxtLink>
                     </article>
                 </div>
@@ -35,11 +44,16 @@ import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 
 const { getPage, getPageBySlug } = useCms();
+const { imageUrl } = useCmsImage();
 
 type TopicItem = {
     title: string;
     icon: string;
     description: string;
+    category: string;
+    image: string;
+    image_alt: string;
+    tags: string[];
     slug: string;
 };
 
@@ -63,6 +77,10 @@ const topics = computed<TopicItem[]>(() =>
         title: p.title,
         icon: p.icon || "",
         description: p.short_description || "",
+        category: p.category || "",
+        image: p.cover_image?.url || "",
+        image_alt: p.cover_image?.alt || "",
+        tags: p.tags || [],
         slug: p.meta?.slug
     }))
 );
@@ -161,6 +179,58 @@ useSeoMeta({
     background: rgba(255, 255, 255, 0.82);
     box-shadow: 0 14px 32px rgba(17, 48, 78, 0.08);
     transition: transform 0.22s ease, border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.topic-media {
+    height: 190px;
+    overflow: hidden;
+    background: #eaf1f6;
+}
+
+.topic-media img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.topic-placeholder {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: #0b355b;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.topic-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+}
+
+.topic-category {
+    color: #c52317;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.topic-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.topic-tags span {
+    border: 1px solid rgba(234, 63, 48, 0.28);
+    border-radius: 999px;
+    padding: 5px 8px;
+    color: #0b355b;
+    font-size: 0.75rem;
+    font-weight: 700;
 }
 
 .topic-link {

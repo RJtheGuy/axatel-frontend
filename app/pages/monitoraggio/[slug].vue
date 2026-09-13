@@ -10,6 +10,16 @@
 
                 <p v-if="topic.description" class="lead">{{ topic.description }}</p>
 
+                <img
+                    v-if="topic.image"
+                    class="topic-cover"
+                    :src="imageUrl(topic.image)"
+                    :alt="topic.image_alt || topic.title"
+                    :width="topic.image_width"
+                    :height="topic.image_height"
+                    decoding="async"
+                />
+
                 <!-- MonitoringPage.body is a real StreamField(BODY_BLOCKS) —
                      same rendering path as Servizio/Blog, not plain v-html. -->
                 <div class="topic-body">
@@ -27,11 +37,16 @@ import ArticleParticleHero from "../../components/articles/ArticleParticleHero.v
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
+const { imageUrl } = useCmsImage();
 
 type TopicData = {
     title: string;
     icon: string;
     description: string;
+    image: string;
+    image_alt: string;
+    image_width?: number;
+    image_height?: number;
     body: Array<{ type: string; value: any; id: string }>;
     meta?: { search_description?: string };
 };
@@ -55,6 +70,10 @@ const topic = computed<TopicData>(() => ({
     title: raw.value.title,
     icon: raw.value.icon || "",
     description: raw.value.short_description || "",
+    image: raw.value.cover_image?.url || "",
+    image_alt: raw.value.cover_image?.alt || "",
+    image_width: raw.value.cover_image?.width,
+    image_height: raw.value.cover_image?.height,
     body: raw.value.body || [],
     meta: raw.value.meta
 }));
@@ -123,6 +142,15 @@ useSeoMeta({
     color: #274e72;
     font-size: 1.12rem;
     line-height: 1.62;
+}
+
+.topic-cover {
+    width: 100%;
+    max-height: 460px;
+    display: block;
+    margin: 0 0 32px;
+    border: 1px solid rgba(11, 53, 91, 0.14);
+    object-fit: cover;
 }
 
 .topic-body {

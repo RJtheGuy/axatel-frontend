@@ -17,7 +17,7 @@
                 <div class="media">
                     <img
                         v-if="item.image?.url"
-                        :src="item.image.url"
+                        :src="imageUrl(item.image.url)"
                         :alt="unwrapParagraph(item.title).replace(/<[^>]+>/g, '') || item.image.alt"
                         width="360"
                         height="220"
@@ -38,6 +38,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
+
+const { imageUrl } = useCmsImage();
 
 type Item = {
     image?: { url: string; alt?: string };
