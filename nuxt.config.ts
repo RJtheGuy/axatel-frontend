@@ -1,4 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+const publicApiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8001/api/v2'
+const publicApiOrigin = publicApiBase.replace(/\/api\/v\d+\/?$/, '')
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
@@ -53,7 +56,7 @@ export default defineNuxtConfig({
         // requests to localhost:8001 were rejected by the browser before
         // they left the page, with nothing in the server logs.
         // PRODUCTION: replace localhost:8001 with the real API origin.
-        'Content-Security-Policy': "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https: http://localhost:8001; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8001; form-action 'self'; upgrade-insecure-requests",
+        'Content-Security-Policy': `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https: ${publicApiOrigin}; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' ${publicApiOrigin}; form-action 'self'; upgrade-insecure-requests`,
         'Cross-Origin-Opener-Policy': 'same-origin',
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
