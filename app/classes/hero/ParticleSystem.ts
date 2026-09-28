@@ -520,11 +520,16 @@ export class ParticleSystem {
         const isTextStage = this.currentStageType === "text" || this.currentStageType === "composite";
         const isAnchoredFormationStage = isLogoStage || isTextStage || this.currentStageType === "scatter";
         const allowOutOfViewByScroll = isAnchoredFormationStage && this.anchorOffsetY > 0.0001;
+        // On portrait screens (phones) the hero headline fills the width,
+        // so the quote logo sits in the empty band above it instead of on
+        // the right, where it used to overlap the headline.
+        const isPortraitViewport = halfY > halfX * 1.1;
         const forcedLogoOffsetX = isQuoteLogoStage
-            ? halfX * 0.48
+            ? (isPortraitViewport ? 0 : halfX * 0.48)
             : isForcedLogoStage
                 ? halfX * 0.06
                 : 0;
+        const forcedLogoOffsetY = isQuoteLogoStage && isPortraitViewport ? halfY * 0.6 : 0;
         const suffixTransitionProgress = this.clamp01(
             this.suffixTransitionElapsed / this.SUFFIX_TRANSITION_DURATION
         );
@@ -600,6 +605,9 @@ export class ParticleSystem {
 
                     if (forcedLogoOffsetX !== 0) {
                         tx += forcedLogoOffsetX;
+                    }
+                    if (forcedLogoOffsetY !== 0) {
+                        ty += forcedLogoOffsetY;
                     }
 
                     // As soon as a logo target point moves outside viewport bounds,

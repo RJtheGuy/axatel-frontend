@@ -14,7 +14,7 @@
 			<div class="led"></div>
 		</div>
 		<span class="label">
-			{{ isAlarm ? impactValue.toFixed(1) + ' G' : 'Cartello monitorato' }}
+			{{ isAlarm ? impactValue.toFixed(1) + ' G' : t('demo.monitoredSign') }}
 		</span>
 	</div>
 
@@ -36,8 +36,8 @@
 			<div class="stand-brace"></div>
 		</div>
 
-		<div class="triangle-sign" aria-label="Cartello lavori in corso">
-			<svg class="roadwork-sign" viewBox="0 0 220 190" role="img" aria-label="Segnale lavori in corso">
+		<div class="triangle-sign" :aria-label="t('demo.roadworksSign')">
+			<svg class="roadwork-sign" viewBox="0 0 220 190" role="img" :aria-label="t('demo.roadworksSign')">
 				<defs>
 					<clipPath id="inner-triangle-works">
 						<polygon points="110,26 188,166 32,166" />
@@ -72,6 +72,8 @@
 
 <script setup lang="ts">
 import { ref } from "vue"
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
 	(e: "alarm"): void

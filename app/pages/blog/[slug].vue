@@ -6,7 +6,8 @@
 
         <div class="post-light-stage">
             <article class="post-shell">
-                <NuxtLink to="/blog" class="back-link">Torna al blog</NuxtLink>
+                <NuxtLink :to="localePath('/blog')" class="back-link">{{ t("blog.back") }}</NuxtLink>
+                <LayoutTranslationNotice v-if="raw?.__fallback" />
 
                 <div class="post-meta-top">
                     <span v-if="post.author">{{ post.author }}</span>
@@ -44,13 +45,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { createError, useRoute, useSeoMeta } from "#app";
+import { computed, onMounted } from "vue";
+import { createError, useHead, useRoute, useRuntimeConfig, useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
 
 type BlogPostData = {
     title: string;
@@ -69,13 +72,13 @@ const slug = computed(() => {
 });
 
 const { data: raw } = await useAsyncData(
-    () => `blog-post-${slug.value}`,
+    () => `blog-post-${locale.value}-${slug.value}`,
     () => getPageBySlug<any>("blog.BlogPost", slug.value as string).catch(() => null),
     { watch: [slug] }
 );
 
 if (!raw.value) {
-    throw createError({ statusCode: 404, statusMessage: "Articolo non trovato" });
+    throw createError({ statusCode: 404, statusMessage: t("blog.notFound") });
 }
 
 const post = computed<BlogPostData>(() => ({
@@ -91,7 +94,7 @@ const post = computed<BlogPostData>(() => ({
 
 function formatDate(iso: string): string {
     try {
-        return new Date(iso).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
+        return new Date(iso).toLocaleDateString(locale.value, { day: "numeric", month: "long", year: "numeric" });
     } catch {
         return iso;
     }
@@ -102,8 +105,47 @@ useSeoMeta({
     description: () => post.value.meta?.search_description || post.value.intro,
     ogTitle: () => post.value.title,
     ogDescription: () => post.value.intro,
+    ogImage: () => post.value.image || undefined,
     ogType: "article",
+    articlePublishedTime: () => post.value.date || undefined,
+    articleAuthor: () => (post.value.author ? [post.value.author] : undefined),
     robots: "index,follow"
+});
+
+// BlogPosting structured data: lets search engines show the article with
+// its date, author and picture.
+const siteUrl = String((useRuntimeConfig().public as any)?.i18n?.baseUrl || "").replace(/\/$/, "");
+const LANGUAGE_TAGS: Record<string, string> = { it: "it-IT", en: "en-GB", fr: "fr-FR" };
+useHead({
+    script: [
+        {
+            type: "application/ld+json",
+            innerHTML: computed(() =>
+                JSON.stringify({
+                    "@context": "https://schema.org",
+                    "@type": "BlogPosting",
+                    headline: post.value.title,
+                    description: post.value.meta?.search_description || post.value.intro || undefined,
+                    image: post.value.image || undefined,
+                    datePublished: post.value.date || raw.value?.meta?.first_published_at || undefined,
+                    dateModified: raw.value?.meta?.last_published_at || undefined,
+                    author: post.value.author
+                        ? { "@type": "Person", name: post.value.author }
+                        : { "@type": "Organization", name: "Axatel" },
+                    publisher: { "@type": "Organization", name: "Axatel", url: "https://axatel.it" },
+                    inLanguage: raw.value?.__fallback ? "it-IT" : LANGUAGE_TAGS[locale.value] || "it-IT",
+                    mainEntityOfPage: siteUrl ? `${siteUrl}${route.path}` : undefined,
+                    keywords: post.value.tags.length ? post.value.tags.join(", ") : undefined,
+                })
+            ),
+        },
+    ],
+});
+
+// Reading the post removes it from the "new posts" count in the menu.
+const { markRead } = useBlogUpdates();
+onMounted(() => {
+    markRead(slug.value as string);
 });
 </script>
 
@@ -209,6 +251,8 @@ useSeoMeta({
    defaults those components assume (they're normally used on the
    near-black homepage) to fit this page's light stage. */
 .post-body {
+    --cms-text: #274e72;
+    --cms-heading: #0b355b;
     color: #0b355b;
 }
 

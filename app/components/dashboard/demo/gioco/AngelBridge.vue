@@ -20,7 +20,7 @@
         </div>
 
         <span class="label">
-            {{ isAlarm ? currentValue.toFixed(1) + ' mm' : 'Fessura monitorata' }}
+            {{ isAlarm ? currentValue.toFixed(1) + ' mm' : t('demo.sensors.crack') }}
         </span>
 
     </div>
@@ -96,6 +96,8 @@
 <script setup lang="ts">
 import { ref,onMounted,onUnmounted } from "vue"
 import { gsap } from "gsap"
+
+const { t } = useI18n()
 
 const emit=defineEmits<{
     (e:"alarm"):void

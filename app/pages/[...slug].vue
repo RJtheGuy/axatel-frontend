@@ -2,6 +2,7 @@
     <main class="flex-page">
         <header v-if="page?.title" class="page-head">
             <h1>{{ page.title }}</h1>
+            <LayoutTranslationNotice v-if="page?.__fallback" class="page-notice" />
         </header>
         <CmsBlockRenderer :blocks="page?.body ?? []" />
     </main>
@@ -22,6 +23,7 @@ import { computed } from "vue";
  * trip rather than two.
  */
 const route = useRoute();
+const { locale } = useI18n();
 const { findByPath } = useCms();
 
 const path = computed(() => {
@@ -31,7 +33,7 @@ const path = computed(() => {
 });
 
 const { data: page, error } = await useAsyncData(
-    () => `flex-${path.value}`,
+    () => `flex-${locale.value}-${path.value}`,
     async () => {
         try {
             const result = await findByPath(path.value);
@@ -56,7 +58,7 @@ const { data: page, error } = await useAsyncData(
 if (!page.value) {
     throw createError({
         statusCode: 404,
-        statusMessage: "Pagina non trovata",
+        statusMessage: useNuxtApp().$i18n.t("errors.page"),
         fatal: true
     });
 }
@@ -72,6 +74,14 @@ useSeoMeta({
 </script>
 
 <style scoped>
+.page-notice {
+    margin-top: 18px;
+    max-width: 720px;
+    color: #c6dcef;
+    border-color: rgba(147, 183, 218, 0.3);
+    background: rgba(147, 183, 218, 0.08);
+}
+
 .flex-page {
     min-height: 100vh;
     padding-top: 16vh;

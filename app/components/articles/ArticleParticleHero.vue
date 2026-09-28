@@ -26,7 +26,7 @@ async function startEngine(): Promise<void> {
     if (!canvasEl.value || engine) return;
 
     if ("fonts" in document) {
-        await document.fonts.load('350 48px "forma-djr-micro"');
+        await document.fonts.load('350 48px Montserrat');
     }
 
     const { default: HeroEngine } = await import("@/classes/hero/HeroEngine");

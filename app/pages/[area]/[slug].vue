@@ -6,6 +6,7 @@
     <main v-if="isCmsBacked" class="flex-page">
         <header v-if="cmsPage?.title" class="page-head">
             <h1>{{ cmsPage.title }}</h1>
+            <LayoutTranslationNotice v-if="cmsPage?.__fallback" />
         </header>
         <CmsBlockRenderer :blocks="cmsPage?.body ?? []" />
     </main>
@@ -30,6 +31,7 @@ import { glossaryTerms } from "../../data/glossary";
 import type { ContentPageData } from "../../types/contentPage";
 
 const route = useRoute();
+const { locale } = useI18n();
 const routeValue = (value: string | string[] | undefined): string => Array.isArray(value) ? value[0] || "" : value || "";
 
 const area = computed(() => routeValue(route.params.area));
@@ -44,7 +46,7 @@ const isCmsBacked = computed(() => !(area.value in contentAreas));
 const { findByPath } = useCms();
 
 const { data: cmsPage } = await useAsyncData(
-    () => `area-cms-${area.value}-${slug.value}`,
+    () => `area-cms-${locale.value}-${area.value}-${slug.value}`,
     async () => {
         if (!isCmsBacked.value) return null;
         try {
@@ -62,7 +64,7 @@ const { data: cmsPage } = await useAsyncData(
 );
 
 if (isCmsBacked.value && !cmsPage.value) {
-    throw createError({ statusCode: 404, statusMessage: "Pagina non trovata" });
+    throw createError({ statusCode: 404, statusMessage: useNuxtApp().$i18n.t("errors.page") });
 }
 
 // ── Legacy branch (unchanged) — only evaluated when isCmsBacked is false ──

@@ -13,7 +13,7 @@
         <div class="led"></div>
       </div>
       <span class="label">
-        {{ isAlarm ? avgSpeed.toFixed(1) + ' km/h' : 'Telecamera' }}
+        {{ isAlarm ? avgSpeed.toFixed(1) + ' km/h' : t('demo.sensors.camera') }}
       </span>
     </div>
 
@@ -40,7 +40,7 @@
 
     <div class="measure">
       <div class="measure-value">
-        Velocità media {{ avgSpeed.toFixed(1) }} km/h
+        {{ t("demo.avgSpeed", { value: avgSpeed.toFixed(1) }) }}
       </div>
       <div class="measure-bar">
         <div
@@ -71,6 +71,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue"
 import { gsap } from "gsap"
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   (e: "alarm"): void

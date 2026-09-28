@@ -28,7 +28,7 @@
                 {{ application.name }}
             </h2>
             <p>
-                {{ application.description }}
+                {{ description }}
             </p>
 
         </div>
@@ -44,7 +44,7 @@
             role="status"
             aria-live="polite"
         >
-            allarme inviato
+            {{ t("demo.alarmSent") }}
         </div>
 
         <Suspense v-if="activeDemoComponent">
@@ -59,7 +59,7 @@
 
                 <div class="loading">
 
-                    Caricamento...
+                    {{ t("demo.loading") }}
 
                 </div>
 
@@ -72,7 +72,7 @@
             class="loading"
         >
 
-            Preparazione demo...
+            {{ t("demo.preparing") }}
 
         </div>
 
@@ -83,7 +83,7 @@
 
             <span>
 
-                Demo disponibile prossimamente
+                {{ t("demo.comingSoon") }}
 
             </span>
 
@@ -242,61 +242,21 @@ const logo = computed(() => {
 
 })
 
-const instruction = computed(() => {
+// Texts come from i18n/messages-interface.ts ("demo.apps.<demo>"), so they
+// follow the visitor's language. application.description / instruction
+// are used only for a demo without translated texts.
+const { t, te } = useI18n()
+const appKey = computed(() => props.application.demo ? `demo.apps.${props.application.demo}` : "")
+const appText = (field: string, fallback = "") =>
+    appKey.value && te(`${appKey.value}.${field}`) ? t(`${appKey.value}.${field}`) : fallback
 
-    if (props.application.instruction) {
-        return props.application.instruction
-    }
+const description = computed(() => appText("description", props.application.description))
 
-    switch (props.application.demo) {
+const instruction = computed(() => appText("instruction", props.application.instruction ?? ""))
 
-        case "GeoAngel":
-            return "Colpisci il sensore col mouse per generare l'impatto"
-
-        case "AngelRiver":
-            return "Passa il mouse sulla card per simulare la pioggia e far salire il livello"
-
-        case "AngelBridge":
-            return "Passa il mouse sulla card per aprire la crepa"
-
-        case "AngelRoadSite":
-            return "Colpisci col mouse il cartello lavori in corso per far scattare l'allarme"
-
-        case "TrafficAlert":
-            return "Passa il mouse sulla card per aumentare il traffico fino alla congestione"
-
-        default:
-            return ""
-
-    }
-
-})
-
-const mobileInstruction = computed(() => {
-
-    switch (props.application.demo) {
-
-        case "GeoAngel":
-            return "Scorri rapidamente il dito attraverso il sensore centrale"
-
-        case "AngelRiver":
-            return "Tieni premuto sulla demo per far piovere e alzare il livello"
-
-        case "AngelBridge":
-            return "Tieni premuto sulla demo per aprire la crepa"
-
-        case "AngelRoadSite":
-            return "Scorri rapidamente il dito sul cartello per generare l'impatto"
-
-        case "TrafficAlert":
-            return "Tieni premuto sulla demo per aumentare il traffico"
-
-        default:
-            return props.application.instruction ?? "Tocca la demo per interagire"
-
-    }
-
-})
+const mobileInstruction = computed(() =>
+    appText("mobile", props.application.instruction ?? t("demo.tapToInteract"))
+)
 
 async function onAlarm(){
 

@@ -1,10 +1,10 @@
 <template>
     <main class="caso-page">
         <article class="caso-container">
-            <nav class="breadcrumb" aria-label="Breadcrumb">
+            <nav class="breadcrumb" :aria-label="t('caseDetail.breadcrumb')">
                 <ol role="list">
-                    <li><NuxtLink to="/">Home</NuxtLink></li>
-                    <li><NuxtLink to="/casi">Casi di successo</NuxtLink></li>
+                    <li><NuxtLink :to="localePath('/')">{{ t("caseDetail.home") }}</NuxtLink></li>
+                    <li><NuxtLink :to="localePath('/casi')">{{ t("cases.kicker") }}</NuxtLink></li>
                     <li aria-current="page">{{ caso?.title }}</li>
                 </ol>
             </nav>
@@ -18,6 +18,8 @@
                 :height="caso.cover_image.height"
                 decoding="async"
             />
+
+            <LayoutTranslationNotice v-if="caso?.__fallback" />
 
             <header class="caso-header">
                 <p v-if="caso?.category" class="caso-category">{{ caso.category }}</p>
@@ -36,8 +38,8 @@
                  markup as literal text. -->
             <div v-if="caso?.body" class="caso-body" v-html="caso.body"></div>
 
-            <NuxtLink class="caso-back ax-cta-outline" to="/casi">
-                Tutti i casi di successo
+            <NuxtLink class="caso-back ax-cta-outline" :to="localePath('/casi')">
+                {{ t("caseDetail.all") }}
             </NuxtLink>
         </article>
     </main>
@@ -49,11 +51,13 @@ import { computed } from "vue";
 const route = useRoute();
 const { getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
 
 const slug = computed(() => String(route.params.slug));
 
 const { data: caso } = await useAsyncData(
-    () => `caso-${slug.value}`,
+    () => `caso-${locale.value}-${slug.value}`,
     () => getPageBySlug("casi.CasoSuccessoPage", slug.value),
     { watch: [slug] }
 );
@@ -61,13 +65,13 @@ const { data: caso } = await useAsyncData(
 if (!caso.value) {
     throw createError({
         statusCode: 404,
-        statusMessage: "Caso di successo non trovato",
+        statusMessage: t("caseDetail.notFound"),
         fatal: true
     });
 }
 
 useSeoMeta({
-    title: () => `${caso.value?.title} | Casi di successo Axatel`,
+    title: () => `${caso.value?.title} | ${t("cases.kicker")} Axatel`,
     description: () => caso.value?.meta?.search_description || caso.value?.description,
     ogTitle: () => caso.value?.title,
     ogDescription: () => caso.value?.description,

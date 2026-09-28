@@ -26,12 +26,12 @@
             <div class="led"></div>
         </div>
         <span class="label">
-            {{ isAlarm ? levelMeters.toFixed(1) + ' m' : 'Livello fiume' }}
+            {{ isAlarm ? levelMeters.toFixed(1) + ' m' : t('demo.sensors.river') }}
         </span>
     </div>
 
     <div class="threshold" :style="{ bottom: threshold + '%' }">
-        <span>Soglia {{ thresholdMeters.toFixed(1) }}m</span>
+        <span>{{ t("demo.threshold", { value: thresholdMeters.toFixed(1) }) }}</span>
     </div>
 
     <div class="water" :style="{ height: waterLevel + '%' }">
@@ -44,6 +44,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue"
 import { gsap } from "gsap"
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
     (e: "alarm"): void

@@ -22,7 +22,7 @@ export interface SiteSettings {
             href?: string | null
             groups?: Array<{ label: string; links: NavLink[] }>
         }>
-        cta: { visible: boolean; label: string; url: string }
+        cta: { visible: boolean; label: string; url: string; label_is_fallback?: boolean }
     }
     footer: {
         contacts: Array<{ title: string; value: string; href: string; external?: boolean }>
@@ -44,8 +44,13 @@ export function useSiteSettings() {
     const config = useRuntimeConfig()
     const base = import.meta.server ? config.apiInternalBase : config.public.apiBase
 
-    const { data: settings } = useAsyncData<SiteSettings | null>('site-settings', () =>
-        $fetch<SiteSettings>(`${base}/site-settings/`).catch(() => null)
+    // Menu labels come back in the visitor's language (?locale=en uses the
+    // "Etichetta EN" fields, falling back to Italian). Cached per language.
+    const { locale } = useI18n()
+    const { data: settings } = useAsyncData<SiteSettings | null>(
+        () => `site-settings-${locale.value}`,
+        () => $fetch<SiteSettings>(`${base}/site-settings/`, { params: { locale: locale.value } }).catch(() => null),
+        { watch: [locale] }
     )
 
     return { settings }

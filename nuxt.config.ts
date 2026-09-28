@@ -1,10 +1,35 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 const publicApiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8001/api/v2'
-const publicApiOrigin = publicApiBase.replace(/\/api\/v\d+\/?$/, '')
+// With NUXT_PUBLIC_API_BASE=/api/v2 (same-origin, see server/routes/api/v2)
+// the CMS pictures still come from the backend address, so allow that one.
+const publicApiOrigin = (publicApiBase.startsWith('/')
+  ? (process.env.NUXT_API_INTERNAL_BASE || '')
+  : publicApiBase).replace(/\/api\/v\d+\/?$/, '')
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
+
+  modules: ['@nuxtjs/i18n'],
+
+  // Italian at the normal URLs (/monitoraggio), English and French under
+  // /en/… and /fr/…. No automatic redirect by browser language: visitors
+  // choose with the switcher in the navbar. Interface strings live in
+  // i18n/i18n.config.ts; page content comes translated from the CMS.
+  i18n: {
+    locales: [
+      { code: 'it', language: 'it-IT', name: 'Italiano' },
+      { code: 'en', language: 'en-GB', name: 'English' },
+      { code: 'fr', language: 'fr-FR', name: 'Français' },
+    ],
+    defaultLocale: 'it',
+    // Absolute address used in hreflang tags. Override at runtime with
+    // NUXT_PUBLIC_I18N_BASE_URL (e.g. when the site gets a domain).
+    baseUrl: process.env.NUXT_PUBLIC_I18N_BASE_URL || 'http://80.211.135.192',
+    strategy: 'prefix_except_default',
+    detectBrowserLanguage: false,
+    vueI18n: './i18n.config.ts',
+  },
 
   // Env vars only reach runtimeConfig if the key is declared here.
   // NUXT_API_INTERNAL_BASE  → runtimeConfig.apiInternalBase
@@ -29,9 +54,15 @@ export default defineNuxtConfig({
       meta: [
         { name: 'theme-color', content: '#07111d' }
       ],
+      // Montserrat is self-hosted from public/fonts (the CSP only allows
+      // fonts from 'self'). Before this the font was never loaded and the
+      // whole site rendered in the browser's fallback (Arial/Helvetica).
+      link: [
+        { rel: 'preload', href: '/fonts/montserrat-latin-wght-normal.woff2', as: 'font', type: 'font/woff2', crossorigin: '' }
+      ],
       style: [
         {
-          innerHTML: `:root{--ax-color-bg-main:#020712;--ax-color-bg-surface:#070f18;--ax-color-bg-panel:rgba(9,22,34,.74);--ax-color-bg-card-light:#eef2f7;--ax-color-bg-card-soft:#f8fbff;--ax-color-text-primary:#f2f8ff;--ax-color-text-secondary:#c6dcef;--ax-color-text-muted:#9ab6cf;--ax-color-text-dark:#163558;--ax-color-border-soft:rgba(147,183,218,.3);--ax-color-border-card:rgba(169,203,242,.36);--ax-card-radius:18px;--ax-color-accent-red:#c52317;--ax-color-accent-red-soft:#ea3f30;--ax-color-accent-red-border:rgba(255,140,127,.9);--ax-color-overlay-dark-strong:rgba(7,17,29,.92);--ax-color-overlay-dark-medium:rgba(7,17,29,.78);--ax-color-overlay-dark-soft:rgba(7,17,29,.45);--color-primary:var(--ax-color-bg-main);--color-secondary:var(--ax-color-accent-red)}html,body,#__nuxt{width:100%;min-height:100%;margin:0;padding:0;border:0;overflow-x:hidden}html,body{background:var(--ax-color-bg-main)}*{box-sizing:border-box;margin:0;padding:0;font-family:Montserrat,sans-serif;font-optical-sizing:auto}body{color:var(--ax-color-text-primary)}h1,h2,h3,h4,h5,h6{color:var(--ax-color-text-primary);text-wrap:balance}p,span,small{color:inherit}.ax-cta-outline{display:inline-block;border:1px solid var(--ax-color-accent-red-border);border-radius:999px;background:transparent;color:var(--ax-color-accent-red-soft);text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:.82rem;padding:12px 18px;transition:background-color .2s ease,color .2s ease,border-color .2s ease}.ax-cta-outline:hover{background:rgba(234,63,48,.12);border-color:var(--ax-color-accent-red-soft);color:#ff7366}`
+          innerHTML: `@font-face{font-family:Montserrat;font-style:normal;font-display:swap;font-weight:100 900;src:url(/fonts/montserrat-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}@font-face{font-family:Montserrat;font-style:normal;font-display:swap;font-weight:100 900;src:url(/fonts/montserrat-latin-ext-wght-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}:root{--ax-color-bg-main:#020712;--ax-color-bg-surface:#070f18;--ax-color-bg-panel:rgba(9,22,34,.74);--ax-color-bg-card-light:#eef2f7;--ax-color-bg-card-soft:#f8fbff;--ax-color-text-primary:#f2f8ff;--ax-color-text-secondary:#c6dcef;--ax-color-text-muted:#9ab6cf;--ax-color-text-dark:#163558;--ax-color-border-soft:rgba(147,183,218,.3);--ax-color-border-card:rgba(169,203,242,.36);--ax-card-radius:18px;--ax-color-accent-red:#c52317;--ax-color-accent-red-soft:#ea3f30;--ax-color-accent-red-border:rgba(255,140,127,.9);--ax-color-overlay-dark-strong:rgba(7,17,29,.92);--ax-color-overlay-dark-medium:rgba(7,17,29,.78);--ax-color-overlay-dark-soft:rgba(7,17,29,.45);--color-primary:var(--ax-color-bg-main);--color-secondary:var(--ax-color-accent-red)}html,body,#__nuxt{width:100%;min-height:100%;margin:0;padding:0;border:0;overflow-x:hidden}html,body{background:var(--ax-color-bg-main)}*{box-sizing:border-box;margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,'Segoe UI',sans-serif;font-optical-sizing:auto}body{color:var(--ax-color-text-primary)}h1,h2,h3,h4,h5,h6{color:var(--ax-color-text-primary);text-wrap:balance}p,span,small{color:inherit}.ax-cta-outline{display:inline-block;border:1px solid var(--ax-color-accent-red-border);border-radius:999px;background:transparent;color:var(--ax-color-accent-red-soft);text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:.82rem;padding:12px 18px;transition:background-color .2s ease,color .2s ease,border-color .2s ease}.ax-cta-outline:hover{background:rgba(234,63,48,.12);border-color:var(--ax-color-accent-red-soft);color:#ff7366}`
         }
       ]
     }
@@ -65,6 +96,11 @@ export default defineNuxtConfig({
         ...(publicApiBase.startsWith('https://')
           ? { 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains' }
           : {})
+      }
+    },
+    '/fonts/**': {
+      headers: {
+        'Cache-Control': 'public, max-age=31536000, immutable'
       }
     },
     '/_nuxt/**': {

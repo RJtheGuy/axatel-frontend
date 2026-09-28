@@ -9,9 +9,11 @@ import { useSeoMeta } from "#app";
 import TeamNetwork from "../../components/team/TeamNetwork.vue";
 import { teamMembers } from "../../data/team";
 
+const { t } = useI18n();
+
 useSeoMeta({
-    title: "Team | Axatel",
-    description: "Le persone e le competenze che trasformano insieme problemi complessi in soluzioni Axatel."
+    title: () => `${t("team.title")} | Axatel`,
+    description: () => t("seo.teamDescription")
 });
 </script>
 

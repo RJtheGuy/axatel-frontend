@@ -1,6 +1,6 @@
 // app/utils/resolveImage.ts
 //
-// Single source of truth for resolving frontend image paths to backend media.
+// Single source of truth for resolving frontend image paths (app/assets/immagini).
 // Nuxt auto-imports everything in app/utils/, so `resolveImage(...)` is
 // usable directly in any component template or <script setup>.
 //
@@ -15,12 +15,18 @@ const images = import.meta.glob<string>(
     { eager: true, import: "default" }
 );
 
-export function resolveImage(pathOrFilename: string | undefined | null): string {
-    const config = useRuntimeConfig();
-    const apiBase = import.meta.server ? config.apiInternalBase : config.public.apiBase;
-    const backendOrigin = apiBase.replace(/\/api\/v\d+\/?$/, "");
-    const fallback = `${backendOrigin}/media/frontend/immagini/Axatel.svg`;
+/**
+ * The images live in app/assets/immagini and are bundled with the site, so
+ * they are always served by the site itself (same address as the page).
+ *
+ * They used to be loaded from the backend at /media/frontend/immagini/, which
+ * only works if someone copied the folder onto the server by hand: on the
+ * server ala.png was missing (404), and from localhost the browser blocked
+ * them (CORS), so the particle hero showed a broken shape instead of the wing.
+ */
+const fallback = Object.entries(images).find(([path]) => path.endsWith("/Axatel.svg"))?.[1] ?? "";
 
+export function resolveImage(pathOrFilename: string | undefined | null): string {
     if (!pathOrFilename) return fallback;
 
     // CMS and external URLs already point to their source of truth.
@@ -35,14 +41,15 @@ export function resolveImage(pathOrFilename: string | undefined | null): string 
     //   "casi-di-successo/ss51-alemagna.webp"
     const clean = pathOrFilename.replace(/^\/?immagini\//, "").replace(/^\//, "");
 
-    const match = Object.entries(images).find(
-        ([path]) => path.endsWith(`/${clean}`) || path.endsWith(clean)
-    );
+    const match = Object.entries(images).find(([path]) => path.endsWith(`/${clean}`));
 
     if (!match) {
         console.warn(`[resolveImage] not found under assets/immagini/: ${pathOrFilename}`);
         return fallback;
     }
 
-    return `${backendOrigin}/media/frontend/immagini/${clean}`;
+    return match[1];
 }
+
+/** URL of the Axatel logo, used when an image can't be loaded. */
+export const imageFallbackUrl = fallback;

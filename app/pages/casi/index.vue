@@ -1,22 +1,42 @@
 <template>
     <main class="cases-page">
         <header class="cases-hero">
-<ArticleParticleHero title="Tutti i casi" :asset-url="resolveImage('/immagini/ala.png')" />        </header>
+<ArticleParticleHero :title="t('cases.title')" :asset-url="resolveImage('/immagini/ala.png')" />        </header>
 
         <div class="cases-light-stage">
             <section class="cases-shell">
-                <NuxtLink to="/" class="back-link">Torna alla home</NuxtLink>
+                <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
 
-                <div class="page-kicker">Casi di successo</div>
+                <div class="page-kicker">{{ t("cases.kicker") }}</div>
                 <p class="lead">{{ lead }}</p>
+                <LayoutTranslationNotice v-if="hasUntranslated" />
 
-                <p v-if="!cases.length" class="empty">
-                    Nessun caso di successo pubblicato al momento.
-                </p>
+                <p v-if="!cases.length" class="empty">{{ t("cases.empty") }}</p>
 
-                <div v-else class="cases-grid">
-                    <article v-for="item in cases" :key="item.slug" class="case-card">
-                        <NuxtLink :to="`/casi/${item.slug}`" class="case-link" :aria-label="`Leggi ${item.title}`">
+                <!-- Sector filter: one chip per category used by the published cases.
+                     Kept in the URL (?settore=…) so a filtered list can be shared. -->
+                <div v-if="sectors.length > 1" class="case-filters" role="group" :aria-label="t('cases.filterLabel')">
+                    <button
+                        type="button"
+                        class="chip"
+                        :aria-pressed="!activeSector"
+                        @click="setSector('')"
+                    >{{ t("cases.all") }} <span>{{ cases.length }}</span></button>
+                    <button
+                        v-for="sector in sectors"
+                        :key="sector.name"
+                        type="button"
+                        class="chip"
+                        :aria-pressed="activeSector === sector.name"
+                        @click="setSector(sector.name)"
+                    >{{ sector.name }} <span>{{ sector.count }}</span></button>
+                </div>
+
+                <p v-if="cases.length && !visibleCases.length" class="empty">{{ t("cases.noMatch") }}</p>
+
+                <div v-if="visibleCases.length" class="cases-grid">
+                    <article v-for="item in visibleCases" :key="item.slug" class="case-card">
+                        <NuxtLink :to="localePath(`/casi/${item.slug}`)" class="case-link" :aria-label="t('cases.read', { title: item.title })">
                             <div class="case-media">
                                 <img
                                     v-if="item.image"
@@ -56,6 +76,10 @@ import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 
 const { getPage, getPageBySlug } = useCms();
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
+const route = useRoute();
+const router = useRouter();
 
 type CaseItem = {
     title: string;
@@ -67,19 +91,20 @@ type CaseItem = {
     slug: string;
 };
 
-const { data: casiData } = await useAsyncData("casi-list", () =>
+const { data: casiData } = await useAsyncData(() => `casi-list-${locale.value}`, () =>
     getPage("casi.CasoSuccessoPage", { order: "-first_published_at" }).catch(() => null)
 );
 
 // Intro copy now comes from CasiIndexPage.intro, editable in the admin.
-const { data: indexPage } = await useAsyncData("casi-index", () =>
+const { data: indexPage } = await useAsyncData(() => `casi-index-${locale.value}`, () =>
     getPageBySlug("casi.CasiIndexPage", "casi").catch(() => null)
 );
 
-const DEFAULT_LEAD =
-    "Progetti, tecnologie e applicazioni sul campo per infrastrutture piu sicure, monitorate e connesse.";
+// Untranslated index pages would put Italian text on the EN/FR site.
+// Some cases shown in Italian because they aren't translated in the CMS yet.
+const hasUntranslated = computed(() => ((casiData.value?.items ?? []) as any[]).some((c) => c.__fallback));
 
-const lead = computed(() => indexPage.value?.intro?.trim() || DEFAULT_LEAD);
+const lead = computed(() => (!indexPage.value?.__fallback && indexPage.value?.intro?.trim()) || t("cases.lead"));
 
 const cases = computed<CaseItem[]>(() =>
     (casiData.value?.items ?? []).map((c: any) => ({
@@ -93,6 +118,31 @@ const cases = computed<CaseItem[]>(() =>
     }))
 );
 
+// Sectors = the "Categoria" field of each case, most used first.
+const sectors = computed(() => {
+    const counts = new Map<string, number>();
+    for (const c of cases.value) if (c.category) counts.set(c.category, (counts.get(c.category) ?? 0) + 1);
+    return [...counts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([name, count]) => ({ name, count }));
+});
+
+const activeSector = computed(() => {
+    const q = String(route.query.settore ?? "");
+    return sectors.value.some((s) => s.name === q) ? q : "";
+});
+
+const visibleCases = computed(() =>
+    activeSector.value ? cases.value.filter((c) => c.category === activeSector.value) : cases.value
+);
+
+function setSector(name: string): void {
+    const query = { ...route.query };
+    if (name) query.settore = name;
+    else delete query.settore;
+    router.replace({ query });
+}
+
 /*
  * buildArticleRoute() intentionally NOT restored here. It used to point
  * at /articoli/<slug> with the whole case JSON-stringified into a
@@ -102,9 +152,9 @@ const cases = computed<CaseItem[]>(() =>
  */
 
 useSeoMeta({
-    title: "Casi di successo | Axatel",
+    title: () => `${t("cases.kicker")} | Axatel`,
     description: () => lead.value,
-    ogTitle: "Casi di successo Axatel",
+    ogTitle: () => `${t("cases.kicker")} Axatel`,
     ogDescription: () => lead.value,
     ogType: "website",
     robots: "index,follow"
@@ -184,6 +234,55 @@ useSeoMeta({
 .empty {
     color: #667f97;
     padding: 40px 0;
+}
+
+.case-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 24px;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 16px;
+    border: 1px solid rgba(11, 53, 91, 0.2);
+    border-radius: 999px;
+    background: #fff;
+    color: #0b355b;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.chip span {
+    color: #667f97;
+    font-size: 0.76rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.chip:hover {
+    border-color: #c52317;
+}
+
+.chip[aria-pressed="true"] {
+    border-color: #c52317;
+    background: #c52317;
+    color: #fff;
+}
+
+.chip[aria-pressed="true"] span {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.chip:focus-visible {
+    outline: 2px solid #c52317;
+    outline-offset: 2px;
 }
 
 .cases-grid {

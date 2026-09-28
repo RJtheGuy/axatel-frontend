@@ -3,11 +3,11 @@
         <TeamNeuralBackground :focused="Boolean(selectedMember)" />
 
         <header class="team-heading">
-            <h1>Team</h1>
-            <p>Nessuno risolve un problema da solo</p>
+            <h1>{{ t("team.title") }}</h1>
+            <p>{{ t("team.subtitle") }}</p>
         </header>
 
-        <div class="team-field" aria-label="Persone del team Axatel">
+        <div class="team-field" :aria-label="t('team.peopleAria')">
             <button
                 v-for="(member, index) in members"
                 :key="member.id"
@@ -15,7 +15,7 @@
                 :class="{ 'is-selected': selectedMember?.id === member.id }"
                 :style="memberStyle(member, index)"
                 type="button"
-                :aria-label="`Scopri ${member.name}`"
+                :aria-label="t('team.discover', { name: member.name })"
                 :aria-pressed="selectedMember?.id === member.id"
                 @click="selectMember(member)"
             >
@@ -28,10 +28,10 @@
 
         <Transition name="profile">
             <article v-if="selectedMember" class="member-profile" aria-live="polite">
-                <p class="profile-kicker">Il nostro team</p>
+                <p class="profile-kicker">{{ t("team.kicker") }}</p>
                 <h2>{{ selectedMember.name }}</h2>
                 <p>{{ selectedMember.description }}</p>
-                <button type="button" class="back-button" @click="clearSelection">Torna al team</button>
+                <button type="button" class="back-button" @click="clearSelection">{{ t("team.back") }}</button>
             </article>
         </Transition>
     </section>
@@ -45,6 +45,7 @@ import type { TeamMember } from "../../data/team";
 defineProps<{ members: TeamMember[] }>();
 const stageEl = ref<HTMLElement | null>(null);
 const selectedMember = ref<TeamMember | null>(null);
+const { t } = useI18n();
 
 function memberStyle(member: TeamMember, index: number): Record<string, string> {
     const horizontal = 4 + (index * 3) % 9;
@@ -101,7 +102,7 @@ function clearSelection(): void {
 .team-heading h1 {
     margin: 0;
     color: #f3fbff;
-    font-family: "forma-djr-micro", sans-serif;
+    font-family: Montserrat, system-ui, sans-serif;
     font-size: clamp(4.5rem, 10vw, 8rem);
     font-weight: 350;
     line-height: 0.95;

@@ -1,31 +1,15 @@
 <script setup lang="ts">
-const processSteps = [
-	{
-		number: "01",
-		title: "Programmiamo",
-		description: "Configuriamo sensori e firmware sulla misura reale da controllare."
-	},
-	{
-		number: "02",
-		title: "Installiamo",
-		description: "Portiamo la tecnologia sul campo e la integriamo con l'infrastruttura."
-	},
-	{
-		number: "03",
-		title: "Raccogliamo",
-		description: "Acquisiamo dati continui e affidabili da ogni punto monitorato."
-	},
-	{
-		number: "04",
-		title: "Analizziamo",
-		description: "Trasformiamo i segnali in informazioni utili e soglie operative."
-	},
-	{
-		number: "05",
-		title: "Automatizziamo",
-		description: "Attiviamo risposte immediate, come un semaforo rosso in caso di pericolo."
-	}
-];
+import { computed } from "vue"
+
+// Same five steps as the solution pages ("process.steps" in the i18n files).
+const { t, tm, rt } = useI18n()
+const processSteps = computed(() =>
+	(tm("process.steps") as Array<{ title: unknown; text: unknown }>).map((step, index) => ({
+		number: String(index + 1).padStart(2, "0"),
+		title: rt(step.title as never),
+		description: rt(step.text as never)
+	}))
+)
 
 function requestDemoScroll(): void {
 	window.dispatchEvent(new CustomEvent("axatel-demo-jump"));
@@ -36,12 +20,9 @@ function requestDemoScroll(): void {
 	<section class="spiegazione-section" aria-labelledby="process-title">
 		<div class="process-content">
 			<header class="process-heading">
-				<p class="eyebrow">Dall'hardware alla decisione</p>
-				<h2 id="process-title">Gestiamo tutta la filiera.</h2>
-				<p class="lead">
-					Un unico processo connette il campo, i dati e le azioni. Progettiamo ogni
-					passaggio per trasformare una misura in una risposta concreta e tempestiva.
-				</p>
+				<p class="eyebrow">{{ t("home.explain.eyebrow") }}</p>
+				<h2 id="process-title">{{ t("home.explain.title") }}</h2>
+				<p class="lead">{{ t("home.explain.lead") }}</p>
 			</header>
 
 			<ol class="process-steps">
@@ -55,13 +36,12 @@ function requestDemoScroll(): void {
 
 			<div class="process-outcome">
 				<div>
-					<span class="outcome-label">Evento rilevato</span>
-					<strong>Un allarme, due livelli di controllo</strong>
+					<span class="outcome-label">{{ t("home.explain.outcomeLabel") }}</span>
+					<strong>{{ t("home.explain.outcomeTitle") }}</strong>
 				</div>
 				<p>
-					L'evento raggiunge le piattaforme verticali, come <b>GeoAngel</b> e
-					<b>Angel Bridge</b>, e alimenta <b>AngelBPM</b>, dove ogni allarme attiva
-					procedure, responsabilità e interventi tracciabili.
+					{{ t("home.explain.outcome1") }} <b>GeoAngel</b> {{ t("home.explain.outcome2") }}
+					<b>Angel Bridge</b>{{ t("home.explain.outcome3") }} <b>AngelBPM</b>{{ t("home.explain.outcome4") }}
 				</p>
 			</div>
 		</div>
@@ -69,10 +49,10 @@ function requestDemoScroll(): void {
 		<button
 			class="scroll-invite"
 			type="button"
-			aria-label="Vai alle demo interattive"
+			:aria-label="t('home.explain.scrollAria')"
 			@click="requestDemoScroll"
 		>
-			<span>Scopri come funziona</span>
+			<span>{{ t("home.explain.scroll") }}</span>
 			<svg class="arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 				<path d="M12 5v14M19 12l-7 7-7-7" />
 			</svg>

@@ -13,13 +13,13 @@
             <div class="led"></div>
         </div>
         <span class="label">
-            {{ isAlarm ? currentValue.toFixed(1) + ' G' : 'Sensore urti' }}
+            {{ isAlarm ? currentValue.toFixed(1) + ' G' : t('demo.sensors.impact') }}
         </span>
     </div>
 
     <div class="measure">
-        <div class="measure-value">Impatto massimo {{ currentValue.toFixed(1) }} G</div>
-        <div class="measure-tip">Attraversa il target centrale ad alta velocita</div>
+        <div class="measure-value">{{ t("demo.maxImpact", { value: currentValue.toFixed(1) }) }}</div>
+        <div class="measure-tip">{{ t("demo.crossTarget") }}</div>
     </div>
 
 </div>
@@ -27,6 +27,8 @@
 
 <script setup lang="ts">
 import { ref } from "vue"
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
     (e: "alarm"): void

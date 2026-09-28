@@ -13,6 +13,23 @@
 // outage should never be able to break the live site, only prevent it
 // from reflecting the latest edit.
 
+function luminance(hex: string): number | null {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+    if (!m) return null;
+    const [r, g, b] = [0, 2, 4].map((i) => {
+        const c = parseInt(m[1].slice(i, i + 2), 16) / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function isReadable(fg: string, bg: string): boolean {
+    const a = luminance(fg);
+    const b = luminance(bg);
+    if (a === null || b === null) return false;
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 4.5;
+}
+
 export default defineNuxtPlugin(async () => {
     if (import.meta.server) return;
 
@@ -35,7 +52,12 @@ export default defineNuxtPlugin(async () => {
         set("--ax-color-bg-main", theme.background_color);
         set("--ax-color-bg-surface", theme.surface_color);
         set("--ax-color-text-primary", theme.text_color);
-        set("--ax-color-text-muted", theme.muted_color);
+        // Secondary text must stay readable: skip a CMS value that falls
+        // below WCAG AA (4.5:1) against the background and keep the
+        // built-in colour instead.
+        if (isReadable(theme.muted_color, theme.background_color)) {
+            set("--ax-color-text-muted", theme.muted_color);
+        }
         set("--ax-color-border-soft", theme.border_color);
         set("--ax-color-accent-red", theme.primary_color);
         set("--ax-color-accent-red-soft", theme.accent_color);
@@ -64,4 +86,4 @@ export default defineNuxtPlugin(async () => {
         // break the page.
         console.warn("[theme] failed to load active theme, using static defaults", error);
     }
-});
+});

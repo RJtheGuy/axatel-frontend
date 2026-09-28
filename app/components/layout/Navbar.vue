@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import fallbackNavigationItems from "../../data/navigation.json";
 import corporate from "../../data/corporate.json";
 import axatelLogo from '~/assets/immagini/Axatel.svg'
 
@@ -14,15 +13,22 @@ const { settings } = useSiteSettings()
 // same "never break the live site over missing CMS content" pattern
 // used everywhere else. Once an editor adds items in Impostazioni →
 // Navigazione, this switches over automatically, no code change.
-const navigationItems = computed(() => {
-    const cmsItems = settings.value?.navigation?.items
-    return Array.isArray(cmsItems) && cmsItems.length > 0 ? cmsItems : fallbackNavigationItems
-})
+// Menu in the visitor's language, links pointing to the same language
+// (see composables/useSiteNavigation.ts).
+const { items: navigationItems, localize } = useSiteNavigation()
+const { t } = useI18n()
+const localePath = useLocalePath()
 
-const headerCta = computed(() => settings.value?.navigation?.cta ?? {
-    visible: true,
-    label: "Parla con un esperto",
-    url: "/contatti",
+// New blog posts since the visitor's last look (see useBlogUpdates.ts).
+const { count: newPosts, load: loadBlogUpdates } = useBlogUpdates()
+
+const headerCta = computed(() => {
+    const cta = settings.value?.navigation?.cta
+    return {
+        visible: cta?.visible ?? true,
+        label: (!cta?.label_is_fallback && cta?.label?.trim()) || t("nav.cta"),
+        url: localize(cta?.url?.trim() || "/contatti"),
+    }
 })
 
 const hidden = ref(false)
@@ -134,6 +140,7 @@ onMounted(() => {
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener("keydown", handleKeydown)
+    loadBlogUpdates()
 })
 
 onUnmounted(() => {
@@ -212,7 +219,7 @@ onUnmounted(() => {
                 </NuxtLink>
 
                 <span class="sr-only" aria-live="polite">
-                    {{ copiedContact ? 'Contatto copiato negli appunti' : '' }}
+                    {{ copiedContact ? t('ui.contactCopied') : '' }}
                 </span>
             </div>
         </div>
@@ -220,7 +227,7 @@ onUnmounted(() => {
 
     <div class="container">
 
-        <NuxtLink class="brand" to="/" aria-label="Axatel, torna alla home" @click="closeMenu">
+        <NuxtLink class="brand" :to="localePath('/')" :aria-label="t('nav.home')" @click="closeMenu">
             <img :src="axatelLogo" width="128" height="30" alt="Axatel Logo" fetchpriority="high" decoding="async">
         </NuxtLink>
 
@@ -229,15 +236,16 @@ onUnmounted(() => {
             type="button"
             :aria-expanded="menuOpen"
             aria-controls="main-navigation"
-            :aria-label="menuOpen ? 'Chiudi menu' : 'Apri menu'"
+            :aria-label="menuOpen ? t('nav.closeMenu') : t('nav.openMenu')"
             @click="menuOpen = !menuOpen"
         >
             <span></span>
             <span></span>
             <span></span>
+            <i v-if="newPosts > 0 && !menuOpen" class="toggle-dot" aria-hidden="true"></i>
         </button>
 
-        <nav id="main-navigation" class="menu" aria-label="Navigazione principale">
+        <nav id="main-navigation" class="menu" :aria-label="t('nav.main')">
             <LayoutNavbarItem
                 v-for="item in navigationItems"
                 :key="item.label"
@@ -254,6 +262,7 @@ onUnmounted(() => {
             >
                 {{ headerCta.label }}
             </NuxtLink>
+            <LayoutLanguageSwitcher @navigate="closeMenu" />
         </nav>
 
     </div>
@@ -413,6 +422,7 @@ onUnmounted(() => {
 }
 
 .menu-toggle {
+    position:relative;
     display:none;
     width:44px;
     height:44px;
@@ -430,6 +440,17 @@ onUnmounted(() => {
     border-radius:2px;
     background:#fff;
     transition:transform 0.2s ease, opacity 0.2s ease;
+}
+
+.toggle-dot {
+    position:absolute;
+    top:9px;
+    right:7px;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--ax-color-accent-red-soft, #e2493d);
+    box-shadow:0 0 0 2px #020712;
 }
 
 @media (max-width: 1100px) {

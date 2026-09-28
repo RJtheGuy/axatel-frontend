@@ -5,7 +5,9 @@
 
         <div class="content-light-stage">
             <section class="content-shell">
-                <NuxtLink to="/" class="back-link">Torna alla home</NuxtLink>
+                <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
+                <!-- These pages are written in the code, in Italian only, until they move to the CMS. -->
+                <LayoutTranslationNotice v-if="locale !== 'it'" />
                 <div class="eyebrow">{{ breadcrumbLabel }} · {{ page.group }} · {{ page.eyebrow }}</div>
                 <p class="lead">{{ page.introduction }}</p>
 
@@ -70,6 +72,9 @@ import ContentMedia from "./ContentMedia.vue";
 import ContentSection from "./ContentSection.vue";
 import GlossarySearch from "./GlossarySearch.vue";
 import ArticleParticleHero from "../articles/ArticleParticleHero.vue";
+
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
 
 withDefaults(defineProps<{
     page: ContentPageData;

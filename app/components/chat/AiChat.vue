@@ -11,8 +11,8 @@
                         <button
                             class="icon-btn"
                             :disabled="!messages.length && !error"
-                            title="Ricomincia la conversazione"
-                            aria-label="Ricomincia la conversazione"
+                            :title="t('chat.restart')"
+                            :aria-label="t('chat.restart')"
                             @click="reset"
                         >
                             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -25,8 +25,8 @@
                         </button>
                         <button
                             class="icon-btn"
-                            title="Chiudi"
-                            aria-label="Chiudi la chat"
+                            :title="t('chat.close')"
+                            :aria-label="t('chat.closeChat')"
                             @click="toggle"
                         >
                             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -92,14 +92,14 @@
                         type="text"
                         :placeholder="placeholder"
                         :disabled="pending"
-                        aria-label="Messaggio"
+                        :aria-label="t('chat.message')"
                         @keydown.esc="toggle"
                     />
                     <button
                         type="submit"
                         class="send-btn"
                         :disabled="pending || !draft.trim()"
-                        aria-label="Invia"
+                        :aria-label="t('chat.send')"
                     >
                         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                             <path fill="currentColor" d="M3 20l18-8L3 4v6l12 2-12 2z" />
@@ -113,7 +113,7 @@
             class="chat-toggle"
             :class="{ 'is-open': open }"
             :aria-expanded="open"
-            :aria-label="open ? 'Chiudi la chat' : 'Apri la chat'"
+            :aria-label="open ? t('chat.closeChat') : t('chat.openChat')"
             @click="toggle"
         >
             <!-- Inline SVG rather than emoji: this file is deliberately
@@ -165,33 +165,25 @@ const inputEl = ref<HTMLInputElement | null>(null);
 // stable enough once messages are cleared and re-added by reset().
 let nextId = 0;
 
-/* Accented characters use \u escapes to keep this file ASCII.
-   \u00e8 = e-grave   \u2026 = ellipsis */
-const title = computed(() => props.config?.title || "Chiedi ad Axatel");
+// Texts from Impostazioni -> Chatbot are written in Italian, so they are
+// used only on the Italian site; English and French use the translated
+// interface text (i18n/messages-interface.ts, "chat").
+const { t, tm, rt, locale } = useI18n();
+const fromCms = (value?: string) => (locale.value === "it" && value ? value : "");
 
-const welcome = computed(
-    () => props.config?.welcome_message
-        || "Ciao! Posso rispondere a domande su Axatel e le nostre soluzioni."
-);
+const title = computed(() => fromCms(props.config?.title) || t("chat.title"));
 
-const placeholder = computed(
-    () => props.config?.placeholder || "Scrivi una domanda\u2026"
-);
+const welcome = computed(() => fromCms(props.config?.welcome_message) || t("chat.welcome"));
 
-// Fallbacks are phrased as real questions because the engine matches on
+const placeholder = computed(() => fromCms(props.config?.placeholder) || t("chat.placeholder"));
+
+// Suggestions are phrased as real questions because the engine matches on
 // semantic similarity against KNOWLEDGE_BASE - a terse menu label like
 // "Sede" scores badly and falls through to the generic answer.
-const DEFAULT_SUGGESTIONS = [
-    "Cosa fa Axatel?",
-    "Dove siete?",
-    "Cos'\u00e8 Smart Road?",
-    "Come vi contatto?",
-];
-
-const suggestions = computed(() =>
-    props.config?.suggestions?.length
+const suggestions = computed<string[]>(() =>
+    locale.value === "it" && props.config?.suggestions?.length
         ? props.config.suggestions
-        : DEFAULT_SUGGESTIONS
+        : (tm("chat.suggestions") as unknown[]).map((s) => rt(s as never))
 );
 
 async function toggle() {
@@ -247,7 +239,7 @@ async function send() {
         if (res?.response) {
             messages.value.push({ id: nextId++, role: "bot", text: res.response });
         } else {
-            error.value = res?.error || "Risposta non valida dal server.";
+            error.value = res?.error || t("chat.invalid");
         }
     } catch (e: any) {
         // The FIRST request after a backend restart loads the
@@ -255,9 +247,7 @@ async function send() {
         // (chatbot/engine.py _ensure_loaded). That takes 30-60s and
         // usually surfaces here as a timeout - a cold start, not a
         // failure. Later requests are fast.
-        error.value =
-            "Non riesco a rispondere in questo momento. "
-            + "Se \u00e8 la prima domanda dopo un riavvio, riprova tra un minuto.";
+        error.value = t("chat.unavailable");
         console.error("[chatbot]", e);
     } finally {
         pending.value = false;

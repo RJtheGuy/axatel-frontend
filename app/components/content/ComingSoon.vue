@@ -1,10 +1,10 @@
 <template>
     <section class="coming-soon">
         <p class="eyebrow">{{ group }} · {{ eyebrow }}</p>
-        <p class="status-label">Prossimamente</p>
-        <h2>Stiamo preparando questa pagina.</h2>
+        <p class="status-label">{{ t("comingSoon.status") }}</p>
+        <h2>{{ t("comingSoon.title") }}</h2>
         <div class="status-line" aria-hidden="true"><span></span></div>
-        <NuxtLink to="/contatti" class="ax-cta-outline">Parla con noi</NuxtLink>
+        <NuxtLink :to="localePath('/contatti')" class="ax-cta-outline">{{ t("comingSoon.cta") }}</NuxtLink>
     </section>
 </template>
 
@@ -13,6 +13,8 @@ defineProps<{
     group: string;
     eyebrow: string;
 }>();
+const { t } = useI18n();
+const localePath = useLocalePath();
 </script>
 
 <style scoped>

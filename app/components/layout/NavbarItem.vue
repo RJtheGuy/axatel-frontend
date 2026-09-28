@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import type { NavigationItem } from "../../types/navigation";
+import { isBlogHref, useBlogUpdates } from "../../composables/useBlogUpdates";
 
 const props = defineProps<{
     item: NavigationItem;
@@ -13,6 +14,18 @@ const emit = defineEmits<{
 }>();
 
 const dropdown = ref<HTMLDetailsElement | null>(null);
+
+// "New posts" badge next to the Blog link, and a small dot on the menu and
+// group that contain it, so the badge is findable without opening every menu.
+const { t } = useI18n();
+const { count: newPosts } = useBlogUpdates();
+const badgeText = computed(() => (newPosts.value > 9 ? "9+" : String(newPosts.value)));
+const badgeLabel = computed(() =>
+    newPosts.value === 1 ? t("blog.newPostsOne") : t("blog.newPosts", { count: newPosts.value })
+);
+const groupHasNew = (group: { links?: Array<{ href?: string }> }) =>
+    newPosts.value > 0 && Boolean(group.links?.some((l) => isBlogHref(l.href)));
+const itemHasNew = computed(() => (props.item.groups ?? []).some(groupHasNew));
 const activeMobileGroup = ref<number | null>(null);
 
 const isDesktop = () => window.matchMedia("(min-width: 1101px)").matches;
@@ -64,6 +77,7 @@ watch(() => props.mobileExpanded, (expanded) => {
         @click="emit('navigate')"
     >
         {{ item.label }}
+        <span v-if="isBlogHref(item.href) && newPosts > 0" class="new-badge" :aria-label="badgeLabel">{{ badgeText }}</span>
     </NuxtLink>
 
     <details
@@ -74,7 +88,10 @@ watch(() => props.mobileExpanded, (expanded) => {
         @mouseleave="closeOnLeave"
     >
         <summary class="nav-link" @click="handleSummaryClick">
-            <span>{{ item.label }}</span>
+            <span class="summary-label">
+                {{ item.label }}
+                <span v-if="itemHasNew" class="new-dot" aria-hidden="true" />
+            </span>
             <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m7 10 5 5 5-5" />
             </svg>
@@ -93,7 +110,10 @@ watch(() => props.mobileExpanded, (expanded) => {
                     :aria-expanded="activeMobileGroup === groupIndex"
                     @click="toggleMobileGroup(groupIndex)"
                 >
-                    <span>{{ group.label }}</span>
+                    <span class="summary-label">
+                        {{ group.label }}
+                        <span v-if="groupHasNew(group)" class="new-dot group-dot" aria-hidden="true" />
+                    </span>
                     <svg class="group-chevron" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="m7 10 5 5 5-5" />
                     </svg>
@@ -106,7 +126,13 @@ watch(() => props.mobileExpanded, (expanded) => {
                         :to="link.href"
                         @click="emit('navigate')"
                     >
-                        {{ link.label }}
+                        <span>{{ link.label }}</span>
+                        <span
+                            v-if="isBlogHref(link.href) && newPosts > 0"
+                            class="new-badge"
+                            :aria-label="badgeLabel"
+                            :title="badgeLabel"
+                        >{{ badgeText }}</span>
                     </NuxtLink>
                 </div>
             </section>
@@ -272,6 +298,76 @@ summary::-webkit-details-marker {
 .dropdown-group a:focus-visible {
     color: var(--ax-color-accent-red-soft);
     transform: translateX(3px);
+}
+
+.summary-label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Small red dot: "something new inside this menu". */
+.new-dot {
+    position: absolute;
+    top: -3px;
+    right: -8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ax-color-accent-red-soft, #e2493d);
+    box-shadow: 0 0 0 2px rgba(5, 15, 25, 0.9);
+    animation: new-dot-pulse 2.4s ease-out 2;
+}
+
+.group-dot {
+    position: static;
+    margin-left: 8px;
+    box-shadow: none;
+}
+
+/* Count pill next to the Blog link. */
+.new-badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--ax-color-accent-red-soft, #e2493d);
+    color: #fff;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Desktop: keep the pill next to the word, not at the far edge. */
+@media (min-width: 1101px) {
+    .dropdown-group a .new-badge {
+        margin-right: auto;
+        margin-left: -10px;
+    }
+}
+
+.dropdown-group a:hover .new-badge,
+.dropdown-group a:focus-visible .new-badge {
+    color: #fff;
+}
+
+@keyframes new-dot-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(226, 73, 61, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 0 8px rgba(226, 73, 61, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .new-dot {
+        animation: none;
+    }
 }
 
 @media (min-width: 1101px) {

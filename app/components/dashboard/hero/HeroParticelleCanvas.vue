@@ -23,7 +23,8 @@ const defaultFrasi = [
 ];
 
 const DEFAULT_QUOTE_TEXT = "Tutti noi di Axatel abbiamo un obiettivo in comune:\nabbiamo a cuore ciò che facciamo e l'impatto positivo che generiamo per i nostri partner e per le comunità in cui viviamo e operiamo.\nPer noi e sempre una questione personale";
-const DEFAULT_CASES_LOGO_ASSET = resolveImage("/immagini/angelo.png");
+// Resolved when used (not at import time) so the backend URL is known.
+const DEFAULT_CASES_LOGO_PATH = "/immagini/angelo.png";
 
 
 const resolveFrasi = (frasi?: string[]): string[] => {
@@ -36,10 +37,12 @@ const resolveQuoteText = (quoteText?: string): string => {
     return normalized.length > 0 ? normalized : DEFAULT_QUOTE_TEXT;
 };
 
+// Always goes through resolveImage: a bare "/immagini/angelo.png" was
+// requested from the frontend itself, where it doesn't exist (404 + a
+// wasted CMS lookup via the catch-all route).
 const resolveCasesLogoAsset = (asset?: string): string => {
-    if (!asset) return DEFAULT_CASES_LOGO_ASSET;
-    const normalized = asset.trim();
-    return normalized.length > 0 ? normalized : DEFAULT_CASES_LOGO_ASSET;
+    const normalized = (asset ?? "").trim();
+    return resolveImage(normalized || DEFAULT_CASES_LOGO_PATH);
 };
 
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -198,6 +201,12 @@ async function startEngine(): Promise<void> {
     if (!canvas.value || engine) return;
 
     removeEngineStartIntentListeners();
+
+    // Particle text is drawn on a canvas, which uses whatever font is
+    // loaded at that moment - wait for Montserrat so shapes don't fall back.
+    if ("fonts" in document) {
+        await document.fonts.load("350 48px Montserrat").catch(() => undefined);
+    }
 
     const { default: HeroEngine } = await import("@/classes/hero/HeroEngine");
 

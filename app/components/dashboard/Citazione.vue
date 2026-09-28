@@ -3,16 +3,18 @@
         <div class="hero-grid" aria-hidden="true"></div>
 
         <div class="hero-copy">
-            <p class="hero-kicker">Tecnologia che protegge</p>
-            <h1>Sistemi di monitoraggio <span>real-time</span> per la mitigazione del rischio</h1>
-            <p class="hero-intro">
-                Dati, automazione e controllo continuo per anticipare gli eventi e proteggere
-                infrastrutture, territori e persone.
-            </p>
+            <p class="hero-kicker">{{ t("hero.kicker") }}</p>
+            <h1>{{ t("hero.titleBefore") }} <span>{{ t("hero.titleAccent") }}</span> {{ t("hero.titleAfter") }}</h1>
+            <p class="hero-intro">{{ t("hero.intro") }}</p>
 
-            <div class="hero-status" aria-label="Monitoraggio attivo">
+            <div class="hero-actions">
+                <NuxtLink :to="localePath('/contatti')" class="hero-btn hero-btn-primary">{{ t("hero.ctaPrimary") }}</NuxtLink>
+                <NuxtLink :to="localePath('/monitoraggio')" class="hero-btn hero-btn-ghost">{{ t("hero.ctaSecondary") }} <span aria-hidden="true">→</span></NuxtLink>
+            </div>
+
+            <div class="hero-status" :aria-label="t('hero.status')">
                 <span class="status-dot"></span>
-                <span>Monitoraggio attivo</span>
+                <span>{{ t("hero.status") }}</span>
                 <span class="status-separator"></span>
                 <span>24 / 7</span>
             </div>
@@ -27,6 +29,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
+
+const { t } = useI18n();
+const localePath = useLocalePath();
 
 const sectionEl = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
@@ -118,7 +123,7 @@ onBeforeUnmount(() => {
     position: relative;
     z-index: 3;
     display: flex;
-    width: min(58vw, 820px);
+    width: min(60vw, 880px);
     height: 100%;
     padding: 15vh 0 12vh clamp(36px, 8vw, 140px);
     flex-direction: column;
@@ -138,9 +143,9 @@ onBeforeUnmount(() => {
     max-width: 790px;
     margin: 0;
     color: #fff;
-    font-size: clamp(3rem, 5.6vw, 6.4rem);
-    font-weight: 220 !important;
-    line-height: 0.98;
+    font-size: clamp(2.6rem, 4.6vw, 5.2rem);
+    font-weight: 250 !important;
+    line-height: 1.02;
     letter-spacing: 0;
     text-wrap: balance;
 }
@@ -159,9 +164,64 @@ onBeforeUnmount(() => {
     line-height: 1.65;
 }
 
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 34px;
+}
+
+.hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 24px;
+    border-radius: 999px;
+    font-size: 0.86rem;
+    font-weight: 650;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.hero-btn-primary {
+    color: #fff;
+    background: var(--ax-color-accent-red);
+    box-shadow: 0 12px 28px rgba(197, 35, 23, 0.32);
+}
+
+.hero-btn-primary:hover {
+    background: var(--ax-color-accent-red-soft);
+    transform: translateY(-1px);
+}
+
+.hero-btn-ghost {
+    color: var(--ax-color-text-primary);
+    border: 1px solid rgba(198, 220, 239, 0.32);
+    background: rgba(2, 7, 18, 0.35);
+}
+
+.hero-btn-ghost:hover {
+    border-color: rgba(198, 220, 239, 0.7);
+}
+
+.hero-btn:focus-visible {
+    outline: 2px solid #8bd9ff;
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-btn,
+    .hero-btn:hover {
+        transition: none;
+        transform: none;
+    }
+}
+
 .hero-status {
     display: flex;
-    margin-top: 34px;
+    margin-top: 28px;
     align-items: center;
     gap: 10px;
     color: var(--ax-color-text-muted);
@@ -276,13 +336,22 @@ onBeforeUnmount(() => {
 
     .hero-copy {
         width: 100%;
-        padding: 110px 7vw 110px;
+        padding: 96px 6vw 64px;
         justify-content: flex-end;
     }
 
     .hero-copy h1 {
-        max-width: 94%;
-        font-size: clamp(2.5rem, 12vw, 4rem);
+        max-width: 100%;
+        font-size: clamp(2.2rem, 10.5vw, 3.4rem);
+    }
+
+    .hero-actions {
+        margin-top: 26px;
+    }
+
+    .hero-btn {
+        min-height: 46px;
+        padding: 0 20px;
     }
 
     .hero-intro {

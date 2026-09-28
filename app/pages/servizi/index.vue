@@ -1,23 +1,21 @@
 <template>
     <main class="svc-page">
         <header class="svc-hero">
-            <ArticleParticleHero title="Servizi" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero :title="t('services.title')" :asset-url="resolveImage('/immagini/ala.png')" />
         </header>
 
         <div class="svc-light-stage">
             <section class="svc-shell">
-                <NuxtLink to="/" class="back-link">Torna alla home</NuxtLink>
+                <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
 
-                <div class="page-kicker">Come lo realizziamo</div>
+                <div class="page-kicker">{{ t("solutions.kicker") }}</div>
                 <p class="lead">{{ lead }}</p>
 
-                <p v-if="!items.length" class="empty">
-                    Nessun servizio pubblicato al momento.
-                </p>
+                <p v-if="!items.length" class="empty">{{ t("services.empty") }}</p>
 
                 <div v-else class="svc-grid">
                     <article v-for="item in items" :key="item.slug" class="svc-card">
-                        <NuxtLink :to="`/servizi/${item.slug}`" class="svc-link" :aria-label="`Leggi ${item.title}`">
+                        <NuxtLink :to="localePath(`/servizi/${item.slug}`)" class="svc-link" :aria-label="t('blog.read', { title: item.title })">
                             <div class="svc-icon" v-if="item.icon">{{ item.icon }}</div>
                             <h2>{{ item.title }}</h2>
                             <p>{{ item.description }}</p>
@@ -35,6 +33,8 @@ import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 
 const { getPage, getPageBySlug } = useCms();
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
 
 type ServiceItem = {
     title: string;
@@ -43,19 +43,19 @@ type ServiceItem = {
     slug: string;
 };
 
-const { data: svcData } = await useAsyncData("servizi-list", () =>
+const { data: svcData } = await useAsyncData(() => `servizi-list-${locale.value}`, () =>
     getPage("services.ServicePage", { order: "title" }).catch(() => null)
 );
 
-const { data: indexPage } = await useAsyncData("servizi-index", () =>
+const { data: indexPage } = await useAsyncData(() => `servizi-index-${locale.value}`, () =>
     getPageBySlug("services.ServicesIndexPage", "servizi").catch(() => null)
 );
 
-const DEFAULT_LEAD = "Piattaforme, sensori, tecnologie e servizi per realizzare monitoraggio e automazione su misura.";
 
 const lead = computed(() => {
     const intro = indexPage.value?.intro;
-    return typeof intro === "string" && intro.trim().length > 0 ? intro : DEFAULT_LEAD;
+    if (indexPage.value?.__fallback) return t("services.lead");
+    return typeof intro === "string" && intro.trim().length > 0 ? intro : t("services.lead");
 });
 
 const items = computed<ServiceItem[]>(() =>
@@ -68,9 +68,9 @@ const items = computed<ServiceItem[]>(() =>
 );
 
 useSeoMeta({
-    title: "Servizi | Axatel",
+    title: () => `${t("services.title")} | Axatel`,
     description: () => lead.value,
-    ogTitle: "Servizi | Axatel",
+    ogTitle: () => `${t("services.title")} | Axatel`,
     ogDescription: () => lead.value,
     ogType: "website",
     robots: "index,follow"
@@ -206,4 +206,4 @@ useSeoMeta({
         padding: 5vh 5vw 6vh;
     }
 }
-</style>
+</style>

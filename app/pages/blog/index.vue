@@ -1,23 +1,21 @@
 <template>
     <main class="blog-page">
         <header class="blog-hero">
-            <ArticleParticleHero title="Blog" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero :title="t('blog.title')" :asset-url="resolveImage('/immagini/ala.png')" />
         </header>
 
         <div class="blog-light-stage">
             <section class="blog-shell">
-                <NuxtLink to="/" class="back-link">Torna alla home</NuxtLink>
+                <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
 
-                <div class="page-kicker">Blog</div>
+                <div class="page-kicker">{{ t("blog.title") }}</div>
                 <p class="lead">{{ lead }}</p>
 
-                <p v-if="!posts.length" class="empty">
-                    Nessun articolo pubblicato al momento.
-                </p>
+                <p v-if="!posts.length" class="empty">{{ t("blog.empty") }}</p>
 
                 <div v-else class="blog-grid">
                     <article v-for="item in posts" :key="item.slug" class="post-card">
-                        <NuxtLink :to="`/blog/${item.slug}`" class="post-link" :aria-label="`Leggi ${item.title}`">
+                        <NuxtLink :to="localePath(`/blog/${item.slug}`)" class="post-link" :aria-label="t('blog.read', { title: item.title })">
                             <div class="post-media">
                                 <img
                                     v-if="item.image"
@@ -52,11 +50,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 
 const { getPage, getPageBySlug } = useCms();
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
 
 type PostItem = {
     title: string;
@@ -68,17 +68,16 @@ type PostItem = {
     slug: string;
 };
 
-const { data: blogData } = await useAsyncData("blog-list", () =>
-    getPage("blog.BlogPost", { order: "-date" }).catch(() => null)
+const { data: blogData } = await useAsyncData(() => `blog-list-${locale.value}`, () =>
+    getPage("blog.BlogPost", { order: "-date", limit: 20 }).catch(() => null)
 );
 
 // Intro copy comes from BlogIndexPage.intro, editable in the admin —
 // same convention as casi/index.vue's CasiIndexPage.intro.
-const { data: indexPage } = await useAsyncData("blog-index", () =>
+const { data: indexPage } = await useAsyncData(() => `blog-index-${locale.value}`, () =>
     getPageBySlug("blog.BlogIndexPage", "blog").catch(() => null)
 );
 
-const DEFAULT_LEAD = "Novità, approfondimenti e aggiornamenti dal mondo Axatel.";
 
 const lead = computed(() => {
     const intro = indexPage.value?.intro;
@@ -87,7 +86,9 @@ const lead = computed(() => {
     // CmsBlockRenderer instead of this plain-text fallback. Left as a
     // simple default for now since BlogIndexPage.intro is very likely
     // still empty on a fresh install.
-    return typeof intro === "string" && intro.trim().length > 0 ? intro : DEFAULT_LEAD;
+    // An untranslated index page would put Italian text on the EN/FR site.
+    if (indexPage.value?.__fallback) return t("blog.lead");
+    return typeof intro === "string" && intro.trim().length > 0 ? intro : t("blog.lead");
 });
 
 const posts = computed<PostItem[]>(() =>
@@ -104,16 +105,22 @@ const posts = computed<PostItem[]>(() =>
 
 function formatDate(iso: string): string {
     try {
-        return new Date(iso).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
+        return new Date(iso).toLocaleDateString(locale.value, { day: "numeric", month: "long", year: "numeric" });
     } catch {
         return iso;
     }
 }
 
+// Opening the list clears the "new posts" badge in the menu.
+const { markAllSeen } = useBlogUpdates();
+onMounted(() => {
+    markAllSeen();
+});
+
 useSeoMeta({
-    title: "Blog | Axatel",
+    title: () => `${t("blog.title")} | Axatel`,
     description: () => lead.value,
-    ogTitle: "Blog Axatel",
+    ogTitle: () => `${t("blog.title")} Axatel`,
     ogDescription: () => lead.value,
     ogType: "website",
     robots: "index,follow"

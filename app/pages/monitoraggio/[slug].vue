@@ -6,19 +6,25 @@
 
         <div class="topic-light-stage">
             <article class="topic-shell">
-                <NuxtLink to="/monitoraggio" class="back-link">Torna a Cosa monitoriamo</NuxtLink>
+                <NuxtLink :to="localePath('/monitoraggio')" class="back-link">{{ t("monitoring.back") }}</NuxtLink>
 
-                <p v-if="topic.description" class="lead">{{ topic.description }}</p>
+                <LayoutTranslationNotice v-if="raw?.__fallback" />
 
-                <img
-                    v-if="topic.image"
-                    class="topic-cover"
-                    :src="imageUrl(topic.image)"
-                    :alt="topic.image_alt || topic.title"
-                    :width="topic.image_width"
-                    :height="topic.image_height"
-                    decoding="async"
-                />
+                <div class="topic-intro" :class="{ 'has-media': topic.image }">
+                    <div>
+                        <p v-if="topic.category" class="topic-kicker">{{ topic.category }}</p>
+                        <p v-if="topic.description" class="lead">{{ topic.description }}</p>
+                    </div>
+                    <figure v-if="topic.image" class="topic-badge">
+                        <img
+                            :src="imageUrl(topic.image)"
+                            :alt="topic.image_alt || topic.title"
+                            :width="topic.image_width"
+                            :height="topic.image_height"
+                            decoding="async"
+                        />
+                    </figure>
+                </div>
 
                 <!-- MonitoringPage.body is a real StreamField(BODY_BLOCKS) —
                      same rendering path as Servizio/Blog, not plain v-html. -->
@@ -42,6 +48,7 @@ const { imageUrl } = useCmsImage();
 type TopicData = {
     title: string;
     icon: string;
+    category: string;
     description: string;
     image: string;
     image_alt: string;
@@ -56,19 +63,23 @@ const slug = computed(() => {
     return Array.isArray(s) ? s[0] : s;
 });
 
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
+
 const { data: raw } = await useAsyncData(
-    () => `monitoraggio-topic-${slug.value}`,
+    () => `monitoraggio-topic-${locale.value}-${slug.value}`,
     () => getPageBySlug<any>("monitoring.MonitoringPage", slug.value as string).catch(() => null),
-    { watch: [slug] }
+    { watch: [slug, locale] }
 );
 
 if (!raw.value) {
-    throw createError({ statusCode: 404, statusMessage: "Argomento non trovato" });
+    throw createError({ statusCode: 404, statusMessage: t("errors.topic") });
 }
 
 const topic = computed<TopicData>(() => ({
     title: raw.value.title,
     icon: raw.value.icon || "",
+    category: raw.value.category || "",
     description: raw.value.short_description || "",
     image: raw.value.cover_image?.url || "",
     image_alt: raw.value.cover_image?.alt || "",
@@ -144,16 +155,60 @@ useSeoMeta({
     line-height: 1.62;
 }
 
-.topic-cover {
-    width: 100%;
-    max-height: 460px;
+.topic-intro {
+    display: grid;
+    gap: 32px;
+    align-items: center;
+    margin: 0 0 40px;
+    padding-bottom: 36px;
+    border-bottom: 1px solid rgba(11, 53, 91, 0.1);
+}
+
+.topic-intro.has-media {
+    grid-template-columns: minmax(0, 1fr) 220px;
+}
+
+.topic-intro .lead {
+    margin: 0;
+}
+
+.topic-kicker {
+    margin: 0 0 10px;
+    color: #c52317;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* Product pictogram (Angel River, Traffic Alert…): shown whole, never cropped. */
+.topic-badge {
+    margin: 0;
+    padding: 22px;
+    border: 1px solid rgba(11, 53, 91, 0.1);
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 18px 40px rgba(17, 48, 78, 0.1);
+}
+
+.topic-badge img {
     display: block;
-    margin: 0 0 32px;
-    border: 1px solid rgba(11, 53, 91, 0.14);
-    object-fit: cover;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+}
+
+/* Rich text blocks carry their own page padding; inside this column they
+   should line up with the intro instead of being indented again. */
+.topic-body :deep(.cms-rich-text) {
+    max-width: none;
+    padding: 0 0 8px;
 }
 
 .topic-body {
+    --cms-text: #274e72;
+    --cms-heading: #0b355b;
     color: #0b355b;
 }
 
@@ -174,6 +229,15 @@ useSeoMeta({
 
     .topic-shell {
         padding: 5vh 5vw 6vh;
+    }
+
+    .topic-intro.has-media {
+        grid-template-columns: 1fr;
+    }
+
+    .topic-badge {
+        width: 160px;
+        order: -1;
     }
 }
 </style>

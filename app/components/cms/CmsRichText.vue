@@ -19,7 +19,7 @@ defineProps<{ value: string }>();
 
 .cms-rich-text :deep(p) {
     margin: 0 0 1.4em;
-    color: var(--ax-color-text-secondary);
+    color: var(--cms-text, var(--ax-color-text-secondary));
     line-height: 1.75;
 }
 
@@ -45,12 +45,22 @@ defineProps<{ value: string }>();
 .cms-rich-text :deep(ol) {
     margin: 0 0 1.5em;
     padding-left: 1.3em;
-    color: var(--ax-color-text-secondary);
+    color: var(--cms-text, var(--ax-color-text-secondary));
     line-height: 1.7;
 }
 
 .cms-rich-text :deep(li) {
     margin-bottom: 0.5em;
+}
+
+.cms-rich-text :deep(li)::marker {
+    color: var(--ax-color-accent-red-soft);
+}
+
+.cms-rich-text :deep(h2),
+.cms-rich-text :deep(h3),
+.cms-rich-text :deep(h4) {
+    color: var(--cms-heading, var(--ax-color-text-primary));
 }
 
 .cms-rich-text :deep(a) {
@@ -59,7 +69,7 @@ defineProps<{ value: string }>();
 
 .cms-rich-text :deep(b),
 .cms-rich-text :deep(strong) {
-    color: var(--ax-color-text-primary);
+    color: var(--cms-heading, var(--ax-color-text-primary));
     font-weight: 600;
 }
 </style>
