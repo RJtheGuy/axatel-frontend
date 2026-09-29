@@ -96,10 +96,15 @@ export function useCms() {
         })
     }
 
+    /** People for the team page (Impostazioni → Team), in the current language. */
+    async function getTeam<T = any>() {
+        return await $fetch<{ members: T[] }>(`${base}/team/`, { params: { locale: currentLocale() } })
+    }
+
     /** Active site theme (falls back to DEFAULT_THEME server-side). */
     async function getActiveTheme<T = any>() {
         return await $fetch<T>(`${base}/themes/active/`)
     }
 
-    return { getPage, getPageBySlug, findByPath, getActiveTheme, currentLocale }
+    return { getPage, getPageBySlug, findByPath, getTeam, getActiveTheme, currentLocale }
 }

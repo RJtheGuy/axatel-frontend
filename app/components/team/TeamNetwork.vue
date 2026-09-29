@@ -20,7 +20,8 @@
                 @click="selectMember(member)"
             >
                 <span class="portrait">
-                    <img :src="member.image" :alt="member.name" width="180" height="180" />
+                    <img v-if="member.image" :src="member.image" :alt="member.name" width="180" height="180" loading="lazy" decoding="async" />
+                    <span v-else class="initials" aria-hidden="true">{{ initials(member.name) }}</span>
                 </span>
                 <span class="member-name">{{ member.name }}</span>
             </button>
@@ -28,7 +29,7 @@
 
         <Transition name="profile">
             <article v-if="selectedMember" class="member-profile" aria-live="polite">
-                <p class="profile-kicker">{{ t("team.kicker") }}</p>
+                <p class="profile-kicker">{{ selectedMember.role || t("team.kicker") }}</p>
                 <h2>{{ selectedMember.name }}</h2>
                 <p>{{ selectedMember.description }}</p>
                 <button type="button" class="back-button" @click="clearSelection">{{ t("team.back") }}</button>
@@ -66,6 +67,16 @@ function memberStyle(member: TeamMember, index: number): Record<string, string> 
         "--drift-rotate": `${direction * (0.6 + index % 3 * 0.35)}deg`,
         "--stack-order": `${index}`
     };
+}
+
+// Shown instead of a photo when none was uploaded: "Mario Rossi" → "MR".
+function initials(name: string): string {
+    return name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join("");
 }
 
 function selectMember(member: TeamMember): void {
@@ -163,6 +174,17 @@ function clearSelection(): void {
     height: 100%;
     display: block;
     object-fit: cover;
+}
+
+.initials {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    color: #e8f7ff;
+    font-size: clamp(1rem, 2.4vw, 1.6rem);
+    font-weight: 600;
+    letter-spacing: 0.04em;
 }
 
 .member-name {
