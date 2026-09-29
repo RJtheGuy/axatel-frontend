@@ -10,6 +10,7 @@
 
                 <div class="page-kicker">{{ t("monitoring.kicker") }}</div>
                 <p class="lead">{{ lead }}</p>
+                <LayoutTranslationNotice v-if="hasUntranslated" />
 
                 <p v-if="!topics.length" class="empty">
                     {{ t("monitoring.empty") }}
@@ -56,6 +57,7 @@
 import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
+import { monitoringOrder, monitoringPages } from "../../data/monitoring";
 
 const { getPage, getPageBySlug } = useCms();
 const { t, locale } = useI18n();
@@ -93,8 +95,16 @@ const lead = computed(() => {
     return usable ? intro : t("monitoring.lead");
 });
 
-const topics = computed<TopicItem[]>(() =>
-    (monData.value?.items ?? []).map((p: any) => ({
+const shorten = (title: string) =>
+    // "Monitoraggio frane" → "Frane" (and "Traffic monitoring" → "Traffic"):
+    // the group heading already says what it is.
+    capitalize(String(title || "").replace(/^(monitoraggio|surveillance( des| du| de la)?)\s+/i, "").replace(/\s+monitoring$/i, ""));
+
+// CMS topics (Pagine → Monitoraggio) first; any topic not in the CMS yet
+// comes from the built-in list (data/monitoring.ts), so nothing disappears
+// from this page while the topics are being moved into the CMS.
+const topics = computed<TopicItem[]>(() => {
+    const cms = ((monData.value?.items ?? []) as any[]).map((p) => ({
         title: p.title,
         icon: p.icon || "",
         description: p.short_description || "",
@@ -103,10 +113,31 @@ const topics = computed<TopicItem[]>(() =>
         image_alt: p.cover_image?.alt || "",
         tags: p.tags || [],
         slug: p.meta?.slug,
-        // "Monitoraggio frane" → "Frane" (and "Traffic monitoring" → "Traffic"):
-        // the group heading already says what it is.
-        shortTitle: capitalize(String(p.title || "").replace(/^(monitoraggio|surveillance( des| du| de la)?)\s+/i, "").replace(/\s+monitoring$/i, ""))
-    }))
+        shortTitle: shorten(p.title),
+    }));
+    const inCms = new Set(cms.map((p) => p.slug));
+    const builtIn = monitoringOrder
+        .filter((slug) => !inCms.has(slug))
+        .map((slug) => monitoringPages[slug]!)
+        .map((p) => ({
+            title: p.title,
+            icon: "",
+            description: p.introduction,
+            category: p.group,
+            image: p.image || "",
+            image_alt: p.imageAlt || "",
+            tags: [],
+            slug: p.slug,
+            shortTitle: shorten(p.title),
+        }));
+    return [...cms, ...builtIn];
+});
+
+// Built-in topics and CMS pages not translated yet are in Italian.
+const hasUntranslated = computed(
+    () =>
+        ((monData.value?.items ?? []) as any[]).some((p) => p.__fallback) ||
+        (locale.value !== "it" && topics.value.length > ((monData.value?.items ?? []) as any[]).length)
 );
 
 function capitalize(value: string): string {

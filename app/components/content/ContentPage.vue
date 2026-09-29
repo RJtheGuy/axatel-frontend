@@ -43,7 +43,7 @@
 
                     <footer class="content-cta">
                         <p>{{ page.cta?.text || "Vuoi capire quale soluzione e adatta al tuo progetto?" }}</p>
-                        <NuxtLink :to="page.cta?.href || '/contatti'" class="ax-cta-outline">
+                        <NuxtLink :to="localePath(page.cta?.href || '/contatti')" class="ax-cta-outline">
                             {{ page.cta?.label || "Contattaci" }}
                         </NuxtLink>
                     </footer>
@@ -53,7 +53,7 @@
                     <NuxtLink
                         v-for="item in relatedPages"
                         :key="item.slug"
-                        :to="`${basePath}/${item.slug}`"
+                        :to="localePath(`${basePath}/${item.slug}`)"
                     >
                         <span>{{ item.group }}</span>
                         <strong>{{ shortTitle(item.title) }}</strong>

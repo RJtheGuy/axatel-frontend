@@ -1,5 +1,7 @@
 <template>
-    <main class="topic-page">
+    <!-- CMS page (Pagine → Monitoraggio). If the topic isn't in the CMS yet,
+         the built-in version from data/monitoring.ts is shown instead. -->
+    <main v-if="raw" class="topic-page">
         <header class="topic-hero">
             <ArticleParticleHero :title="topic.title" :asset-url="resolveImage('/immagini/ala.png')" />
         </header>
@@ -31,15 +33,28 @@
                 <div class="topic-body">
                     <CmsBlockRenderer :blocks="topic.body ?? []" />
                 </div>
+
+                <ContentProjectCta :subject="topic.title" />
             </article>
         </div>
     </main>
+
+    <ContentPage
+        v-else
+        :page="legacy!"
+        :breadcrumb-label="t('monitoring.kicker')"
+        base-path="/monitoraggio"
+        :related-pages="legacyRelated"
+        :related-label="t('monitoring.kicker')"
+    />
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import { createError, useRoute, useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
+import ContentPage from "../../components/content/ContentPage.vue";
+import { monitoringOrder, monitoringPages } from "../../data/monitoring";
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
@@ -72,11 +87,20 @@ const { data: raw } = await useAsyncData(
     { watch: [slug, locale] }
 );
 
-if (!raw.value) {
+// Built-in fallback (the topics written in the code before the CMS).
+const legacy = computed(() => monitoringPages[slug.value as string]);
+const legacyRelated = computed(() =>
+    monitoringOrder
+        .filter((s) => s !== slug.value && monitoringPages[s]?.status === "published")
+        .slice(0, 4)
+        .map((s) => monitoringPages[s]!)
+);
+
+if (!raw.value && !legacy.value) {
     throw createError({ statusCode: 404, statusMessage: t("errors.topic") });
 }
 
-const topic = computed<TopicData>(() => ({
+const topic = computed<TopicData>(() => raw.value ? ({
     title: raw.value.title,
     icon: raw.value.icon || "",
     category: raw.value.category || "",
@@ -87,6 +111,14 @@ const topic = computed<TopicData>(() => ({
     image_height: raw.value.cover_image?.height,
     body: raw.value.body || [],
     meta: raw.value.meta
+}) : ({
+    title: legacy.value!.title,
+    icon: "",
+    category: legacy.value!.group,
+    description: legacy.value!.introduction,
+    image: legacy.value!.image || "",
+    image_alt: legacy.value!.imageAlt || "",
+    body: [],
 }));
 
 useSeoMeta({
@@ -207,19 +239,15 @@ useSeoMeta({
 }
 
 .topic-body {
+    /* Colours for the CMS blocks on this light page (the blocks read these
+       variables, so dark blocks like "Prodotto in evidenza" keep their own). */
     --cms-text: #274e72;
     --cms-heading: #0b355b;
+    --cms-border: rgba(11, 53, 91, 0.12);
+    --cms-surface: #ffffff;
+    --cms-measure: 100%;
+    --cms-wide: 100%;
     color: #0b355b;
-}
-
-.topic-body :deep(h2),
-.topic-body :deep(h3),
-.topic-body :deep(h4) {
-    color: #0b355b;
-}
-
-.topic-body :deep(p) {
-    color: #274e72;
 }
 
 @media (max-width: 768px) {
