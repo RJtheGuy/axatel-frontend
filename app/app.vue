@@ -13,7 +13,7 @@ useHead(() => ({
   link: [
     ...(head.value.link || []),
     // Blog RSS feed (server/routes/feed.xml.ts), for feed readers and crawlers.
-    { rel: 'alternate', type: 'application/rss+xml', title: 'Axatel Blog', href: '/feed.xml' },
+    { rel: 'alternate', type: 'application/rss+xml', title: 'Axatel News', href: '/feed.xml' },
   ],
   meta: [...(head.value.meta || [])],
 }));

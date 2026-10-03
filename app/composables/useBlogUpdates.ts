@@ -3,7 +3,7 @@
  *
  * A post counts as new when its publication date (the "Data pubblicazione"
  * field in the CMS) is in the last 30 days and the visitor hasn't seen it
- * yet. Opening /blog marks every listed post as seen; opening a post marks
+ * yet. Opening /news marks every listed post as seen; opening a post marks
  * that post as seen. What has been seen is remembered by slug. The state lives in the visitor's browser (localStorage), so
  * there are no accounts or cookies involved.
  *
@@ -92,7 +92,11 @@ export function useBlogUpdates() {
     return { count, load, markAllSeen, markRead };
 }
 
-/** True for the blog list address in any language: /blog, /en/blog, /fr/blog. */
+/**
+ * True for the news list address in any language: /news, /en/news, /fr/news.
+ * The old /blog address still counts (a CMS menu not yet renamed), since it
+ * redirects to /news.
+ */
 export function isBlogHref(href?: string | null): boolean {
-    return /^(\/(en|fr))?\/blog\/?$/.test(href || "");
+    return /^(\/(en|fr))?\/(news|blog)\/?$/.test(href || "");
 }

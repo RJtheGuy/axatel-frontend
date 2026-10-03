@@ -21,7 +21,7 @@
     {
         "label": "Approfondimenti",
         "groups": [
-            { "label": "Risorse", "links": [{ "label": "Blog", "href": "/blog" }, { "label": "Academy", "href": "/approfondimenti/academy" }, { "label": "News", "href": "/approfondimenti/news" }, { "label": "FAQ", "href": "/approfondimenti/faq" }, { "label": "Glossario", "href": "/approfondimenti/glossario" }] }
+            { "label": "Risorse", "links": [{ "label": "News", "href": "/news" }, { "label": "Academy", "href": "/approfondimenti/academy" }, { "label": "FAQ", "href": "/approfondimenti/faq" }, { "label": "Glossario", "href": "/approfondimenti/glossario" }] }
         ]
     },
     {

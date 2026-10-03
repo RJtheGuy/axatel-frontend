@@ -80,6 +80,19 @@ export default defineNuxtConfig({
       redirect: { to: '/casi/**', statusCode: 301 }
     },
 
+    // The blog became "News" at /news. Old links (shared, bookmarked,
+    // indexed by Google) keep working, in every language.
+    '/blog': { redirect: { to: '/news', statusCode: 301 } },
+    '/blog/**': { redirect: { to: '/news/**', statusCode: 301 } },
+    '/en/blog': { redirect: { to: '/en/news', statusCode: 301 } },
+    '/en/blog/**': { redirect: { to: '/en/news/**', statusCode: 301 } },
+    '/fr/blog': { redirect: { to: '/fr/news', statusCode: 301 } },
+    '/fr/blog/**': { redirect: { to: '/fr/news/**', statusCode: 301 } },
+    // The old "News, coming soon" placeholder now leads to the real news.
+    '/approfondimenti/news': { redirect: { to: '/news', statusCode: 301 } },
+    '/en/approfondimenti/news': { redirect: { to: '/en/news', statusCode: 301 } },
+    '/fr/approfondimenti/news': { redirect: { to: '/fr/news', statusCode: 301 } },
+
     '/**': {
       headers: {
         // connect-src was 'self', which blocked every browser-side fetch

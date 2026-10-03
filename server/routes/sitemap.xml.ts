@@ -23,7 +23,7 @@ const BUILT_IN = [
     "/soluzioni",
     "/prodotti",
     "/servizi",
-    "/blog",
+    "/news",
     "/contatti",
     "/azienda/team",
     "/azienda/chi-siamo",
@@ -41,7 +41,7 @@ const BUILT_IN = [
 // CMS page type → address prefix on the site.
 const CMS_TYPES: Record<string, string> = {
     "casi.CasoSuccessoPage": "/casi",
-    "blog.BlogPost": "/blog",
+    "blog.BlogPost": "/news",
     "products.ProductPage": "/prodotti",
     "solutions.SolutionPage": "/soluzioni",
     "monitoring.MonitoringPage": "/monitoraggio",

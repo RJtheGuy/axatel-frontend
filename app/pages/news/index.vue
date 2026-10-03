@@ -15,7 +15,7 @@
 
                 <div v-else class="blog-grid">
                     <article v-for="item in posts" :key="item.slug" class="post-card">
-                        <NuxtLink :to="localePath(`/blog/${item.slug}`)" class="post-link" :aria-label="t('blog.read', { title: item.title })">
+                        <NuxtLink :to="localePath(`/news/${item.slug}`)" class="post-link" :aria-label="t('blog.read', { title: item.title })">
                             <div class="post-media">
                                 <img
                                     v-if="item.image"
@@ -75,7 +75,7 @@ const { data: blogData } = await useAsyncData(() => `blog-list-${locale.value}`,
 // Intro copy comes from BlogIndexPage.intro, editable in the admin —
 // same convention as casi/index.vue's CasiIndexPage.intro.
 const { data: indexPage } = await useAsyncData(() => `blog-index-${locale.value}`, () =>
-    getPageBySlug("blog.BlogIndexPage", "blog").catch(() => null)
+    getPage<any>("blog.BlogIndexPage", { limit: 1 }).then((res) => res?.items?.[0] ?? null).catch(() => null)
 );
 
 

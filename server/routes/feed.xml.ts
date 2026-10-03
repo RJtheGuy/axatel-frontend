@@ -1,5 +1,5 @@
 /**
- * RSS feed of the blog: /feed.xml (Italian, latest 20 posts).
+ * RSS feed of the news (the CMS "blog" posts): /feed.xml (Italian, latest 20 posts).
  *
  * Feed readers, news aggregators and search engines use it to discover new
  * articles as soon as they are published in the CMS, without waiting to
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
         .map((p) => {
             const slug = p?.meta?.slug;
             if (!slug) return "";
-            const link = `${site}/blog/${encodeURIComponent(slug)}`;
+            const link = `${site}/news/${encodeURIComponent(slug)}`;
             const date = rfc822(p?.date || p?.meta?.first_published_at || "");
             const image = p?.cover_image?.url;
             return [
@@ -66,8 +66,8 @@ export default defineEventHandler(async (event) => {
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">',
         "  <channel>",
-        "    <title>Axatel Blog</title>",
-        `    <link>${escapeXml(`${site}/blog`)}</link>`,
+        "    <title>Axatel News</title>",
+        `    <link>${escapeXml(`${site}/news`)}</link>`,
         `    <atom:link href="${escapeXml(`${site}/feed.xml`)}" rel="self" type="application/rss+xml" />`,
         "    <description>Novità, approfondimenti e aggiornamenti dal mondo Axatel.</description>",
         "    <language>it-IT</language>",

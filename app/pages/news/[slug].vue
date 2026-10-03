@@ -6,7 +6,7 @@
 
         <div class="post-light-stage">
             <article class="post-shell">
-                <NuxtLink :to="localePath('/blog')" class="back-link">{{ t("blog.back") }}</NuxtLink>
+                <NuxtLink :to="localePath('/news')" class="back-link">{{ t("blog.back") }}</NuxtLink>
                 <LayoutTranslationNotice v-if="raw?.__fallback" />
 
                 <div class="post-meta-top">
