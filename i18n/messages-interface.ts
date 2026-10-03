@@ -155,6 +155,13 @@ export const interfaceMessages = {
             back: "Torna al team",
             peopleAria: "Persone del team Axatel",
             discover: "Scopri {name}",
+            department: "Reparto {name}",
+            reportsTo: "Riporta a",
+            directReports: "Il suo team",
+        },
+        info: {
+            related: "Altre pagine",
+            sectionAria: "Pagine della sezione",
         },
         blog: {
             title: "Blog",
@@ -343,6 +350,13 @@ export const interfaceMessages = {
             back: "Back to the team",
             peopleAria: "People in the Axatel team",
             discover: "Meet {name}",
+            department: "{name} department",
+            reportsTo: "Reports to",
+            directReports: "Their team",
+        },
+        info: {
+            related: "More pages",
+            sectionAria: "Pages in this section",
         },
         blog: {
             title: "Blog",
@@ -531,6 +545,13 @@ export const interfaceMessages = {
             back: "Retour à l'équipe",
             peopleAria: "Membres de l'équipe Axatel",
             discover: "Découvrir {name}",
+            department: "Service {name}",
+            reportsTo: "Rattaché à",
+            directReports: "Son équipe",
+        },
+        info: {
+            related: "Autres pages",
+            sectionAria: "Pages de la section",
         },
         blog: {
             title: "Blog",

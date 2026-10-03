@@ -7,6 +7,9 @@ export type TeamMember = {
     image: string;
     description: string;
     position: { x: number; y: number };
+    /** Organisation chart (CMS): who this person reports to, and the department they lead. */
+    parentId?: string | null;
+    department?: string;
 };
 
 /**

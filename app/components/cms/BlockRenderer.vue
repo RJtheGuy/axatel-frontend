@@ -58,7 +58,8 @@ const componentMap: Record<string, any> = {
     measures: resolveComponent("CmsMeasures"),
     steps: resolveComponent("CmsSteps"),
     device_cards: resolveComponent("CmsDeviceCards"),
-    case_cards: resolveComponent("CmsCaseCards")
+    case_cards: resolveComponent("CmsCaseCards"),
+    faq: resolveComponent("CmsFaq")
 };
 </script>
 

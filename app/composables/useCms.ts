@@ -96,6 +96,16 @@ export function useCms() {
         })
     }
 
+    /**
+     * Published child pages of one parent (e.g. the other pages of the
+     * "Azienda" section), in the language the parent is in.
+     */
+    async function getChildren<T = any>(parentId: number, lang?: string, params: Record<string, any> = {}) {
+        return await $fetch<{ items: T[] }>(`${base}/pages/`, {
+            params: { child_of: parentId, locale: lang || currentLocale(), limit: 20, ...params },
+        })
+    }
+
     /** People for the team page (Impostazioni → Team), in the current language. */
     async function getTeam<T = any>() {
         return await $fetch<{ members: T[] }>(`${base}/team/`, { params: { locale: currentLocale() } })
@@ -106,5 +116,5 @@ export function useCms() {
         return await $fetch<T>(`${base}/themes/active/`)
     }
 
-    return { getPage, getPageBySlug, findByPath, getTeam, getActiveTheme, currentLocale }
+    return { getPage, getPageBySlug, findByPath, getChildren, getTeam, getActiveTheme, currentLocale }
 }

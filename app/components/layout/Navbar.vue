@@ -406,6 +406,19 @@ onUnmounted(() => {
     gap:28px;
 }
 
+/* Laptop widths: the full menu still fits, with tighter spacing, instead
+   of running into the logo. */
+@media (min-width: 1101px) and (max-width: 1360px) {
+    .container{
+        gap:20px;
+        padding:6px 20px;
+    }
+
+    .menu{
+        gap:clamp(10px, 1.3vw, 18px);
+    }
+}
+
 .menu .nav-cta {
     flex:0 0 auto;
     color:#fff;

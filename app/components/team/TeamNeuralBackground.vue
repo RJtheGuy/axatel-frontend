@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
     AdditiveBlending,
     BufferAttribute,
@@ -29,7 +29,9 @@ type RoutePoint =
     | (Edge & { kind: "edge"; progress: number; lane: number })
     | { kind: "ring"; node: number; angle: number; layer: number };
 
-const props = defineProps<{ focused: boolean }>();
+// edges: the lines to draw, as [from, to] indices of the .team-member
+// buttons (org chart). Without it, lines link nearby people.
+const props = defineProps<{ focused: boolean; edges?: Array<[number, number]> | null }>();
 const hostEl = ref<HTMLElement | null>(null);
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 
@@ -48,6 +50,7 @@ let velocities = new Float32Array();
 let routeTargets = new Float32Array();
 let routePoints: RoutePoint[] = [];
 let topology: Edge[] = [];
+let topologyReady = false;
 let networkParticleCount = 0;
 let lastCenterSample = -1;
 const flowField = new FlowField();
@@ -192,8 +195,21 @@ function buildTopology(points: Point[]): Edge[] {
     return result;
 }
 
+// The org chart changed (people loaded, phone/desktop layout): rebuild the lines.
+watch(
+    () => JSON.stringify(props.edges ?? null),
+    () => {
+        // Particles glide to the new lines (no snap): only the route changes.
+        topology = [];
+        topologyReady = false;
+    }
+);
+
 function createRoutePoints(points: NetworkNode[]): void {
-    topology = buildTopology(points);
+    topology = props.edges
+        ? props.edges.filter(([a, b]) => points[a] && points[b]).map(([a, b]) => ({ a, b }))
+        : buildTopology(points);
+    topologyReady = true;
     const lengths = topology.map((edge) => Math.hypot(points[edge.a]!.x - points[edge.b]!.x, points[edge.a]!.y - points[edge.b]!.y));
     const totalLength = lengths.reduce((total, length) => total + length, 0) || 1;
     routePoints = [];
@@ -240,7 +256,7 @@ function sampleNetworkTargets(time: number): void {
     const centers = memberCenters();
     if (centers.length < 2) return;
     const isInitialFormation = lastCenterSample < 0;
-    if (topology.length === 0) createRoutePoints(centers);
+    if (!topologyReady) createRoutePoints(centers);
     for (let index = 0; index < routePoints.length; index += 1) {
         const route = routePoints[index]!;
         const offset = index * 3;

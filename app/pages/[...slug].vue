@@ -5,6 +5,16 @@
             <LayoutTranslationNotice v-if="page?.__fallback" class="page-notice" />
         </header>
         <CmsBlockRenderer :blocks="page?.body ?? []" />
+
+        <!-- A "Sezione informativa" (/azienda/, /approfondimenti/) lists its pages. -->
+        <section v-if="sectionPages.length" class="section-list" :aria-label="t('info.sectionAria')">
+            <p v-if="page?.intro" class="section-intro">{{ page.intro }}</p>
+            <div class="section-grid">
+                <NuxtLink v-for="item in sectionPages" :key="item.path" :to="localePath(item.path)">
+                    {{ item.title }} <span aria-hidden="true">→</span>
+                </NuxtLink>
+            </div>
+        </section>
     </main>
 </template>
 
@@ -23,8 +33,9 @@ import { computed } from "vue";
  * trip rather than two.
  */
 const route = useRoute();
-const { locale } = useI18n();
-const { findByPath } = useCms();
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
+const { findByPath, getChildren } = useCms();
 
 const path = computed(() => {
     const s = route.params.slug;
@@ -63,6 +74,20 @@ if (!page.value) {
     });
 }
 
+const { data: children } = await useAsyncData(
+    () => `section-${locale.value}-${path.value}`,
+    () =>
+        page.value?.meta?.type === "home.InfoIndexPage" && page.value?.id
+            ? getChildren(page.value.id, page.value.__fallback ? "it" : locale.value).catch(() => null)
+            : Promise.resolve(null),
+    { watch: [path] }
+);
+const sectionPages = computed(() =>
+    ((children.value?.items ?? []) as any[])
+        .filter((p) => p.meta?.slug)
+        .map((p) => ({ title: p.title as string, path: `${path.value}${p.meta.slug}` }))
+);
+
 useSeoMeta({
     title: () => page.value?.meta?.seo_title || page.value?.title,
     description: () => page.value?.meta?.search_description,
@@ -74,6 +99,43 @@ useSeoMeta({
 </script>
 
 <style scoped>
+.section-list {
+    display: grid;
+    gap: 18px;
+    padding: 0 8vw 12vh;
+}
+
+.section-intro {
+    max-width: 720px;
+    margin: 0;
+    color: var(--ax-color-text-secondary);
+    line-height: 1.6;
+}
+
+.section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    max-width: 1000px;
+}
+
+.section-grid a {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+    border: 1px solid rgba(147, 183, 218, 0.24);
+    border-radius: 14px;
+    color: var(--ax-color-text-primary);
+    text-decoration: none;
+    transition: border-color 0.15s ease;
+}
+
+.section-grid a:hover,
+.section-grid a:focus-visible {
+    border-color: var(--ax-color-accent-red-soft);
+}
+
 .page-notice {
     margin-top: 18px;
     max-width: 720px;

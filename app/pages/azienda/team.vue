@@ -7,8 +7,11 @@
 <script setup lang="ts">
 /**
  * Team page. People come from the CMS (Impostazioni → Team: name, role,
- * description, photo, "Visibile" switch, order). Until at least one
- * person is published there, the built-in example team is shown.
+ * description, photo, "Visibile" switch, order, and the organisation
+ * chart: "Riporta a" and "Guida il reparto"). When someone reports to
+ * someone else, the page draws an org chart (see utils/teamTree.ts);
+ * otherwise an even network. Until at least one person is published
+ * there, the built-in example team is shown.
  */
 import { computed } from "vue";
 import { useSeoMeta } from "#app";
@@ -19,7 +22,15 @@ const { t, locale } = useI18n();
 const { getTeam } = useCms();
 const { imageUrl } = useCmsImage();
 
-type CmsMember = { id: number; name: string; role: string; bio: string; photo: { url: string } | null };
+type CmsMember = {
+    id: number;
+    name: string;
+    role: string;
+    bio: string;
+    photo: { url: string } | null;
+    reportsTo: number | null;
+    department: string;
+};
 
 const { data: cmsTeam } = await useAsyncData(
     () => `team-${locale.value}`,
@@ -37,6 +48,8 @@ const members = computed<TeamMember[]>(() => {
         image: person.photo ? imageUrl(person.photo.url) : "",
         description: person.bio,
         position: teamPosition(index, people.length),
+        parentId: person.reportsTo ? `cms-${person.reportsTo}` : null,
+        department: person.department || "",
     }));
 });
 

@@ -48,6 +48,9 @@ const CMS_TYPES: Record<string, string> = {
     "services.ServicePage": "/servizi",
     // Free pages can sit under other free pages: their address comes from the CMS.
     "home.FlexPage": "",
+    "home.InfoIndexPage": "",
+    "home.InfoPage": "",
+    "home.GlossaryPage": "",
 };
 
 const LOCALES = [
