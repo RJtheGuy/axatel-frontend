@@ -66,7 +66,7 @@ if (!caso.value) {
     throw createError({
         statusCode: 404,
         statusMessage: t("caseDetail.notFound"),
-        fatal: true
+        fatal: import.meta.client
     });
 }
 

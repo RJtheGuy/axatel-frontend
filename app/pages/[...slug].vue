@@ -48,18 +48,22 @@ const { data: page, error } = await useAsyncData(
     async () => {
         try {
             const result = await findByPath(path.value);
-            console.log("[catch-all] findByPath succeeded for", path.value, result ? "(got data)" : "(empty response)");
             return result;
         } catch (err: any) {
             // Was previously swallowed with .catch(() => null) — logging
             // the real cause instead, since a silent null makes every
             // failure mode (wrong host, CORS, 404, network error, bad
             // params) look identical from the outside.
-            console.error("[catch-all] findByPath FAILED for", path.value, {
-                message: err?.message,
-                statusCode: err?.statusCode ?? err?.response?.status,
-                data: err?.data ?? err?.response?._data
-            });
+            // A 404 is a normal "no such page" (often a bot probing
+            // addresses): not worth a log line. Anything else is logged.
+            const statusCode = err?.statusCode ?? err?.response?.status;
+            if (statusCode !== 404) {
+                console.error("[catch-all] findByPath FAILED for", path.value, {
+                    message: err?.message,
+                    statusCode,
+                    data: err?.data ?? err?.response?._data
+                });
+            }
             return null;
         }
     },
@@ -70,7 +74,9 @@ if (!page.value) {
     throw createError({
         statusCode: 404,
         statusMessage: useNuxtApp().$i18n.t("errors.page"),
-        fatal: true
+        // Fatal in the browser so the error page shows; on the server a
+        // 404 renders the error page anyway and is not logged as a crash.
+        fatal: import.meta.client
     });
 }
 
