@@ -1,6 +1,6 @@
 <template>
     <main class="team-page">
-        <TeamNetwork :members="members" />
+        <TeamNetwork :members="members" :label-mode="labelMode" />
     </main>
 </template>
 
@@ -29,12 +29,13 @@ type CmsMember = {
     bio: string;
     photo: { url: string } | null;
     reportsTo: number | null;
+    alsoReportsTo?: number[];
     department: string;
 };
 
 const { data: cmsTeam } = await useAsyncData(
     () => `team-${locale.value}`,
-    () => getTeam<CmsMember>().catch(() => null),
+    () => getTeam<CmsMember>().catch(() => null) as Promise<{ members: CmsMember[]; labelMode?: string } | null>,
     { watch: [locale] }
 );
 
@@ -49,9 +50,13 @@ const members = computed<TeamMember[]>(() => {
         description: person.bio,
         position: teamPosition(index, people.length),
         parentId: person.reportsTo ? `cms-${person.reportsTo}` : null,
+        alsoParentIds: (person.alsoReportsTo ?? []).map((id) => `cms-${id}`),
         department: person.department || "",
     }));
 });
+
+// What the org chart shows under each name (Impostazioni → Team).
+const labelMode = computed(() => (cmsTeam.value?.members?.length ? cmsTeam.value?.labelMode : undefined) || "department");
 
 useSeoMeta({
     title: () => `${t("team.title")} | Axatel`,

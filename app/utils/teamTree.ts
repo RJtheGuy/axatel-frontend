@@ -6,6 +6,8 @@
  * the first row, each manager above the people who report to them, and a
  * line ONLY between a person and their manager, so departments read as
  * separate branches (a team under the CEO is not linked to the CFO).
+ * "Riporta anche a" adds a lighter line to each extra manager; the person
+ * stays placed under their main manager.
  *
  * Positions are percentages of the team stage. Two shapes:
  *  - "wide" (desktop): a classic top-down tree; a manager with more than
@@ -13,24 +15,32 @@
  *    grid of 2 or 3 columns instead of one long row;
  *  - "narrow" (phones): an indented outline, one person per row.
  */
-export type TreePerson = { id: string; parentId?: string | null; department?: string };
+export type TreePerson = { id: string; parentId?: string | null; alsoParentIds?: string[]; department?: string };
 
 export type TreeLayout = {
     positions: Record<string, { x: number; y: number }>;
-    /** Lines to draw, as [manager index, person index] in the input order. */
-    edges: Array<[number, number]>;
+    /** Lines to draw, as [manager index, person index, weight] in the input
+     *  order; weight 1 = main manager, 0.5 = "also reports to". */
+    edges: Array<[number, number, number]>;
     rows: number;
     columns: number;
     /** Department each person belongs to: their own, or their nearest manager's. */
     departmentOf: Record<string, string>;
     managerOf: Record<string, string | undefined>;
     reportsOf: Record<string, string[]>;
+    /** "Riporta anche a": extra managers of a person, and the reverse. */
+    alsoManagersOf: Record<string, string[]>;
+    alsoReportsOf: Record<string, string[]>;
 };
 
 /** True when at least one person reports to someone else on the page. */
 export function hasHierarchy(people: TreePerson[]): boolean {
     const ids = new Set(people.map((p) => p.id));
-    return people.some((p) => p.parentId && p.parentId !== p.id && ids.has(p.parentId));
+    return people.some(
+        (p) =>
+            (p.parentId && p.parentId !== p.id && ids.has(p.parentId)) ||
+            (p.alsoParentIds ?? []).some((id) => id !== p.id && ids.has(id))
+    );
 }
 
 export function layoutTree(people: TreePerson[], shape: "wide" | "narrow"): TreeLayout {
@@ -126,11 +136,22 @@ export function layoutTree(people: TreePerson[], shape: "wide" | "narrow"): Tree
         positions[person.id] = { x, y };
     }
 
-    const edges: Array<[number, number]> = [];
+    const alsoManagersOf: Record<string, string[]> = {};
+    const alsoReportsOf: Record<string, string[]> = {};
+    for (const person of people) alsoReportsOf[person.id] = [];
     for (const person of people) {
-        const boss = managerOf[person.id];
-        if (boss) edges.push([index.get(boss)!, index.get(person.id)!]);
+        alsoManagersOf[person.id] = [...new Set(person.alsoParentIds ?? [])].filter(
+            (id) => id !== person.id && id !== managerOf[person.id] && byId.has(id)
+        );
+        for (const boss of alsoManagersOf[person.id]!) alsoReportsOf[boss]!.push(person.id);
     }
 
-    return { positions, edges, rows, columns, departmentOf, managerOf, reportsOf };
+    const edges: Array<[number, number, number]> = [];
+    for (const person of people) {
+        const boss = managerOf[person.id];
+        if (boss) edges.push([index.get(boss)!, index.get(person.id)!, 1]);
+        for (const extra of alsoManagersOf[person.id]!) edges.push([index.get(extra)!, index.get(person.id)!, 0.5]);
+    }
+
+    return { positions, edges, rows, columns, departmentOf, managerOf, reportsOf, alsoManagersOf, alsoReportsOf };
 }

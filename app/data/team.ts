@@ -9,6 +9,8 @@ export type TeamMember = {
     position: { x: number; y: number };
     /** Organisation chart (CMS): who this person reports to, and the department they lead. */
     parentId?: string | null;
+    /** Extra managers ("Riporta anche a"): drawn with a lighter line. */
+    alsoParentIds?: string[];
     department?: string;
 };
 

@@ -29,7 +29,8 @@
                     <span v-else class="initials" aria-hidden="true">{{ initials(member.name) }}</span>
                 </span>
                 <span class="member-name">{{ member.name }}</span>
-                <span v-if="isDepartmentLead(member)" class="member-dept">{{ t("team.department", { name: member.department }) }}</span>
+                <span v-if="showRole(member)" class="member-role">{{ member.role }}</span>
+                <span v-if="showDepartment(member)" class="member-dept">{{ t("team.department", { name: member.department }) }}</span>
             </button>
         </div>
 
@@ -39,11 +40,11 @@
                 <h2>{{ selectedMember.name }}</h2>
                 <p v-if="selectedDepartment" class="profile-dept">{{ t("team.department", { name: selectedDepartment }) }}</p>
                 <p>{{ selectedMember.description }}</p>
-                <dl v-if="selectedManager || selectedReports.length" class="profile-links">
-                    <div v-if="selectedManager">
+                <dl v-if="selectedManagers.length || selectedReports.length" class="profile-links">
+                    <div v-if="selectedManagers.length">
                         <dt>{{ t("team.reportsTo") }}</dt>
                         <dd>
-                            <button type="button" @click="selectMember(selectedManager)">{{ selectedManager.name }}</button>
+                            <button v-for="person in selectedManagers" :key="person.id" type="button" @click="selectMember(person)">{{ person.name }}</button>
                         </dd>
                     </div>
                     <div v-if="selectedReports.length">
@@ -65,7 +66,10 @@ import TeamNeuralBackground from "./TeamNeuralBackground.vue";
 import type { TeamMember } from "../../data/team";
 import { hasHierarchy, layoutTree } from "../../utils/teamTree";
 
-const props = defineProps<{ members: TeamMember[] }>();
+// labelMode (Impostazioni → Team → Etichetta sotto il nome): what the org
+// chart shows under each name: "department" (under department heads),
+// "role" (under everyone), "both" or "none".
+const props = withDefaults(defineProps<{ members: TeamMember[]; labelMode?: string }>(), { labelMode: "department" });
 const stageEl = ref<HTMLElement | null>(null);
 const selectedMember = ref<TeamMember | null>(null);
 const { t } = useI18n();
@@ -99,25 +103,35 @@ const edges = computed(() => (tree.value ? (selectedMember.value ? [] : tree.val
 const stageStyle = computed<Record<string, string>>(() => {
     if (!tree.value) return {};
     const { rows, columns } = tree.value;
-    if (isNarrow.value) return { "--tree-height": `${rows * 118}px`, "--member-size": "72px" };
+    // Each row holds the photo, the labels under it and room for the line.
+    const labelSpace = { both: 72, department: 50, role: 44 }[props.labelMode] ?? 24;
+    if (isNarrow.value) return { "--tree-height": `${rows * (72 + labelSpace + 40)}px`, "--member-size": "72px" };
     const size = Math.max(70, Math.min(124, Math.floor(1040 / columns) - 26));
-    return { "--tree-height": `${Math.max(rows * 190, 380)}px`, "--member-size": `${size}px` };
+    const rowHeight = size + labelSpace + 66;
+    return { "--tree-height": `${Math.max(rows * rowHeight, 380)}px`, "--member-size": `${size}px` };
 });
 
-const isDepartmentLead = (member: TeamMember) => Boolean(isTree.value && (member.department || "").trim());
+const showDepartment = (member: TeamMember) =>
+    Boolean(isTree.value && ["department", "both"].includes(props.labelMode) && (member.department || "").trim());
+const showRole = (member: TeamMember) =>
+    Boolean(isTree.value && ["role", "both"].includes(props.labelMode) && (member.role || "").trim());
 
 const selectedDepartment = computed(() =>
     selectedMember.value && tree.value ? tree.value.departmentOf[selectedMember.value.id] || "" : ""
 );
-const selectedManager = computed(() => {
-    const id = selectedMember.value && tree.value?.managerOf[selectedMember.value.id];
-    return id ? byId.value.get(id) ?? null : null;
+// Main manager first, then the "also reports to" ones; the same for the team.
+const selectedManagers = computed(() => {
+    const id = selectedMember.value?.id;
+    if (!id || !tree.value) return [];
+    const ids = [tree.value.managerOf[id], ...(tree.value.alsoManagersOf[id] ?? [])].filter(Boolean) as string[];
+    return ids.map((x) => byId.value.get(x)!).filter(Boolean);
 });
-const selectedReports = computed(() =>
-    selectedMember.value && tree.value
-        ? (tree.value.reportsOf[selectedMember.value.id] ?? []).map((id) => byId.value.get(id)!).filter(Boolean)
-        : []
-);
+const selectedReports = computed(() => {
+    const id = selectedMember.value?.id;
+    if (!id || !tree.value) return [];
+    const ids = [...(tree.value.reportsOf[id] ?? []), ...(tree.value.alsoReportsOf[id] ?? [])];
+    return [...new Set(ids)].map((x) => byId.value.get(x)!).filter(Boolean);
+});
 
 function memberStyle(member: TeamMember, index: number): Record<string, string> {
     // In the org chart people drift less, so the branches stay readable.
@@ -297,7 +311,29 @@ function clearSelection(): void {
     white-space: nowrap;
 }
 
-.has-selection .member-dept {
+/* In the org chart the lines run behind the labels: a soft backdrop keeps
+   names and roles readable where a line passes. */
+.team-stage.is-tree .member-name,
+.member-role {
+    padding: 1px 7px;
+    border-radius: 6px;
+    background: rgba(2, 7, 18, 0.66);
+}
+
+.member-role {
+    max-width: 170px;
+    margin-top: -6px;
+    color: #79cfff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+    text-align: center;
+    text-shadow: 0 2px 10px #020712;
+}
+
+.has-selection .member-dept,
+.has-selection .member-role {
     opacity: 0;
 }
 
