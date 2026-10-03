@@ -28,6 +28,34 @@ const groupHasNew = (group: { links?: Array<{ href?: string }> }) =>
 const itemHasNew = computed(() => (props.item.groups ?? []).some(groupHasNew));
 const activeMobileGroup = ref<number | null>(null);
 
+// Desktop dropdown columns. A group with "Colonna" set in the CMS goes in
+// that column; the others go under the column that is shortest so far, so
+// a long group and two short ones balance out. Inside a column groups keep
+// the CMS order. On phones the groups are a plain
+// list in CMS order (see the `order` style below).
+type NavGroup = NonNullable<NavigationItem["groups"]>[number];
+const groupWeight = (group: NavGroup) => 1.4 + (group.links?.length ?? 0);
+const dropdownColumns = computed(() => {
+    const groups = props.item.groups ?? [];
+    const wanted = Math.max(0, ...groups.map((group) => Number(group.column) || 0));
+    const count = Math.min(3, Math.max(groups.length > 1 ? 2 : 1, wanted));
+    const columns = Array.from({ length: count }, () => ({ entries: [] as Array<{ group: NavGroup; index: number }>, weight: 0 }));
+    const put = (column: (typeof columns)[number], group: NavGroup, index: number) => {
+        column.entries.push({ group, index });
+        column.weight += groupWeight(group);
+    };
+    // One pass in menu order, so setting a column on one group leaves the
+    // groups before it where they were.
+    groups.forEach((group, index) => {
+        const fixed = Number(group.column) || 0;
+        const target = fixed
+            ? columns[Math.min(fixed, count) - 1]!
+            : columns.reduce((best, column) => (column.weight < best.weight ? column : best));
+        put(target, group, index);
+    });
+    return columns.filter((column) => column.entries.length > 0);
+});
+
 const isDesktop = () => window.matchMedia("(min-width: 1101px)").matches;
 
 const openOnHover = () => {
@@ -97,12 +125,14 @@ watch(() => props.mobileExpanded, (expanded) => {
             </svg>
         </summary>
 
-        <div class="dropdown-panel">
+        <div class="dropdown-panel" :style="{ '--dropdown-columns': String(Math.max(dropdownColumns.length, 1)) }">
+            <div v-for="(column, columnIndex) in dropdownColumns" :key="columnIndex" class="dropdown-column">
             <section
-                v-for="(group, groupIndex) in item.groups"
+                v-for="{ group, index: groupIndex } in column.entries"
                 :key="group.label"
                 class="dropdown-group"
                 :class="{ 'group-open': activeMobileGroup === groupIndex }"
+                :style="{ order: groupIndex }"
             >
                 <button
                     class="group-toggle"
@@ -124,6 +154,7 @@ watch(() => props.mobileExpanded, (expanded) => {
                         v-for="link in group.links"
                         :key="`${group.label}-${link.label}`"
                         :to="link.href"
+                        :target="link.open_in_new_tab ? '_blank' : undefined"
                         @click="emit('navigate')"
                     >
                         <span>{{ link.label }}</span>
@@ -136,6 +167,7 @@ watch(() => props.mobileExpanded, (expanded) => {
                     </NuxtLink>
                 </div>
             </section>
+            </div>
         </div>
     </details>
 </template>
@@ -216,7 +248,7 @@ summary::-webkit-details-marker {
     top: calc(100% + 12px);
     left: 50%;
     display: grid;
-    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    grid-template-columns: repeat(var(--dropdown-columns, 2), minmax(180px, 1fr));
     width: max-content;
     min-width: 420px;
     max-width: min(680px, calc(100vw - 40px));
@@ -228,6 +260,13 @@ summary::-webkit-details-marker {
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
     backdrop-filter: blur(22px);
     transform: translateX(-50%);
+}
+
+.dropdown-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
 }
 
 .dropdown-panel::before {
@@ -420,6 +459,11 @@ summary::-webkit-details-marker {
         box-shadow: none;
         backdrop-filter: none;
         transform: none;
+    }
+
+    /* Phones: one list in CMS order, whatever the desktop columns. */
+    .dropdown-column {
+        display: contents;
     }
 
     .dropdown-group {

@@ -3,24 +3,60 @@
         <p v-if="value.label" class="label">{{ value.label }}</p>
         <h2>{{ value.name }}</h2>
         <p class="description">{{ value.description }}</p>
-        <div v-if="value.product_url || value.link_url" class="actions">
-            <NuxtLink v-if="value.product_url" :to="localePath(value.product_url)" class="primary">
-                {{ t("products.viewProduct") }} <span aria-hidden="true">→</span>
-            </NuxtLink>
-            <a v-if="value.link_url" :href="value.link_url" target="_blank" rel="noopener noreferrer" class="secondary">
-                {{ value.link_label || t("products.datasheet") }}
-            </a>
+        <div v-if="actions.length" class="actions">
+            <template v-for="(action, index) in actions" :key="index">
+                <NuxtLink v-if="action.internal" :to="localePath(action.href)" :class="action.style">
+                    {{ action.label }} <span v-if="action.arrow" aria-hidden="true">→</span>
+                </NuxtLink>
+                <a v-else :href="action.href" target="_blank" rel="noopener noreferrer" :class="action.style">
+                    {{ action.label }}
+                </a>
+            </template>
         </div>
     </aside>
 </template>
 
 <script setup lang="ts">
 // "Prodotto in evidenza": the Axatel product or service behind a solution.
-defineProps<{
-    value: { label?: string; name: string; description: string; product_url?: string | null; link_url?: string; link_label?: string };
+// Buttons, in order: the product page (if chosen), the old single "Link
+// alternativo" (if still filled in), then every entry of "Pulsanti".
+type Button = { label: string; href: string; kind: "page" | "document" | "url"; style?: string };
+const props = defineProps<{
+    value: {
+        label?: string;
+        name: string;
+        description: string;
+        product_url?: string | null;
+        link_url?: string;
+        link_label?: string;
+        buttons?: Button[];
+    };
 }>();
 const { t } = useI18n();
 const localePath = useLocalePath();
+
+const isInternal = (href: string) => href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/media/");
+const actions = computed(() => {
+    const list: Array<{ label: string; href: string; internal: boolean; style: string; arrow: boolean }> = [];
+    if (props.value.product_url) {
+        list.push({ label: t("products.viewProduct"), href: props.value.product_url, internal: true, style: "primary", arrow: true });
+    }
+    if (props.value.link_url) {
+        list.push({
+            label: props.value.link_label || t("products.datasheet"),
+            href: props.value.link_url,
+            internal: isInternal(props.value.link_url),
+            style: "secondary",
+            arrow: false,
+        });
+    }
+    for (const button of props.value.buttons ?? []) {
+        if (!button?.label || !button?.href) continue;
+        const internal = button.kind === "page" && isInternal(button.href);
+        list.push({ label: button.label, href: button.href, internal, style: button.style === "primary" ? "primary" : "secondary", arrow: internal });
+    }
+    return list;
+});
 </script>
 
 <style scoped>

@@ -26,8 +26,13 @@
                         <p class="feature-label">{{ page.feature.label }}</p>
                         <h2 :id="`feature-${page.slug}`">{{ page.feature.name }}</h2>
                         <p>{{ page.feature.description }}</p>
+                        <NuxtLink
+                            v-if="page.feature.href && page.feature.href.startsWith('/')"
+                            class="feature-link"
+                            :to="localePath(page.feature.href)"
+                        >{{ page.feature.hrefLabel || "Approfondisci" }}</NuxtLink>
                         <a
-                            v-if="page.feature.href"
+                            v-else-if="page.feature.href"
                             class="feature-link"
                             :href="page.feature.href"
                             target="_blank"

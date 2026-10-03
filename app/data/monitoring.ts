@@ -24,8 +24,8 @@ export const monitoringPages: Record<string, MonitoringPage> = {
             label: "La soluzione Axatel",
             name: "Cerere Pro Aria",
             description: "Sistema radio LoRaWAN per rilevare in tempo reale gli inquinanti atmosferici e rendere disponibili i dati alla piattaforma di supervisione.",
-            href: "https://www.axatel.it/wp-content/uploads/2026/03/2025_CERERE-PRO-ARIA-PALO.pdf",
-            hrefLabel: "Scheda tecnica"
+            href: "/prodotti/cerere-pro-aria",
+            hrefLabel: "Scheda prodotto"
         },
         sections: [
             {
@@ -58,8 +58,8 @@ export const monitoringPages: Record<string, MonitoringPage> = {
             label: "La soluzione Axatel",
             name: "Angel River",
             description: "Sistema per monitorare corsi d'acqua e bacini, con rilevamento dei livelli e allerta di emergenza.",
-            href: "https://www.axatel.it/wp-content/uploads/2026/03/2025_ANGEL-RIVER.pdf",
-            hrefLabel: "Scheda tecnica"
+            href: "/prodotti/angel-river",
+            hrefLabel: "Scheda prodotto"
         },
         sections: [
             {
@@ -92,8 +92,8 @@ export const monitoringPages: Record<string, MonitoringPage> = {
             label: "La soluzione Axatel",
             name: "Geo Angel",
             description: "Sistema real-time per il monitoraggio dei dissesti geologici e l'automazione delle procedure di emergenza.",
-            href: "https://www.axatel.it/wp-content/uploads/2026/03/2026_GEO-ANGEL.pdf",
-            hrefLabel: "Scheda tecnica"
+            href: "/prodotti/geo-angel",
+            hrefLabel: "Scheda prodotto"
         },
         sections: [
             {
@@ -126,8 +126,8 @@ export const monitoringPages: Record<string, MonitoringPage> = {
             label: "La soluzione Axatel",
             name: "Traffic Alert",
             description: "Sistema di videoanalisi real-time per generare e gestire allarmi relativi al traffico stradale.",
-            href: "https://www.axatel.it/wp-content/uploads/2026/03/traffic-alert.pdf",
-            hrefLabel: "Scheda tecnica"
+            href: "/prodotti/traffic-alert",
+            hrefLabel: "Scheda prodotto"
         },
         sections: [
             {
@@ -160,8 +160,8 @@ export const monitoringPages: Record<string, MonitoringPage> = {
             label: "La soluzione Axatel",
             name: "Angel Road Site",
             description: "Sistema real-time per il tracciamento e il controllo dello stato di sicurezza nei cantieri stradali.",
-            href: "https://www.axatel.it/wp-content/uploads/2026/03/2026_ANGEL-ROAD-SITE.pdf",
-            hrefLabel: "Scheda tecnica"
+            href: "/prodotti/angel-road-site",
+            hrefLabel: "Scheda prodotto"
         },
         sections: [
             {
@@ -203,8 +203,8 @@ export const monitoringPages: Record<string, MonitoringPage> = {
             label: "La soluzione Axatel",
             name: "Angel Bridge",
             description: "Sistema hardware e software per il monitoraggio strutturale di ponti, cavalcavia e costruzioni mediante tecnologia radio LoRaWAN.",
-            href: "https://www.axatel.it/wp-content/uploads/2026/03/2026_ANGEL-BRIDGE.pdf",
-            hrefLabel: "Scheda tecnica"
+            href: "/prodotti/angel-bridge",
+            hrefLabel: "Scheda prodotto"
         },
         sections: [
             {
@@ -237,8 +237,8 @@ export const monitoringPages: Record<string, MonitoringPage> = {
             label: "La soluzione Axatel",
             name: "Angel Bridge",
             description: "Sistema hardware e software per il monitoraggio strutturale di edifici, monumenti e altre costruzioni in tecnologia radio LoRaWAN.",
-            href: "https://www.axatel.it/wp-content/uploads/2026/03/2026_ANGEL-BRIDGE.pdf",
-            hrefLabel: "Scheda tecnica"
+            href: "/prodotti/angel-bridge",
+            hrefLabel: "Scheda prodotto"
         },
         sections: [
             {

@@ -12,7 +12,7 @@ import fallbackNavigationItems from "../data/navigation.json";
 import { NAV_LABELS } from "../data/navLabels";
 
 type Link = { label: string; href: string; open_in_new_tab?: boolean };
-type Group = { label: string; links: Link[] };
+type Group = { label: string; column?: number | null; links: Link[] };
 type Item = { label: string; href?: string | null; groups?: Group[] };
 
 export function useSiteNavigation() {
@@ -43,6 +43,7 @@ export function useSiteNavigation() {
             href: item.href ? localize(item.href) : item.href,
             groups: (item.groups ?? []).map((group) => ({
                 label: translate(group.label),
+                column: group.column ?? null,
                 links: (group.links ?? []).map((link) => ({ ...link, label: translate(link.label), href: localize(link.href) })),
             })),
         }));
