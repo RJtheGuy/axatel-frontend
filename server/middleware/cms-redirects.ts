@@ -16,6 +16,10 @@ let cache: { at: number; rows: Map<string, Row> } = { at: 0, rows: new Map() };
 let pending: Promise<void> | null = null;
 const TTL = 60_000;
 const SKIP = /^\/(api|_nuxt|__nuxt|_ipx|media|static|cms|django-admin|documents)(\/|$)|\.[a-z0-9]{2,5}$/i;
+// Files of the old WordPress site (PDF datasheets…): redirected to Documenti.
+const OLD_FILES = /^\/wp-content\//i;
+// Targets that are files, never prefixed with the language.
+const FILE_TARGET = /^\/(documents|media|static)\//;
 
 const normalise = (path: string) => {
     const clean = decodeURI(path.split("?")[0] || "/").replace(/\/+$/, "");
@@ -36,7 +40,7 @@ async function refresh(api: string): Promise<void> {
 export default defineEventHandler(async (event) => {
     if (event.method !== "GET" && event.method !== "HEAD") return;
     const url = getRequestURL(event);
-    if (SKIP.test(url.pathname)) return;
+    if (SKIP.test(url.pathname) && !OLD_FILES.test(url.pathname)) return;
 
     if (Date.now() - cache.at > TTL) {
         const api = String(useRuntimeConfig(event).apiInternalBase || "").replace(/\/$/, "");
@@ -56,7 +60,7 @@ export default defineEventHandler(async (event) => {
     let target = row.to;
     if (target.startsWith("/")) {
         target = target.replace(/\/+$/, "") || "/";
-        if (prefix && !/^\/(en|fr)(\/|$)/.test(target)) target = `${prefix}${target === "/" ? "" : target}`;
+        if (prefix && !FILE_TARGET.test(target) && !/^\/(en|fr)(\/|$)/.test(target)) target = `${prefix}${target === "/" ? "" : target}`;
         if (target === url.pathname) return;
     }
     return sendRedirect(event, target + (url.search || ""), row.permanent ? 301 : 302);
