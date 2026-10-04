@@ -67,6 +67,9 @@ if (!cmsPage.value && !builtInPage.value) {
         statusMessage: hasBuiltIn.value
             ? contentAreas[area.value as ContentAreaKey].notFoundMessage
             : useNuxtApp().$i18n.t("errors.page"),
+        // In the browser (a click inside the site) the error page must take
+        // over the whole page, otherwise only the footer is left.
+        fatal: import.meta.client,
     });
 }
 

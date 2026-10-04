@@ -105,7 +105,7 @@ const legacyRelated = computed(() =>
 );
 
 if (!cms.value && !legacy.value) {
-    throw createError({ statusCode: 404, statusMessage: area.notFoundMessage });
+    throw createError({ statusCode: 404, statusMessage: area.notFoundMessage, fatal: import.meta.client });
 }
 
 const groupLabel = (group?: string) =>

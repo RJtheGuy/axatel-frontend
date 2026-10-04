@@ -30,11 +30,13 @@
 
                 <!-- MonitoringPage.body is a real StreamField(BODY_BLOCKS) —
                      same rendering path as Servizio/Blog, not plain v-html. -->
-                <div class="topic-body">
-                    <CmsBlockRenderer :blocks="topic.body ?? []" />
+                <div v-if="topic.body?.length" class="topic-body">
+                    <CmsBlockRenderer :blocks="topic.body" />
                 </div>
+                <!-- Topic in the menu but not written yet (empty body in the CMS). -->
+                <ContentComingSoon v-else :kicker="topic.category" :text="t('comingSoon.text')" />
 
-                <ContentProjectCta :subject="topic.title" />
+                <ContentProjectCta v-if="topic.body?.length" :subject="topic.title" />
             </article>
         </div>
     </main>
@@ -111,11 +113,11 @@ const { data: cmsUp } = await useAsyncData(
     { watch: [slug] }
 );
 if (!raw.value && legacy.value?.status === "published" && cmsUp.value) {
-    throw createError({ statusCode: 404, statusMessage: t("errors.topic") });
+    throw createError({ statusCode: 404, statusMessage: t("errors.topic"), fatal: import.meta.client });
 }
 
 if (!raw.value && !legacy.value) {
-    throw createError({ statusCode: 404, statusMessage: t("errors.topic") });
+    throw createError({ statusCode: 404, statusMessage: t("errors.topic"), fatal: import.meta.client });
 }
 
 const topic = computed<TopicData>(() => raw.value ? ({

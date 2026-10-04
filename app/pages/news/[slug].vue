@@ -78,7 +78,7 @@ const { data: raw } = await useAsyncData(
 );
 
 if (!raw.value) {
-    throw createError({ statusCode: 404, statusMessage: t("blog.notFound") });
+    throw createError({ statusCode: 404, statusMessage: t("blog.notFound"), fatal: import.meta.client });
 }
 
 const post = computed<BlogPostData>(() => ({

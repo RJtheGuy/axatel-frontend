@@ -85,7 +85,7 @@ const { data: raw } = await useAsyncData(
 );
 
 if (!raw.value) {
-    throw createError({ statusCode: 404, statusMessage: t("errors.product") });
+    throw createError({ statusCode: 404, statusMessage: t("errors.product"), fatal: import.meta.client });
 }
 
 const product = computed(() => raw.value as any);

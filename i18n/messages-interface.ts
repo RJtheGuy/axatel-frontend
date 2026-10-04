@@ -148,6 +148,14 @@ export const interfaceMessages = {
             status: "Prossimamente",
             title: "Stiamo preparando questa pagina.",
             cta: "Parla con noi",
+            explore: "Scopri cosa monitoriamo",
+            text: "Nel frattempo siamo a disposizione per raccontarti come lavoriamo su questo tema.",
+            related: "Altre pagine",
+            pages: {
+                academy: { kicker: "Formazione", text: "Stiamo preparando percorsi e contenuti formativi dedicati a monitoraggio, automazione e gestione delle infrastrutture." },
+                news: { kicker: "Aggiornamenti", text: "Stiamo costruendo uno spazio per raccontare novità, progetti e appuntamenti dal mondo Axatel." },
+                faq: { kicker: "Risposte utili", text: "Stiamo raccogliendo le domande più frequenti su soluzioni, tecnologie, installazione e assistenza." },
+            },
         },
         team: {
             title: "Team",
@@ -344,6 +352,14 @@ export const interfaceMessages = {
             status: "Coming soon",
             title: "We are preparing this page.",
             cta: "Talk to us",
+            explore: "See what we monitor",
+            text: "In the meantime, we are happy to tell you how we work on this topic.",
+            related: "More pages",
+            pages: {
+                academy: { kicker: "Training", text: "We are preparing training paths and content on monitoring, automation and infrastructure management." },
+                news: { kicker: "Updates", text: "We are building a space for news, projects and events from the Axatel world." },
+                faq: { kicker: "Useful answers", text: "We are collecting the most frequent questions about solutions, technologies, installation and support." },
+            },
         },
         team: {
             title: "Team",
@@ -540,6 +556,14 @@ export const interfaceMessages = {
             status: "Bientôt disponible",
             title: "Nous préparons cette page.",
             cta: "Parlez-nous",
+            explore: "Découvrir ce que nous surveillons",
+            text: "En attendant, nous sommes à votre disposition pour vous expliquer comment nous travaillons sur ce sujet.",
+            related: "Autres pages",
+            pages: {
+                academy: { kicker: "Formation", text: "Nous préparons des parcours et des contenus de formation sur la surveillance, l'automatisation et la gestion des infrastructures." },
+                news: { kicker: "Actualités", text: "Nous préparons un espace pour les nouveautés, les projets et les rendez-vous du monde Axatel." },
+                faq: { kicker: "Réponses utiles", text: "Nous rassemblons les questions les plus fréquentes sur les solutions, les technologies, l'installation et l'assistance." },
+            },
         },
         team: {
             title: "Équipe",
