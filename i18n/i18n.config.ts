@@ -43,6 +43,7 @@ const base = {
                 back: "Torna a Cosa monitoriamo",
                 groups: { ambiente: "Ambiente", viabilita: "Viabilità", strutture: "Strutture", altro: "Altri ambiti" },
                 titlePrefix: "Monitoraggio",
+                all: "Tutti", filterLabel: "Filtra per ambito", soon: "In arrivo",
             },
             footer: {
                 about: "Informazioni su Axatel",
@@ -130,6 +131,7 @@ const base = {
                 back: "Back to What we monitor",
                 groups: { ambiente: "Environment", viabilita: "Roads", strutture: "Structures", altro: "Other areas" },
                 titlePrefix: "Monitoring",
+                all: "All", filterLabel: "Filter by area", soon: "Coming soon",
             },
             footer: {
                 about: "About Axatel",
@@ -217,6 +219,7 @@ const base = {
                 back: "Retour à Ce que nous surveillons",
                 groups: { ambiente: "Environnement", viabilita: "Routes", strutture: "Ouvrages", altro: "Autres domaines" },
                 titlePrefix: "Surveillance",
+                all: "Tous", filterLabel: "Filtrer par domaine", soon: "Bientôt",
             },
             footer: {
                 about: "À propos d'Axatel",

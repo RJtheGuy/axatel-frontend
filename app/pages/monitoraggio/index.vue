@@ -12,42 +12,49 @@
                 <p class="lead">{{ lead }}</p>
                 <LayoutTranslationNotice v-if="hasUntranslated" />
 
-                <p v-if="!topics.length" class="empty">
-                    {{ t("monitoring.empty") }}
-                </p>
+                <p v-if="!topics.length" class="empty">{{ t("monitoring.empty") }}</p>
 
-                <template v-else>
-                    <section
+                <!-- Area filter (Ambiente / Viabilità / Strutture), same look as the
+                     sector filter on Casi di successo. Kept in the URL (?ambito=…). -->
+                <div v-if="groups.length > 1" class="mon-filters" role="group" :aria-label="t('monitoring.filterLabel')">
+                    <button type="button" class="chip" :aria-pressed="!activeGroup" @click="setGroup('')">
+                        {{ t("monitoring.all") }} <span>{{ topics.length }}</span>
+                    </button>
+                    <button
                         v-for="group in groups"
-                        :key="group.label"
-                        class="mon-group"
-                        :aria-labelledby="`group-${group.key}`"
-                    >
-                        <header class="mon-group-head">
-                            <h2 :id="`group-${group.key}`">{{ group.label }}</h2>
-                            <span class="mon-group-count">{{ t("monitoring.areas", { n: group.items.length }, group.items.length) }}</span>
-                        </header>
+                        :key="group.key"
+                        type="button"
+                        class="chip"
+                        :aria-pressed="activeGroup === group.key"
+                        @click="setGroup(group.key)"
+                    >{{ group.label }} <span>{{ group.count }}</span></button>
+                </div>
 
-                        <div class="mon-grid">
-                            <article v-for="item in group.items" :key="item.slug" class="topic-card">
-                                <NuxtLink :to="localePath(`/monitoraggio/${item.slug}`)" class="topic-link">
-                                    <div class="topic-media" aria-hidden="true">
-                                        <img v-if="item.image" :src="imageUrl(item.image)" alt="" width="160" height="160" loading="lazy" decoding="async" />
-                                        <span v-else class="topic-placeholder">{{ item.icon || item.shortTitle.charAt(0) }}</span>
-                                    </div>
-                                    <div class="topic-content">
-                                        <h3>{{ item.shortTitle }}</h3>
-                                        <p>{{ item.description }}</p>
-                                        <div v-if="item.tags.length" class="topic-tags">
-                                            <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
-                                        </div>
-                                        <span class="topic-more">{{ t("common.discover") }} <span aria-hidden="true">→</span></span>
-                                    </div>
-                                </NuxtLink>
-                            </article>
-                        </div>
-                    </section>
-                </template>
+                <div v-if="visibleTopics.length" class="mon-grid">
+                    <article
+                        v-for="item in visibleTopics"
+                        :key="item.slug"
+                        class="topic-card"
+                        :class="[`is-${item.groupKey}`, { 'is-soon': item.comingSoon }]"
+                    >
+                        <NuxtLink :to="localePath(`/monitoraggio/${item.slug}`)" class="topic-link">
+                            <div class="topic-media" aria-hidden="true">
+                                <img v-if="item.image" :src="item.image" alt="" width="150" height="150" loading="lazy" decoding="async" />
+                                <span v-else class="topic-icon">{{ item.icon || item.shortTitle.charAt(0) }}</span>
+                                <span v-if="item.comingSoon" class="topic-soon">{{ t("monitoring.soon") }}</span>
+                            </div>
+                            <div class="topic-content">
+                                <div class="topic-kicker">{{ item.groupLabel }}</div>
+                                <h2>{{ item.shortTitle }}</h2>
+                                <p>{{ item.description }}</p>
+                                <div v-if="item.tags.length" class="topic-tags">
+                                    <small v-for="tag in item.tags" :key="tag">{{ tag }}</small>
+                                </div>
+                                <span class="topic-more">{{ t("common.discover") }} <span aria-hidden="true">→</span></span>
+                            </div>
+                        </NuxtLink>
+                    </article>
+                </div>
             </section>
         </div>
     </main>
@@ -62,18 +69,21 @@ import { monitoringOrder, monitoringPages } from "../../data/monitoring";
 const { getPage, getPageBySlug } = useCms();
 const { t, locale } = useI18n();
 const localePath = useLocalePath();
+const route = useRoute();
+const router = useRouter();
 const { imageUrl } = useCmsImage();
 
 type TopicItem = {
     title: string;
     icon: string;
     description: string;
-    category: string;
+    groupKey: string;
+    groupLabel: string;
     image: string;
-    image_alt: string;
     tags: string[];
     slug: string;
     shortTitle: string;
+    comingSoon: boolean;
 };
 
 const { data: monData } = await useAsyncData(() => `monitoraggio-list-${locale.value}`, () =>
@@ -95,26 +105,46 @@ const lead = computed(() => {
     return usable ? intro : t("monitoring.lead");
 });
 
+// Same order as the "Cosa monitoriamo?" menu.
+const GROUP_ORDER = ["ambiente", "viabilita", "strutture"];
+const normalize = (value: string) =>
+    String(value || "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+const groupLabel = (key: string, raw: string) =>
+    [...GROUP_ORDER, "altro"].includes(key) ? t(`monitoring.groups.${key}`) : capitalize(raw);
+
 const shorten = (title: string) =>
     // "Monitoraggio frane" → "Frane" (and "Traffic monitoring" → "Traffic"):
-    // the group heading already says what it is.
+    // the label above the title already says what it is.
     capitalize(String(title || "").replace(/^(monitoraggio|surveillance( des| du| de la)?)\s+/i, "").replace(/\s+monitoring$/i, ""));
 
-// CMS topics (Pagine → Monitoraggio) first; any topic not in the CMS yet
-// comes from the built-in list (data/monitoring.ts), so nothing disappears
-// from this page while the topics are being moved into the CMS.
+function capitalize(value: string): string {
+    return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+}
+
+// CMS topics (Pagine → Monitoraggio) first; a topic not in the CMS comes
+// from the built-in list (data/monitoring.ts). A CMS topic without category,
+// icon or picture borrows them from the built-in topic with the same slug,
+// so it still lands in the right area with a picture.
 const topics = computed<TopicItem[]>(() => {
-    const cms = ((monData.value?.items ?? []) as any[]).map((p) => ({
-        title: p.title,
-        icon: p.icon || "",
-        description: p.short_description || "",
-        category: p.category || "",
-        image: p.cover_image?.url || "",
-        image_alt: p.cover_image?.alt || "",
-        tags: p.tags || [],
-        slug: p.meta?.slug,
-        shortTitle: shorten(p.title),
-    }));
+    const cms = ((monData.value?.items ?? []) as any[]).map((p) => {
+        const slug = p.meta?.slug;
+        const builtIn = monitoringPages[slug];
+        const rawGroup = p.category || builtIn?.group || "";
+        const key = normalize(rawGroup) || "altro";
+        const hasBody = Array.isArray(p.body) ? p.body.length > 0 : Boolean(p.body);
+        return {
+            title: p.title,
+            icon: p.icon || "",
+            description: p.short_description || builtIn?.introduction || "",
+            groupKey: key,
+            groupLabel: groupLabel(key, rawGroup),
+            image: p.cover_image?.url ? imageUrl(p.cover_image.url) : builtIn?.image || "",
+            tags: p.tags || [],
+            slug,
+            shortTitle: shorten(p.title),
+            comingSoon: !hasBody && (!builtIn || builtIn.status === "coming-soon"),
+        };
+    });
     const inCms = new Set(cms.map((p) => p.slug));
     // Once the CMS answers, a written topic missing from it was hidden on
     // purpose (unpublished); only "coming soon" placeholders are added.
@@ -122,18 +152,30 @@ const topics = computed<TopicItem[]>(() => {
     const builtIn = monitoringOrder
         .filter((slug) => !inCms.has(slug) && !(cmsAnswered && monitoringPages[slug]?.status === "published"))
         .map((slug) => monitoringPages[slug]!)
-        .map((p) => ({
-            title: p.title,
-            icon: "",
-            description: p.introduction,
-            category: p.group,
-            image: p.image || "",
-            image_alt: p.imageAlt || "",
-            tags: [],
-            slug: p.slug,
-            shortTitle: shorten(p.title),
-        }));
-    return [...cms, ...builtIn];
+        .map((p) => {
+            const key = normalize(p.group) || "altro";
+            return {
+                title: p.title,
+                icon: "",
+                description: p.introduction,
+                groupKey: key,
+                groupLabel: groupLabel(key, p.group),
+                image: p.image || "",
+                tags: [],
+                slug: p.slug,
+                shortTitle: shorten(p.title),
+                comingSoon: p.status === "coming-soon",
+            };
+        });
+    const rank = (key: string) => (GROUP_ORDER.indexOf(key) === -1 ? 99 : GROUP_ORDER.indexOf(key));
+    // Area order, then written topics before "coming soon", then A-Z.
+    return [...cms, ...builtIn].sort(
+        (a, b) =>
+            rank(a.groupKey) - rank(b.groupKey) ||
+            a.groupKey.localeCompare(b.groupKey) ||
+            Number(a.comingSoon) - Number(b.comingSoon) ||
+            a.shortTitle.localeCompare(b.shortTitle, locale.value)
+    );
 });
 
 // Built-in topics and CMS pages not translated yet are in Italian.
@@ -143,33 +185,31 @@ const hasUntranslated = computed(
         (locale.value !== "it" && topics.value.length > ((monData.value?.items ?? []) as any[]).length)
 );
 
-function capitalize(value: string): string {
-    return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
-}
-
-// Same order as the "Cosa monitoriamo?" menu. Anything with another
-// category (or none) goes into a final group, so nothing disappears.
-const GROUP_ORDER = ["ambiente", "viabilita", "strutture"];
-const normalize = (value: string) =>
-    value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
-
 const groups = computed(() => {
-    const map = new Map<string, TopicItem[]>();
+    const seen = new Map<string, { key: string; label: string; count: number }>();
     for (const item of topics.value) {
-        const key = normalize(item.category) || "altro";
-        if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push(item);
+        const entry = seen.get(item.groupKey) ?? { key: item.groupKey, label: item.groupLabel, count: 0 };
+        entry.count += 1;
+        seen.set(item.groupKey, entry);
     }
-    const keys = [...map.keys()].sort((a, b) => {
-        const ia = GROUP_ORDER.indexOf(a), ib = GROUP_ORDER.indexOf(b);
-        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
-    });
-    return keys.map((key) => ({
-        key,
-        label: ["ambiente", "viabilita", "strutture", "altro"].includes(key) ? t(`monitoring.groups.${key}`) : capitalize(key),
-        items: map.get(key)!.sort((x, y) => x.shortTitle.localeCompare(y.shortTitle, locale.value)),
-    }));
+    return [...seen.values()];
 });
+
+const activeGroup = computed(() => {
+    const q = String(route.query.ambito ?? "");
+    return groups.value.some((g) => g.key === q) ? q : "";
+});
+
+const visibleTopics = computed(() =>
+    activeGroup.value ? topics.value.filter((item) => item.groupKey === activeGroup.value) : topics.value
+);
+
+function setGroup(key: string): void {
+    const query = { ...route.query };
+    if (key) query.ambito = key;
+    else delete query.ambito;
+    router.replace({ query });
+}
 
 useSeoMeta({
     title: () => `${t("monitoring.kicker")} | Axatel`,
@@ -182,7 +222,7 @@ useSeoMeta({
 </script>
 
 <style scoped>
-/* Same visual language as blog/index.vue and casi/index.vue. */
+/* Same visual language as casi/index.vue (Casi di successo). */
 .mon-page {
     min-height: 100vh;
     overflow: hidden;
@@ -230,14 +270,18 @@ useSeoMeta({
     font-weight: 700;
 }
 
-.page-kicker {
-    padding-left: 14px;
-    border-left: 4px solid #c52317;
+.page-kicker,
+.topic-kicker {
     color: #c52317;
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.page-kicker {
+    padding-left: 14px;
+    border-left: 4px solid #c52317;
 }
 
 .lead {
@@ -253,147 +297,237 @@ useSeoMeta({
     padding: 40px 0;
 }
 
-.mon-group + .mon-group {
-    margin-top: 56px;
-}
-
-.mon-group-head {
+/* -- filter chips (as on Casi di successo) -------------------------------- */
+.mon-filters {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 16px;
-    margin: 0 0 18px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(11, 53, 91, 0.12);
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 24px;
 }
 
-.mon-group-head h2 {
-    margin: 0;
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 16px;
+    border: 1px solid rgba(11, 53, 91, 0.2);
+    border-radius: 999px;
+    background: #fff;
     color: #0b355b;
-    font-size: 1.5rem;
+    font: inherit;
+    font-size: 0.86rem;
     font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
-.mon-group-count {
+.chip span {
     color: #667f97;
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     font-variant-numeric: tabular-nums;
 }
 
+.chip:hover {
+    border-color: #c52317;
+}
+
+.chip[aria-pressed="true"] {
+    border-color: #c52317;
+    background: #c52317;
+    color: #fff;
+}
+
+.chip[aria-pressed="true"] span {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.chip:focus-visible {
+    outline: 2px solid #c52317;
+    outline-offset: 2px;
+}
+
+/* -- cards ---------------------------------------------------------------- */
 .mon-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
 }
 
 .topic-card {
-    border: 1px solid rgba(11, 53, 91, 0.12);
-    border-radius: 14px;
-    background: #ffffff;
-    box-shadow: 0 10px 26px rgba(17, 48, 78, 0.06);
-    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+    --tint: #e8f0f7;
+    --tint-deep: #d5e3ef;
+    overflow: hidden;
+    border: 1px solid rgba(11, 53, 91, 0.14);
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 14px 32px rgba(17, 48, 78, 0.08);
+    transition: transform 0.22s ease, border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+/* A quiet colour per area, so the grid reads at a glance. */
+.topic-card.is-ambiente {
+    --tint: #e7f3ef;
+    --tint-deep: #d2e9e1;
+}
+
+.topic-card.is-viabilita {
+    --tint: #f6eeea;
+    --tint-deep: #efdcd4;
+}
+
+.topic-card.is-strutture {
+    --tint: #e9eff7;
+    --tint-deep: #d6e1ef;
 }
 
 .topic-link {
-    display: flex;
-    gap: 18px;
-    align-items: flex-start;
     height: 100%;
-    padding: 22px;
+    display: grid;
+    grid-template-rows: 180px 1fr;
     color: inherit;
     text-decoration: none;
 }
 
-/* Pictograms are square icons: show them whole, small, never cropped. */
+/* The pictures are round product pictograms: shown whole on a tinted
+   panel, never cropped. */
 .topic-media {
-    flex: 0 0 72px;
-    width: 72px;
-    height: 72px;
+    position: relative;
     display: grid;
     place-items: center;
-    border-radius: 12px;
-    background: #f1f5f9;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 50% 55%, #ffffff 0 34%, transparent 70%),
+        linear-gradient(160deg, var(--tint) 0%, var(--tint-deep) 100%);
+}
+
+.topic-media::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #c52317 0 22%, rgba(197, 35, 23, 0.2) 22% 100%);
 }
 
 .topic-media img {
-    width: 60px;
-    height: 60px;
+    width: 132px;
+    height: 132px;
     object-fit: contain;
+    transition: transform 0.35s ease;
 }
 
-.topic-placeholder {
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: #0b355b;
+.topic-icon {
+    font-size: 3.6rem;
     line-height: 1;
+    color: #0b355b;
+    font-weight: 700;
+}
+
+.topic-soon {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(11, 53, 91, 0.86);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .topic-content {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    min-width: 0;
+    gap: 10px;
+    padding: 18px;
 }
 
-.topic-link h3 {
+.topic-content h2 {
     margin: 0;
     color: #0b355b;
-    font-size: 1.12rem;
-    font-weight: 600;
+    font-size: 1.18rem;
+    line-height: 1.22;
 }
 
-.topic-link p {
+.topic-content p {
     margin: 0;
     color: #274e72;
-    font-size: 0.94rem;
     line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .topic-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 7px;
 }
 
-.topic-tags span {
+.topic-tags small {
     border: 1px solid rgba(234, 63, 48, 0.28);
     border-radius: 999px;
-    padding: 4px 8px;
+    background: rgba(234, 63, 48, 0.12);
     color: #0b355b;
-    font-size: 0.72rem;
-    font-weight: 600;
+    padding: 5px 8px;
+    font-weight: 700;
 }
 
 .topic-more {
-    margin-top: 4px;
+    margin-top: auto;
+    padding-top: 4px;
     color: #c52317;
-    font-size: 0.84rem;
+    font-size: 0.86rem;
     font-weight: 700;
+}
+
+.topic-card.is-soon .topic-media img,
+.topic-card.is-soon .topic-icon {
+    opacity: 0.72;
 }
 
 .topic-link:focus-visible {
     outline: 2px solid #c52317;
-    outline-offset: 3px;
-    border-radius: 14px;
+    outline-offset: -2px;
 }
 
 .topic-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(197, 35, 23, 0.4);
-    box-shadow: 0 18px 38px rgba(17, 48, 78, 0.12);
+    transform: translateY(-5px);
+    border-color: rgba(197, 35, 23, 0.48);
+    background: #ffffff;
+    box-shadow: 0 22px 44px rgba(17, 48, 78, 0.16);
+}
+
+.topic-card:hover .topic-media img {
+    transform: scale(1.05);
 }
 
 @media (prefers-reduced-motion: reduce) {
     .topic-card,
-    .topic-card:hover {
+    .topic-card:hover,
+    .topic-card:hover .topic-media img {
         transition: none;
         transform: none;
     }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 980px) {
+    .mon-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
     .mon-grid {
         grid-template-columns: 1fr;
+    }
+
+    .topic-link {
+        grid-template-rows: 150px 1fr;
     }
 }
 
@@ -406,4 +540,4 @@ useSeoMeta({
         padding: 5vh 5vw 6vh;
     }
 }
-</style>
+</style>
