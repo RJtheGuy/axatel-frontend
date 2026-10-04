@@ -198,6 +198,15 @@ export const interfaceMessages = {
             homeOgDescription: "Monitoraggio intelligente, dashboard in tempo reale, gestione allarmi e analisi dati per Smart City e Industria 4.0.",
             teamDescription: "Le persone e le competenze che trasformano insieme problemi complessi in soluzioni Axatel.",
         },
+        consent: {
+            before: "Ho letto l'",
+            link: "informativa privacy",
+            after: " e acconsento al trattamento dei miei dati per ricevere una risposta.",
+        },
+        video: {
+            play: "Guarda il video",
+            notice: "Il video è ospitato su {service} e si carica solo quando premi play.",
+        },
         notFound: {
             title: "Pagina non disponibile",
             badge: "In preparazione o spostata",
@@ -413,6 +422,15 @@ export const interfaceMessages = {
             homeOgDescription: "Smart monitoring, real-time dashboards, alarm management and data analysis for Smart Cities and Industry 4.0.",
             teamDescription: "The people and skills that together turn complex problems into Axatel solutions.",
         },
+        consent: {
+            before: "I have read the ",
+            link: "privacy notice",
+            after: " and agree to my data being processed to answer my request.",
+        },
+        video: {
+            play: "Watch the video",
+            notice: "The video is hosted on {service} and loads only when you press play.",
+        },
         notFound: {
             title: "Page not available",
             badge: "In preparation or moved",
@@ -627,6 +645,15 @@ export const interfaceMessages = {
             homeOgTitle: "Plateforme IoT",
             homeOgDescription: "Surveillance intelligente, tableaux de bord en temps réel, gestion des alarmes et analyse de données pour la Smart City et l'Industrie 4.0.",
             teamDescription: "Les personnes et les compétences qui, ensemble, transforment des problèmes complexes en solutions Axatel.",
+        },
+        consent: {
+            before: "J'ai lu la ",
+            link: "politique de confidentialité",
+            after: " et j'accepte le traitement de mes données pour recevoir une réponse.",
+        },
+        video: {
+            play: "Regarder la vidéo",
+            notice: "La vidéo est hébergée sur {service} et ne se charge que lorsque vous appuyez sur lecture.",
         },
         notFound: {
             title: "Page indisponible",

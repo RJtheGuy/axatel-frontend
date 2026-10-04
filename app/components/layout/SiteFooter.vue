@@ -63,6 +63,9 @@
             <p v-if="vat">{{ vatLabel }} {{ vat }}</p>
             <p v-if="tax && tax !== vat">{{ taxLabel }} {{ tax }}</p>
             <p v-if="rea">REA {{ rea }}</p>
+            <p v-for="link in legalLinks" :key="link.kind" class="footer-legal-link">
+                <NuxtLink :to="link.to">{{ link.label }}</NuxtLink>
+            </p>
         </div>
     </footer>
 </template>
@@ -167,6 +170,14 @@ const vatLabel = computed(() => (locale.value === "it" && filled(settings.value?
 const taxLabel = computed(() => (locale.value === "it" && filled(settings.value?.footer?.tax_label)) || t("footer.tax"));
 const vat = computed(() => filled(settings.value?.footer?.vat_value) || COMPANY.vat);
 const tax = computed(() => filled(settings.value?.footer?.tax_value));
+// Privacy / Cookie policy, shown once published (Impostazioni → Footer → Pagine legali).
+const legalLinks = computed(() =>
+    (((settings.value?.footer as any)?.legal ?? []) as Array<{ kind: string; url: string }>).map((link) => ({
+        kind: link.kind,
+        label: t(`footer.${link.kind}`),
+        to: localePath(link.url.replace(/\/+$/, "") || "/"),
+    }))
+);
 const rea = COMPANY.rea;
 
 const cta = computed(() => {
@@ -332,6 +343,16 @@ const isInternal = (href: string) => href.startsWith("/") && !href.startsWith("/
 
 .footer-legal p {
     margin: 0;
+}
+
+.footer-legal-link a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.footer-legal-link a:hover {
+    color: var(--ax-color-text-primary);
 }
 
 .site-footer a:focus-visible {

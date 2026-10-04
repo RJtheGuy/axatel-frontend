@@ -57,6 +57,8 @@ const base = {
                 follow: "Seguici",
                 vat: "P.IVA",
                 tax: "C.F.",
+                privacy: "Privacy policy",
+                cookie: "Cookie policy",
             },
             contact: {
                 title: "Contatti",
@@ -145,6 +147,8 @@ const base = {
                 follow: "Follow us",
                 vat: "VAT",
                 tax: "Tax code",
+                privacy: "Privacy policy",
+                cookie: "Cookie policy",
             },
             contact: {
                 title: "Contact",
@@ -233,6 +237,8 @@ const base = {
                 follow: "Suivez-nous",
                 vat: "TVA",
                 tax: "Code fiscal",
+                privacy: "Politique de confidentialité",
+                cookie: "Politique de cookies",
             },
             contact: {
                 title: "Contact",

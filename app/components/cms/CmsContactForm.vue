@@ -34,6 +34,8 @@
                 <small>{{ t("contact.cvHint") }}</small>
             </label>
 
+            <FormsPrivacyConsent v-model="consent" class="consent-row" />
+
             <label class="honeypot" aria-hidden="true">
                 Sito web
                 <input v-model="form.website" type="text" name="website" tabindex="-1" autocomplete="off" />
@@ -68,7 +70,9 @@ const props = defineProps<{
     };
 }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const consent = ref(false);
+const { text: consentText } = usePrivacyConsent();
 const headingId = `contact-form-${useId()}`;
 
 const form = reactive({ name: "", company: "", email: "", phone: "", message: "", website: "", file: null as File | null });
@@ -102,10 +106,14 @@ async function submit(): Promise<void> {
         body.append("message", form.message);
         body.append("website", form.website);
         body.append("submission_type", props.value.form_type || "contact");
+        body.append("privacy", consent.value ? "true" : "");
+        body.append("consent_text", consentText.value);
+        body.append("locale", locale.value);
         if (form.file && props.value.show_attachment) body.append("attachment", form.file);
         await $fetch(`${apiBase()}/contact/`, { method: "POST", body });
         sent.value = true;
         Object.assign(form, { name: "", company: "", email: "", phone: "", message: "", website: "", file: null });
+        consent.value = false;
     } catch (err) {
         error.value = t("contact.error");
         console.warn("[contact form] submission failed", err);
@@ -187,6 +195,10 @@ textarea {
 small {
     color: var(--cms-text, var(--ax-color-text-secondary));
     font-weight: 400;
+}
+
+.consent-row {
+    color: var(--cms-text, var(--ax-color-text-secondary));
 }
 
 .honeypot {

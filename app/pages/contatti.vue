@@ -106,6 +106,8 @@
                         <small>{{ t("contact.cvHint") }}</small>
                     </label>
 
+                    <FormsPrivacyConsent v-model="consent" />
+
                     <label class="honeypot" aria-hidden="true">
                         Sito web
                         <input v-model="form.website" type="text" name="website" tabindex="-1" autocomplete="off" />
@@ -153,6 +155,9 @@ const interests = [
     "Progetti IoT personalizzati"
 ];
 
+const consent = ref(false);
+const { text: consentText } = usePrivacyConsent();
+const { locale: siteLocale } = useI18n();
 const submitted = ref(false);
 const submitting = ref(false);
 const submitError = ref("");
@@ -211,6 +216,9 @@ async function submitForm(): Promise<void> {
         body.append("message", form.message);
         body.append("submission_type", form.submission_type);
         body.append("website", form.website);
+        body.append("privacy", consent.value ? "true" : "");
+        body.append("consent_text", consentText.value);
+        body.append("locale", siteLocale.value);
         form.interests.forEach((interest) => body.append("interests", interest));
         if (form.attachment && form.submission_type === "candidate") body.append("attachment", form.attachment);
         if (form.submission_type === "quote") {
