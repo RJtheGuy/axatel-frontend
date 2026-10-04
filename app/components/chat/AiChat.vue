@@ -63,7 +63,11 @@
                             :key="m.id"
                             class="msg"
                             :class="m.role"
-                        >{{ m.text }}</div>
+                        >{{ m.text }}<NuxtLink
+                                v-if="m.link"
+                                :to="localePath(m.link)"
+                                class="msg-link"
+                            >{{ t("chat.more") }} <span aria-hidden="true">→</span></NuxtLink></div>
                     </transition-group>
 
                     <div v-if="pending" class="msg bot pending" aria-live="polite">
@@ -139,7 +143,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from "vue";
 
-type Msg = { id: number; role: "user" | "bot"; text: string };
+type Msg = { id: number; role: "user" | "bot"; text: string; link?: string };
 
 const props = defineProps<{
     config?: {
@@ -169,6 +173,7 @@ let nextId = 0;
 // used only on the Italian site; English and French use the translated
 // interface text (i18n/messages-interface.ts, "chat").
 const { t, tm, rt, locale } = useI18n();
+const localePath = useLocalePath();
 const fromCms = (value?: string) => (locale.value === "it" && value ? value : "");
 
 const title = computed(() => fromCms(props.config?.title) || t("chat.title"));
@@ -231,7 +236,7 @@ async function send() {
         // Always the browser-facing base: this only runs on a click,
         // never during SSR, so the internal container hostname would be
         // wrong here.
-        const res = await $fetch<{ response?: string; error?: string }>(
+        const res = await $fetch<{ response?: string; link?: string; error?: string }>(
             `${runtime.public.apiBase}/chatbot/ask/`,
             // locale: the answer comes back in the visitor's language
             // when the CMS has it (Voci chatbot → Risposta EN/FR).
@@ -239,7 +244,8 @@ async function send() {
         );
 
         if (res?.response) {
-            messages.value.push({ id: nextId++, role: "bot", text: res.response });
+            // link: the page the answer comes from (pages, products, FAQ…).
+            messages.value.push({ id: nextId++, role: "bot", text: res.response, link: res.link || "" });
         } else {
             error.value = res?.error || t("chat.invalid");
         }
@@ -400,6 +406,21 @@ async function send() {
     border-bottom-left-radius: 4px;
     background: rgba(147, 183, 218, 0.12);
     color: var(--ax-color-text-secondary);
+}
+
+.msg-link {
+    display: flex;
+    width: fit-content;
+    gap: 6px;
+    margin-top: 8px;
+    color: #ff8a7a;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.msg-link:hover {
+    text-decoration: underline;
 }
 
 .msg.user {

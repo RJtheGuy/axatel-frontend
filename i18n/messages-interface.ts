@@ -131,6 +131,7 @@ export const interfaceMessages = {
             invalid: "Risposta non valida dal server.",
             unavailable: "Non riesco a rispondere in questo momento. Se è la prima domanda dopo un riavvio, riprova tra un minuto.",
             tooMany: "Troppe domande in poco tempo: riprova tra un minuto.",
+            more: "Scopri di più",
             suggestions: ["Cosa fa Axatel?", "Dove siete?", "Cos'è Smart Road?", "Come vi contatto?"],
         },
         glossary: {
@@ -196,6 +197,16 @@ export const interfaceMessages = {
             homeOgTitle: "Piattaforma IoT",
             homeOgDescription: "Monitoraggio intelligente, dashboard in tempo reale, gestione allarmi e analisi dati per Smart City e Industria 4.0.",
             teamDescription: "Le persone e le competenze che trasformano insieme problemi complessi in soluzioni Axatel.",
+        },
+        notFound: {
+            title: "Pagina non disponibile",
+            badge: "In preparazione o spostata",
+            heading: "Questa pagina non è ancora disponibile.",
+            text: "Potrebbe essere in preparazione oppure è stata spostata. Intanto puoi partire da una di queste sezioni.",
+            home: "Torna alla home",
+            errorTitle: "Qualcosa non ha funzionato",
+            errorText: "Si è verificato un problema temporaneo. Riprova tra qualche istante.",
+            retry: "Riprova",
         },
         errors: {
             page: "Pagina non trovata",
@@ -335,6 +346,7 @@ export const interfaceMessages = {
             invalid: "The server sent an invalid answer.",
             unavailable: "I can't answer right now. If this is the first question after a restart, try again in a minute.",
             tooMany: "Too many questions in a short time: please try again in a minute.",
+            more: "Find out more",
             suggestions: ["What does Axatel do?", "Where are you based?", "What is Smart Road?", "How can I contact you?"],
         },
         glossary: {
@@ -400,6 +412,16 @@ export const interfaceMessages = {
             homeOgTitle: "IoT platform",
             homeOgDescription: "Smart monitoring, real-time dashboards, alarm management and data analysis for Smart Cities and Industry 4.0.",
             teamDescription: "The people and skills that together turn complex problems into Axatel solutions.",
+        },
+        notFound: {
+            title: "Page not available",
+            badge: "In preparation or moved",
+            heading: "This page is not available yet.",
+            text: "It may be in preparation or it has moved. In the meantime, you can start from one of these sections.",
+            home: "Back to home",
+            errorTitle: "Something went wrong",
+            errorText: "There was a temporary problem. Please try again in a moment.",
+            retry: "Try again",
         },
         errors: {
             page: "Page not found",
@@ -539,6 +561,7 @@ export const interfaceMessages = {
             invalid: "Le serveur a envoyé une réponse non valide.",
             unavailable: "Je ne peux pas répondre pour le moment. Si c'est la première question après un redémarrage, réessayez dans une minute.",
             tooMany: "Trop de questions en peu de temps : réessayez dans une minute.",
+            more: "En savoir plus",
             suggestions: ["Que fait Axatel ?", "Où êtes-vous situés ?", "Qu'est-ce que Smart Road ?", "Comment vous contacter ?"],
         },
         glossary: {
@@ -604,6 +627,16 @@ export const interfaceMessages = {
             homeOgTitle: "Plateforme IoT",
             homeOgDescription: "Surveillance intelligente, tableaux de bord en temps réel, gestion des alarmes et analyse de données pour la Smart City et l'Industrie 4.0.",
             teamDescription: "Les personnes et les compétences qui, ensemble, transforment des problèmes complexes en solutions Axatel.",
+        },
+        notFound: {
+            title: "Page indisponible",
+            badge: "En préparation ou déplacée",
+            heading: "Cette page n'est pas encore disponible.",
+            text: "Elle est peut-être en préparation ou elle a été déplacée. En attendant, vous pouvez partir de l'une de ces sections.",
+            home: "Retour à l'accueil",
+            errorTitle: "Un problème est survenu",
+            errorText: "Un problème temporaire est survenu. Réessayez dans un instant.",
+            retry: "Réessayer",
         },
         errors: {
             page: "Page introuvable",

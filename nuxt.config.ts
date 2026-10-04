@@ -92,6 +92,11 @@ export default defineNuxtConfig({
     '/approfondimenti/news': { redirect: { to: '/news', statusCode: 301 } },
     '/en/approfondimenti/news': { redirect: { to: '/en/news', statusCode: 301 } },
     '/fr/approfondimenti/news': { redirect: { to: '/fr/news', statusCode: 301 } },
+    // Gallerie was renamed Tunnel (update 17). Built in, so the old address
+    // works even where the CMS redirect is missing (e.g. a copy on a PC).
+    '/monitoraggio/gallerie': { redirect: { to: '/monitoraggio/tunnel', statusCode: 301 } },
+    '/en/monitoraggio/gallerie': { redirect: { to: '/en/monitoraggio/tunnel', statusCode: 301 } },
+    '/fr/monitoraggio/gallerie': { redirect: { to: '/fr/monitoraggio/tunnel', statusCode: 301 } },
 
     '/**': {
       headers: {
