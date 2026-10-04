@@ -42,7 +42,7 @@
                             {{ t("contact.name") }}
                             <input v-model="form.name" type="text" name="name" autocomplete="name" required />
                         </label>
-                        <label>
+                        <label v-if="!isCandidate">
                             {{ t("contact.company") }}
                             <input v-model="form.company" type="text" name="company" autocomplete="organization" />
                         </label>
@@ -79,7 +79,21 @@
                         </label>
                     </div>
 
-                    <fieldset>
+                    <!-- Each request type asks only what it needs: topics for a contact,
+                         project details for a quote, the CV for an application. -->
+                    <label v-if="isCandidate">
+                        {{ t("contact.cv") }}
+                        <input
+                            ref="attachmentInput"
+                            type="file"
+                            name="attachment"
+                            accept=".pdf,.doc,.docx,.odt,.rtf,.txt"
+                            @change="selectAttachment"
+                        />
+                        <small>{{ t("contact.cvHint") }}</small>
+                    </label>
+
+                    <fieldset v-if="form.submission_type === 'contact'">
                         <legend>{{ t("contact.interestsLegend") }}</legend>
                         <div class="interest-grid">
                             <label v-for="(interest, index) in interests" :key="interest" class="interest-option">
@@ -91,19 +105,8 @@
                     </fieldset>
 
                     <label>
-                        {{ t("contact.message") }}
-                        <textarea v-model="form.message" name="message" rows="6" :placeholder="t('contact.messagePlaceholder')"></textarea>
-                    </label>
-
-                    <label v-if="form.submission_type === 'candidate'">
-                        {{ t("contact.cv") }}
-                        <input
-                            type="file"
-                            name="attachment"
-                            accept=".pdf,.doc,.docx,.odt,.rtf,.txt"
-                            @change="selectAttachment"
-                        />
-                        <small>{{ t("contact.cvHint") }}</small>
+                        {{ isCandidate ? t("contact.messageCandidate") : t("contact.message") }}
+                        <textarea v-model="form.message" name="message" rows="6" :placeholder="messagePlaceholder"></textarea>
                     </label>
 
                     <FormsPrivacyConsent v-model="consent" />
@@ -114,7 +117,7 @@
                     </label>
 
                     <button class="submit-button" type="submit" :disabled="submitting">
-                        {{ submitting ? t("contact.sending") : t("contact.submit") }}
+                        {{ submitting ? t("contact.sending") : submitLabel }}
                     </button>
                     <p v-if="submitted" class="form-feedback" role="status">
                         {{ t("contact.sent") }}
@@ -129,7 +132,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import DashboardTitoloParticelle from "../components/dashboard/TitoloParticelle.vue";
 
 const { t } = useI18n();
@@ -174,6 +177,27 @@ const form = reactive({
     attachment: null as File | null,
 });
 
+const isCandidate = computed(() => form.submission_type === "candidate");
+const attachmentInput = ref<HTMLInputElement | null>(null);
+const messagePlaceholder = computed(() =>
+    isCandidate.value ? t("contact.messagePlaceholderCandidate")
+    : form.submission_type === "quote" ? t("contact.messagePlaceholderQuote")
+    : t("contact.messagePlaceholder"));
+const submitLabel = computed(() =>
+    isCandidate.value ? t("contact.submitCandidate")
+    : form.submission_type === "quote" ? t("contact.submitQuote")
+    : t("contact.submit"));
+
+// Switching type drops what the new type does not ask for, so nothing
+// hidden is sent (topics only for a contact, the CV only for an application).
+watch(() => form.submission_type, (type) => {
+    if (type !== "contact") form.interests = [];
+    if (type !== "candidate") {
+        form.attachment = null;
+        if (attachmentInput.value) attachmentInput.value.value = "";
+    }
+});
+
 // Quote mode: /contatti?tipo=preventivo&oggetto=Angel%20River
 // (used by the "Richiedi un preventivo" buttons on product and solution pages).
 const TIMELINES = ["soon", "mid", "later", "open"] as const;
@@ -210,7 +234,7 @@ async function submitForm(): Promise<void> {
     try {
         const body = new FormData();
         body.append("name", form.name);
-        body.append("company", form.company);
+        body.append("company", isCandidate.value ? "" : form.company);
         body.append("email", form.email);
         body.append("phone", form.phone);
         body.append("message", form.message);
@@ -219,7 +243,7 @@ async function submitForm(): Promise<void> {
         body.append("privacy", consent.value ? "true" : "");
         body.append("consent_text", consentText.value);
         body.append("locale", siteLocale.value);
-        form.interests.forEach((interest) => body.append("interests", interest));
+        if (form.submission_type === "contact") form.interests.forEach((interest) => body.append("interests", interest));
         if (form.attachment && form.submission_type === "candidate") body.append("attachment", form.attachment);
         if (form.submission_type === "quote") {
             if (quote.subject) body.append("details_subject", quote.subject);
