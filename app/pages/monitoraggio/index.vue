@@ -116,8 +116,11 @@ const topics = computed<TopicItem[]>(() => {
         shortTitle: shorten(p.title),
     }));
     const inCms = new Set(cms.map((p) => p.slug));
+    // Once the CMS answers, a written topic missing from it was hidden on
+    // purpose (unpublished); only "coming soon" placeholders are added.
+    const cmsAnswered = cms.length > 0;
     const builtIn = monitoringOrder
-        .filter((slug) => !inCms.has(slug))
+        .filter((slug) => !inCms.has(slug) && !(cmsAnswered && monitoringPages[slug]?.status === "published"))
         .map((slug) => monitoringPages[slug]!)
         .map((p) => ({
             title: p.title,

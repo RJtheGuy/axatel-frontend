@@ -130,7 +130,7 @@ function saveAlarm(){
 
     alarms.unshift({
 
-        id:crypto.randomUUID(),
+        id:makeId(),
 
         name:"Crepa aperta",
 

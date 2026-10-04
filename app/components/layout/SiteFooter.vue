@@ -5,7 +5,7 @@
         <div class="footer-top">
             <div class="footer-brand">
                 <NuxtLink :to="localePath('/')" class="footer-logo" :aria-label="t('nav.home')">
-                    <img :src="axatelLogo" width="140" height="33" alt="Axatel" loading="lazy" decoding="async">
+                    <img :src="brandLogo" width="140" height="33" alt="Axatel" class="brand-logo" loading="lazy" decoding="async">
                 </NuxtLink>
                 <p class="footer-tagline">{{ t("footer.tagline") }}</p>
                 <NuxtLink :to="cta.url" class="ax-cta-outline footer-cta">{{ cta.label }}</NuxtLink>
@@ -44,6 +44,18 @@
                 <span class="contact-title">{{ item.title }}</span>
                 <span class="contact-value">{{ item.value }}</span>
             </a>
+            <div v-if="socialLinks.length" class="footer-contact footer-social">
+                <span class="contact-title">{{ t("footer.follow") }}</span>
+                <span class="contact-value social-links">
+                    <a
+                        v-for="link in socialLinks"
+                        :key="link.url"
+                        :href="link.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >{{ link.label }}</a>
+                </span>
+            </div>
         </address>
 
         <div class="footer-legal">
@@ -71,6 +83,10 @@
 import { computed } from "vue";
 import axatelLogo from "~/assets/immagini/Axatel.svg";
 
+// Logo uploaded in the CMS (Impostazioni → Logo e immagini del sito), else the built-in one.
+const branding = useState<{ logo?: string } | null>("branding");
+const brandLogo = computed(() => branding.value?.logo || axatelLogo);
+
 type Link = { label: string; href: string; open_in_new_tab?: boolean };
 type NavItem = { label: string; href?: string | null; groups?: Array<{ label: string; links: Link[] }> };
 type Contact = { title: string; value: string; href: string; external?: boolean };
@@ -95,7 +111,12 @@ const DEFAULT_CONTACTS = (): Contact[] => [
         href: "https://www.google.com/maps/place/Viale+Mercato+Nuovo,+75,+36100+Vicenza+VI",
         external: true,
     },
-    { title: t("footer.follow"), value: "LinkedIn", href: "https://www.linkedin.com/company/axatel/", external: true },
+];
+
+// "Seguici": Impostazioni → Footer → Seguici (social). Built-in until set.
+const DEFAULT_SOCIAL = [
+    { network: "linkedin", label: "LinkedIn", url: "https://www.linkedin.com/company/axatel/" },
+    { network: "facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61587985567497" },
 ];
 
 // Contact titles typed in the CMS are Italian; show the translated
@@ -123,8 +144,16 @@ const columns = computed(() => {
     return cols;
 });
 
+const socialLinks = computed(() => {
+    const cms = (settings.value?.footer as any)?.social;
+    return Array.isArray(cms) && cms.length > 0 ? cms : DEFAULT_SOCIAL;
+});
+
+// An old single "Seguici" contact is replaced by the social list above.
+const isFollowEntry = (c: Contact) => TITLE_KEYS[(c.title || "").trim().toLowerCase()] === "footer.follow";
+
 const contacts = computed<Contact[]>(() => {
-    const cms = settings.value?.footer?.contacts;
+    const cms = (settings.value?.footer?.contacts ?? []).filter((c: Contact) => !isFollowEntry(c));
     if (!(Array.isArray(cms) && cms.length > 0)) return DEFAULT_CONTACTS();
     if (locale.value === "it") return cms;
     return cms.map((c: Contact) => {
@@ -268,6 +297,23 @@ const isInternal = (href: string) => href.startsWith("/") && !href.startsWith("/
     color: var(--ax-color-text-primary);
 }
 
+.social-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+
+.social-links a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.social-links a:hover,
+.social-links a:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
 .footer-contact:hover .contact-value,
 .footer-contact:focus-visible .contact-value {
     text-decoration: underline;
@@ -318,5 +364,10 @@ const isInternal = (href: string) => href.startsWith("/") && !href.startsWith("/
         grid-template-columns: 1fr;
         margin-top: 40px;
     }
+}
+
+/* A logo uploaded in the CMS may have another shape: keep its proportions. */
+.brand-logo {
+    object-fit: contain;
 }
 </style>

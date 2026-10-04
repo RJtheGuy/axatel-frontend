@@ -17,7 +17,7 @@
                         <p v-if="topic.category" class="topic-kicker">{{ topic.category }}</p>
                         <p v-if="topic.description" class="lead">{{ topic.description }}</p>
                     </div>
-                    <figure v-if="topic.image" class="topic-badge">
+                    <figure v-if="topic.image" class="topic-badge" :class="{ 'is-plain': !topic.frame }">
                         <img
                             :src="imageUrl(topic.image)"
                             :alt="topic.image_alt || topic.title"
@@ -57,7 +57,7 @@ import ContentPage from "../../components/content/ContentPage.vue";
 import { monitoringOrder, monitoringPages } from "../../data/monitoring";
 
 const route = useRoute();
-const { getPageBySlug } = useCms();
+const { getPage, getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
 
 type TopicData = {
@@ -69,6 +69,7 @@ type TopicData = {
     image_alt: string;
     image_width?: number;
     image_height?: number;
+    frame?: boolean;
     body: Array<{ type: string; value: any; id: string }>;
     meta?: { search_description?: string };
 };
@@ -96,6 +97,23 @@ const legacyRelated = computed(() =>
         .map((s) => monitoringPages[s]!)
 );
 
+// A topic that is in the built-in list but not answered by the CMS was
+// unpublished (or deleted) there on purpose: hide it instead of showing the
+// built-in text. The built-in version is used only while the CMS cannot be
+// reached, and for the "coming soon" topics not written in the CMS yet.
+const { data: cmsUp } = await useAsyncData(
+    () => `monitoraggio-cms-up-${slug.value}`,
+    async () => {
+        if (raw.value || !legacy.value || legacy.value.status !== "published") return false;
+        const res = await getPage<any>("monitoring.MonitoringPage", { fields: "_", limit: 1 }).catch(() => null);
+        return Boolean(res?.items?.length);
+    },
+    { watch: [slug] }
+);
+if (!raw.value && legacy.value?.status === "published" && cmsUp.value) {
+    throw createError({ statusCode: 404, statusMessage: t("errors.topic") });
+}
+
 if (!raw.value && !legacy.value) {
     throw createError({ statusCode: 404, statusMessage: t("errors.topic") });
 }
@@ -109,6 +127,7 @@ const topic = computed<TopicData>(() => raw.value ? ({
     image_alt: raw.value.cover_image?.alt || "",
     image_width: raw.value.cover_image?.width,
     image_height: raw.value.cover_image?.height,
+    frame: raw.value.image_frame === true,
     body: raw.value.body || [],
     meta: raw.value.meta
 }) : ({
@@ -221,6 +240,20 @@ useSeoMeta({
     border-radius: 18px;
     background: #ffffff;
     box-shadow: 0 18px 40px rgba(17, 48, 78, 0.1);
+}
+
+/* "Riquadro bianco" switched off in the CMS: the picture sits on the page,
+   and its white background blends into the light background. */
+.topic-badge.is-plain {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.topic-badge.is-plain img {
+    mix-blend-mode: multiply;
 }
 
 .topic-badge img {

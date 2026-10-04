@@ -3,16 +3,16 @@
         <div class="hero-grid" aria-hidden="true"></div>
 
         <div class="hero-copy">
-            <p class="hero-kicker">{{ t("hero.kicker") }}</p>
-            <h1>{{ t("hero.titleBefore") }} <span>{{ t("hero.titleAccent") }}</span> {{ t("hero.titleAfter") }}</h1>
-            <p class="hero-intro">{{ t("hero.intro") }}</p>
+            <p v-if="text.kicker" class="hero-kicker">{{ text.kicker }}</p>
+            <h1>{{ text.titleBefore }} <span>{{ text.titleAccent }}</span> {{ text.titleAfter }}</h1>
+            <p v-if="text.intro" class="hero-intro">{{ text.intro }}</p>
 
             <div class="hero-actions">
-                <NuxtLink :to="localePath('/contatti')" class="hero-btn hero-btn-primary">{{ t("hero.ctaPrimary") }}</NuxtLink>
-                <NuxtLink :to="localePath('/monitoraggio')" class="hero-btn hero-btn-ghost">{{ t("hero.ctaSecondary") }} <span aria-hidden="true">→</span></NuxtLink>
+                <NuxtLink :to="link(text.primaryUrl)" class="hero-btn hero-btn-primary">{{ text.primaryLabel }}</NuxtLink>
+                <NuxtLink v-if="text.secondaryLabel" :to="link(text.secondaryUrl)" class="hero-btn hero-btn-ghost">{{ text.secondaryLabel }} <span aria-hidden="true">→</span></NuxtLink>
             </div>
 
-            <div class="hero-status" :aria-label="t('hero.status')">
+            <div v-if="text.showStatus" class="hero-status" :aria-label="t('hero.status')">
                 <span class="status-dot"></span>
                 <span>{{ t("hero.status") }}</span>
                 <span class="status-separator"></span>
@@ -28,10 +28,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount } from "vue";
+
+// Texts of the first screen: Pagine → Home → "Prima schermata" in the CMS;
+// anything left empty there uses the built-in text in the visitor's language.
+export type HeroTop = {
+    kicker?: string; titleBefore?: string; titleAccent?: string; titleAfter?: string; intro?: string;
+    primaryLabel?: string; primaryUrl?: string; secondaryLabel?: string; secondaryUrl?: string; showStatus?: boolean;
+};
+const props = defineProps<{ content?: HeroTop | null }>();
 
 const { t } = useI18n();
 const localePath = useLocalePath();
+
+const pick = (value: string | undefined, fallback: string) => (value && value.trim() ? value.trim() : fallback);
+const text = computed(() => {
+    const c = props.content ?? {};
+    const secondary = pick(c.secondaryLabel, t("hero.ctaSecondary"));
+    return {
+        kicker: pick(c.kicker, t("hero.kicker")),
+        titleBefore: pick(c.titleBefore, t("hero.titleBefore")),
+        titleAccent: pick(c.titleAccent, t("hero.titleAccent")),
+        titleAfter: pick(c.titleAfter, t("hero.titleAfter")),
+        intro: pick(c.intro, t("hero.intro")),
+        primaryLabel: pick(c.primaryLabel, t("hero.ctaPrimary")),
+        primaryUrl: pick(c.primaryUrl, "/contatti"),
+        // A single "-" in the CMS hides the second button.
+        secondaryLabel: secondary === "-" ? "" : secondary,
+        secondaryUrl: pick(c.secondaryUrl, "/monitoraggio"),
+        showStatus: c.showStatus !== false,
+    };
+});
+const link = (url: string) => (url.startsWith("/") ? localePath(url) : url);
 
 const sectionEl = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;

@@ -2,6 +2,9 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import corporate from "../../data/corporate.json";
 import axatelLogo from '~/assets/immagini/Axatel.svg'
+// Logo uploaded in the CMS (Impostazioni → Logo e immagini del sito), else the built-in one.
+const branding = useState<{ logo?: string } | null>("branding")
+const brandLogo = computed(() => branding.value?.logo || axatelLogo)
 
 // Same useSiteSettings() composable the layout already uses for the
 // chatbot config — one shared fetch of /api/v2/site-settings/, not a
@@ -228,7 +231,7 @@ onUnmounted(() => {
     <div class="container">
 
         <NuxtLink class="brand" :to="localePath('/')" :aria-label="t('nav.home')" @click="closeMenu">
-            <img :src="axatelLogo" width="128" height="30" alt="Axatel Logo" fetchpriority="high" decoding="async">
+            <img :src="brandLogo" width="128" height="30" alt="Axatel Logo" class="brand-logo" fetchpriority="high" decoding="async">
         </NuxtLink>
 
         <button
@@ -592,4 +595,9 @@ onUnmounted(() => {
     }
 }
 
+
+/* A logo uploaded in the CMS may have another shape: keep its proportions. */
+.brand-logo {
+    object-fit: contain;
+}
 </style>

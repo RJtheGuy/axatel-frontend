@@ -26,6 +26,18 @@ const images = import.meta.glob<string>(
  */
 const fallback = Object.entries(images).find(([path]) => path.endsWith("/Axatel.svg"))?.[1] ?? "";
 
+// Pictures replaced from the CMS (Impostazioni → Logo e immagini del sito),
+// by built-in file name, e.g. "ala.png" → the uploaded wing. Set once per
+// page load by plugins/branding.ts.
+const overrides = new Map<string, string>();
+
+export function setImageOverrides(entries: Record<string, string | null | undefined>): void {
+    overrides.clear();
+    for (const [name, url] of Object.entries(entries)) {
+        if (url) overrides.set(name, url);
+    }
+}
+
 export function resolveImage(pathOrFilename: string | undefined | null): string {
     if (!pathOrFilename) return fallback;
 
@@ -40,6 +52,9 @@ export function resolveImage(pathOrFilename: string | undefined | null): string 
     //   "Angel.png"
     //   "casi-di-successo/ss51-alemagna.webp"
     const clean = pathOrFilename.replace(/^\/?immagini\//, "").replace(/^\//, "");
+
+    const override = overrides.get(clean);
+    if (override) return override;
 
     const match = Object.entries(images).find(([path]) => path.endsWith(`/${clean}`));
 

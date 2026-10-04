@@ -181,12 +181,12 @@ export const monitoringPages: Record<string, MonitoringPage> = {
             }
         ]
     },
-    gallerie: {
-        slug: "gallerie",
-        title: "Monitoraggio gallerie",
+    tunnel: {
+        slug: "tunnel",
+        title: "Monitoraggio tunnel",
         group: "Viabilita",
         eyebrow: "Infrastrutture stradali",
-        introduction: "Stiamo preparando una pagina dedicata alle soluzioni Axatel per la supervisione e la sicurezza delle gallerie.",
+        introduction: "Stiamo preparando una pagina dedicata alle soluzioni Axatel per la supervisione e la sicurezza dei tunnel.",
         status: "coming-soon",
         sections: []
     },
@@ -267,7 +267,7 @@ export const monitoringOrder = [
     "frane",
     "traffico",
     "cantieri",
-    "gallerie",
+    "tunnel",
     "ponti",
     "edifici"
 ] as const;

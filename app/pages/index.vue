@@ -2,7 +2,7 @@
     <main class="home-page">
         <div ref="contentSentinel" class="content-sentinel" aria-hidden="true"></div>
         <div class="page-overlay" :class="{ 'is-hidden': isParticleHeroVisible }" aria-hidden="true"></div>
-        <DashboardCitazioneSection />
+        <DashboardCitazioneSection :content="heroTop" />
         <template v-if="showDeferredContent">
             <DashboardDemoSpiegazione />
             <DashboardDemoSection id="applicativi" :applications="dashboardConfig.demo.applications" />
@@ -864,7 +864,7 @@ L'esperienza maturata sul campo continua a dimostrare come la tecnologia possa t
 // languages. The CMS Home page (panel "Hero") overrides them: in Italian
 // always, in English/French only once Home has been translated there, so
 // an untranslated Home never puts Italian phrases on the English site.
-const { t, tm, rt } = useI18n();
+const { t, tm, rt, locale } = useI18n();
 const cmsHero = ref<{ frasi: string[]; quote: string }>({ frasi: [], quote: "" });
 
 const heroFrasi = computed<string[]>(() =>
@@ -874,11 +874,39 @@ const heroFrasi = computed<string[]>(() =>
 );
 const heroQuote = computed(() => cmsHero.value.quote || t("home.quote"));
 
+// First screen (title, intro, buttons): loaded on the server so visitors and
+// Google get the CMS text straight away. English/French use it only once
+// Home has been translated, like the phrases below.
+const { getPage: getHomeForTop } = useCms();
+const { data: heroTop } = await useAsyncData(
+    () => `home-top-${locale.value}`,
+    async () => {
+        const res = await getHomeForTop<any>("home.HomePage", { limit: 1 }).catch(() => null);
+        const home = res?.items?.[0];
+        if (!home || home.__fallback || home.is_alias) return null;
+        return {
+            kicker: home.top_kicker || "",
+            titleBefore: home.top_title_before || "",
+            titleAccent: home.top_title_accent || "",
+            titleAfter: home.top_title_after || "",
+            intro: home.top_intro || "",
+            primaryLabel: home.top_cta_primary_label || "",
+            primaryUrl: home.top_cta_primary_url || "",
+            secondaryLabel: home.top_cta_secondary_label || "",
+            secondaryUrl: home.top_cta_secondary_url || "",
+            showStatus: home.top_show_status !== false,
+        };
+    },
+    { watch: [locale] }
+);
+
 async function loadHomeFromCms(): Promise<void> {
     try {
         const res = await getPage<any>("home.HomePage", { limit: 1 });
         const home = res?.items?.[0];
-        if (!home || home.__fallback) return;
+        // An English/French Home that only mirrors the Italian one (alias)
+        // is not a translation: keep the built-in translated phrases.
+        if (!home || home.__fallback || home.is_alias) return;
         const frasi = (Array.isArray(home.hero_frasi) ? home.hero_frasi : [])
             .map((block: any) => String(block?.value ?? "").replace(/\\n/g, "\n").trim())
             .filter(Boolean);

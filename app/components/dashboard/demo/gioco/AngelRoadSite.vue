@@ -108,7 +108,7 @@ function saveAlarm(value: number) {
 	const alarms = JSON.parse(localStorage.getItem("alarms") ?? "[]")
 
 	alarms.unshift({
-		id: crypto.randomUUID(),
+		id: makeId(),
 		name: "Lavori in corso",
 		unit: "G",
 		timestamp: new Date().toISOString(),

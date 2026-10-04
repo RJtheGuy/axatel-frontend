@@ -31,6 +31,7 @@ export const NAV_LABELS: Record<string, { en: string; fr: string }> = {
     "Traffico": { en: "Traffic", fr: "Trafic" },
     "Cantieri": { en: "Road works", fr: "Chantiers" },
     "Gallerie": { en: "Tunnels", fr: "Tunnels" },
+    "Tunnel": { en: "Tunnels", fr: "Tunnels" },
     "Ponti": { en: "Bridges", fr: "Ponts" },
     "Edifici": { en: "Buildings", fr: "Bâtiments" },
 

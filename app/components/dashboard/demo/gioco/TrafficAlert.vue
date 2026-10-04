@@ -156,7 +156,7 @@ function smoothstep(t: number){
 function saveAlarm(value: number){
   const alarms = JSON.parse(localStorage.getItem("alarms") ?? "[]")
   alarms.unshift({
-    id: crypto.randomUUID(),
+    id: makeId(),
     name: "Traffico",
     unit: "km/h",
     timestamp: new Date().toISOString(),

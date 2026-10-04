@@ -92,7 +92,12 @@ export default defineEventHandler(async (event) => {
     const cms = await Promise.all(
         Object.entries(CMS_TYPES).map(([type, prefix]) => cmsPaths(api, type, prefix))
     );
-    const paths = [...new Set([...BUILT_IN, ...cms.flat()])];
+    // Built-in monitoring topics only while the CMS has none: once topics
+    // are in the CMS, one that is missing there was unpublished on purpose.
+    const cmsTypes = Object.keys(CMS_TYPES);
+    const cmsMonitoring = cms[cmsTypes.indexOf("monitoring.MonitoringPage")] ?? [];
+    const builtIn = cmsMonitoring.length ? BUILT_IN.filter((path) => !path.startsWith("/monitoraggio/")) : BUILT_IN;
+    const paths = [...new Set([...builtIn, ...cms.flat()])];
 
     const href = (prefix: string, path: string) => `${site}${prefix}${path === "/" && prefix ? "" : path}`;
     const urls = paths.flatMap((path) => {

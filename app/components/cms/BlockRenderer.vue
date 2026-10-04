@@ -59,7 +59,8 @@ const componentMap: Record<string, any> = {
     steps: resolveComponent("CmsSteps"),
     device_cards: resolveComponent("CmsDeviceCards"),
     case_cards: resolveComponent("CmsCaseCards"),
-    faq: resolveComponent("CmsFaq")
+    faq: resolveComponent("CmsFaq"),
+    contact_form: resolveComponent("CmsContactForm")
 };
 </script>
 

@@ -521,7 +521,10 @@ async function refresh() {
 }
 
 async function waitForNewAlarm(expectedName: string, sequence: number) {
-    const timeoutAt = performance.now() + 10000
+    // The demos record an event when it ends (traffic flowing again, water
+    // back below the threshold...), which can be long after it started if
+    // the visitor keeps the mouse on the card: wait up to 90 s.
+    const timeoutAt = performance.now() + 90000
 
     while (sequence === flightSequence && performance.now() < timeoutAt) {
         const storedAlarms: Alarm[] = JSON.parse(localStorage.getItem("alarms") ?? "[]")
@@ -586,6 +589,8 @@ async function animateAlarm(event: AlarmEvent) {
     if (!newAlarmId || sequence !== flightSequence) {
         stopFollowingCard()
         flyingDot.value = null
+        // Show whatever was recorded meanwhile instead of an empty list.
+        if (sequence === flightSequence) await refresh()
         return
     }
 

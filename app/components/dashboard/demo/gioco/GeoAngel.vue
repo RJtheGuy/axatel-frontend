@@ -60,7 +60,7 @@ function saveAlarm(value: number) {
 
     alarms.unshift({
 
-        id: crypto.randomUUID(),
+        id: makeId(),
 
         name: "Frana",
 

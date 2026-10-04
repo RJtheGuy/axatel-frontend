@@ -233,7 +233,9 @@ async function send() {
         // wrong here.
         const res = await $fetch<{ response?: string; error?: string }>(
             `${runtime.public.apiBase}/chatbot/ask/`,
-            { method: "POST", body: { message: text } }
+            // locale: the answer comes back in the visitor's language
+            // when the CMS has it (Voci chatbot → Risposta EN/FR).
+            { method: "POST", body: { message: text, locale: locale.value } }
         );
 
         if (res?.response) {
@@ -247,7 +249,8 @@ async function send() {
         // (chatbot/engine.py _ensure_loaded). That takes 30-60s and
         // usually surfaces here as a timeout - a cold start, not a
         // failure. Later requests are fast.
-        error.value = t("chat.unavailable");
+        const status = e?.statusCode ?? e?.response?.status;
+        error.value = status === 429 ? t("chat.tooMany") : t("chat.unavailable");
         console.error("[chatbot]", e);
     } finally {
         pending.value = false;
