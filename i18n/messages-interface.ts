@@ -132,6 +132,9 @@ export const interfaceMessages = {
             unavailable: "Non riesco a rispondere in questo momento. Se è la prima domanda dopo un riavvio, riprova tra un minuto.",
             tooMany: "Troppe domande in poco tempo: riprova tra un minuto.",
             more: "Scopri di più",
+            hintClose: "Chiudi il suggerimento",
+            hintNo: "No grazie",
+            hintContact: "Parla con un esperto",
             suggestions: ["Cosa fa Axatel?", "Dove siete?", "Cos'è Smart Road?", "Come vi contatto?"],
         },
         glossary: {
@@ -358,6 +361,9 @@ export const interfaceMessages = {
             unavailable: "I can't answer right now. If this is the first question after a restart, try again in a minute.",
             tooMany: "Too many questions in a short time: please try again in a minute.",
             more: "Find out more",
+            hintClose: "Close the suggestion",
+            hintNo: "No thanks",
+            hintContact: "Talk to an expert",
             suggestions: ["What does Axatel do?", "Where are you based?", "What is Smart Road?", "How can I contact you?"],
         },
         glossary: {
@@ -584,6 +590,9 @@ export const interfaceMessages = {
             unavailable: "Je ne peux pas répondre pour le moment. Si c'est la première question après un redémarrage, réessayez dans une minute.",
             tooMany: "Trop de questions en peu de temps : réessayez dans une minute.",
             more: "En savoir plus",
+            hintClose: "Fermer la suggestion",
+            hintNo: "Non merci",
+            hintContact: "Parler à un expert",
             suggestions: ["Que fait Axatel ?", "Où êtes-vous situés ?", "Qu'est-ce que Smart Road ?", "Comment vous contacter ?"],
         },
         glossary: {

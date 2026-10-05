@@ -113,6 +113,36 @@
             </div>
         </transition>
 
+        <!-- Page suggestion: after a while on a page, a small bubble proposes
+             questions about it (Impostazioni -> Chatbot -> Suggerimenti sulla
+             pagina; texts from /api/v2/chatbot/hint/). -->
+        <transition name="hint">
+            <div v-if="hint && !open" class="chat-hint" role="status" aria-live="polite">
+                <button class="hint-close" type="button" :aria-label="t('chat.hintClose')" @click="dismissHint">
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                </button>
+                <p class="hint-text">{{ hint.text }}</p>
+                <div class="hint-actions">
+                    <button
+                        v-for="(q, i) in hint.questions"
+                        :key="i"
+                        type="button"
+                        class="chip chip-sm"
+                        @click="askFromHint(q)"
+                    >{{ q.label }}</button>
+                    <NuxtLink
+                        v-if="hint.contact"
+                        :to="localePath('/contatti')"
+                        class="chip chip-sm hint-contact"
+                        @click="hideHint"
+                    >{{ t("chat.hintContact") }}</NuxtLink>
+                </div>
+                <button class="hint-no" type="button" @click="dismissHint">{{ t("chat.hintNo") }}</button>
+            </div>
+        </transition>
+
         <button
             class="chat-toggle"
             :class="{ 'is-open': open }"
@@ -140,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 type Msg = { id: number; role: "user" | "bot"; text: string; link?: string };
 
@@ -190,7 +220,106 @@ const suggestions = computed<string[]>(() =>
         : (tm("chat.suggestions") as unknown[]).map((s) => rt(s as never))
 );
 
+// -- page suggestion ---------------------------------------------------
+type HintQuestion = { label: string; key?: string };
+type Hint = { text: string; questions: HintQuestion[]; contact?: boolean };
+
+const route = useRoute();
+const hint = ref<Hint | null>(null);
+let hintTimer: ReturnType<typeof setTimeout> | null = null;
+let hintHideTimer: ReturnType<typeof setTimeout> | null = null;
+let hintRequest = 0;
+
+// Remembered only for this visit, in this tab (sessionStorage): which pages
+// already showed a suggestion, and whether the visitor said "No thanks".
+// Technical memory, not a cookie; gone when the tab is closed.
+const HINT_OFF = "ax-chat-hint-off";
+const HINT_SEEN = "ax-chat-hint-seen";
+function storage(): Storage | null {
+    try { return window.sessionStorage; } catch { return null; }
+}
+function seenPages(): string[] {
+    try { return JSON.parse(storage()?.getItem(HINT_SEEN) || "[]"); } catch { return []; }
+}
+function markSeen(path: string) {
+    try { storage()?.setItem(HINT_SEEN, JSON.stringify([...seenPages(), path].slice(-50))); } catch { /* private mode */ }
+}
+// The address without the language prefix: the same page in IT/EN/FR.
+const basePath = (path: string) => path.replace(/^\/(en|fr)(?=\/|$)/, "") || "/";
+
+function clearHintTimers() {
+    if (hintTimer) clearTimeout(hintTimer);
+    if (hintHideTimer) clearTimeout(hintHideTimer);
+    hintTimer = hintHideTimer = null;
+}
+
+function hideHint() {
+    clearHintTimers();
+    hint.value = null;
+}
+
+function dismissHint() {
+    hideHint();
+    try { storage()?.setItem(HINT_OFF, "1"); } catch { /* private mode */ }
+}
+
+// Someone typing in a form, or reading with the tab in the background,
+// is not interrupted: try again a little later.
+function busy(): boolean {
+    const el = document.activeElement as HTMLElement | null;
+    return document.visibilityState !== "visible" || open.value || !!el?.closest("input, textarea, select, [contenteditable]");
+}
+
+async function scheduleHint() {
+    hideHint();
+    const request = ++hintRequest;
+    if (props.config?.enabled === false || storage()?.getItem(HINT_OFF)) return;
+    const path = basePath(route.path);
+    if (seenPages().includes(path)) return;
+    let data: (Hint & { enabled?: boolean; delay?: number }) | null = null;
+    try {
+        data = await $fetch(`${runtime.public.apiBase}/chatbot/hint/`, {
+            params: { path, locale: locale.value },
+            timeout: 5000,
+        });
+    } catch {
+        return; // no suggestion is better than an error
+    }
+    if (request !== hintRequest || !data?.enabled || !data.questions?.length) return;
+    const show = () => {
+        if (request !== hintRequest) return;
+        if (busy()) {
+            hintTimer = setTimeout(show, 5000);
+            return;
+        }
+        hint.value = { text: data!.text, questions: data!.questions.slice(0, 3), contact: data!.contact };
+        markSeen(path);
+        // Not left on screen forever.
+        hintHideTimer = setTimeout(() => { hint.value = null; }, 25000);
+    };
+    hintTimer = setTimeout(show, Math.max(5, data.delay || 20) * 1000);
+}
+
+async function askFromHint(q: HintQuestion) {
+    hideHint();
+    if (!open.value) await toggle();
+    draft.value = q.label;
+    send({ key: q.key, hint: true });
+}
+
+onMounted(() => {
+    void scheduleHint();
+});
+watch(() => route.path, () => {
+    void scheduleHint();
+});
+onBeforeUnmount(() => {
+    hintRequest++;
+    clearHintTimers();
+});
+
 async function toggle() {
+    if (!open.value) hideHint();
     open.value = !open.value;
     if (open.value) {
         await nextTick();
@@ -221,7 +350,9 @@ function ask(text: string) {
     send();
 }
 
-async function send() {
+// options: a question picked in the page suggestion carries the key of its
+// answer (so it gets exactly that answer) and is counted as such.
+async function send(options: { key?: string; hint?: boolean } = {}) {
     const text = draft.value.trim();
     if (!text || pending.value) return;
 
@@ -239,7 +370,7 @@ async function send() {
             `${runtime.public.apiBase}/chatbot/ask/`,
             // locale: the answer comes back in the visitor's language
             // when the CMS has it (Voci chatbot → Risposta EN/FR).
-            { method: "POST", body: { message: text, locale: locale.value } }
+            { method: "POST", body: { message: text, locale: locale.value, key: options.key || undefined, hint: options.hint || undefined } }
         );
 
         if (res?.response) {
@@ -565,6 +696,116 @@ async function send() {
 .send-btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
+}
+
+/* -- page suggestion ------------------------------------------------ */
+.chat-hint {
+    position: relative;
+    width: min(320px, calc(100vw - 48px));
+    padding: 16px 16px 12px;
+    border: 1px solid var(--ax-color-border-soft);
+    border-radius: var(--ax-card-radius);
+    background: var(--ax-color-bg-surface);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+}
+
+/* Small tail pointing at the chat button. */
+.chat-hint::after {
+    content: "";
+    position: absolute;
+    right: 22px;
+    bottom: -7px;
+    width: 12px;
+    height: 12px;
+    border-right: 1px solid var(--ax-color-border-soft);
+    border-bottom: 1px solid var(--ax-color-border-soft);
+    background: var(--ax-color-bg-surface);
+    transform: rotate(45deg);
+}
+
+.hint-text {
+    margin: 0 22px 12px 0;
+    color: var(--ax-color-text-primary);
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.hint-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.hint-actions .chip {
+    text-align: left;
+}
+
+.hint-contact {
+    text-decoration: none;
+    border-color: var(--ax-color-accent-red-border);
+}
+
+.hint-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ax-color-text-muted);
+    cursor: pointer;
+}
+
+.hint-close:hover {
+    color: var(--ax-color-text-primary);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.hint-no {
+    margin-top: 10px;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--ax-color-text-muted);
+    font: inherit;
+    font-size: 0.78rem;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.hint-close:focus-visible,
+.hint-no:focus-visible {
+    outline: 2px solid var(--ax-color-accent-red-border);
+    outline-offset: 2px;
+}
+
+.hint-enter-active,
+.hint-leave-active {
+    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(.22,.61,.36,1);
+    transform-origin: bottom right;
+}
+
+.hint-enter-from,
+.hint-leave-to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hint-enter-active,
+    .hint-leave-active {
+        transition: opacity 0.15s ease;
+    }
+
+    .hint-enter-from,
+    .hint-leave-to {
+        transform: none;
+    }
 }
 
 @media (max-width: 480px) {
