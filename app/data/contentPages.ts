@@ -431,7 +431,7 @@ export const companyPages: Record<string, ContentPageData> = {
                 ]
             }
         ],
-        cta: { text: "Vuoi costruire con noi sistemi che lavorano nel mondo reale?", label: "Invia il tuo CV", href: "/contatti" }
+        cta: { text: "Vuoi costruire con noi sistemi che lavorano nel mondo reale?", label: "Invia il tuo CV", href: "/contatti?tipo=candidatura#contact-form" }
     },
     "diventa-partner": {
         slug: "diventa-partner",
@@ -457,7 +457,7 @@ export const companyPages: Record<string, ContentPageData> = {
                 ]
             }
         ],
-        cta: { text: "Hai una tecnologia o un progetto che potrebbe incontrare le competenze Axatel?", label: "Parliamone", href: "/contatti" }
+        cta: { text: "Hai una tecnologia o un progetto che potrebbe incontrare le competenze Axatel?", label: "Parliamone", href: "/contatti?tipo=partner#contact-form" }
     }
 };
 

@@ -1,7 +1,8 @@
 <template>
     <main class="content-page">
         <header class="content-hero">
-<ArticleParticleHero :title="page.title" :asset-url="resolveImage('/immagini/ala.png')" />        </header>
+            <ArticleParticleHero :title="page.title" />
+        </header>
 
         <div class="content-light-stage">
             <section class="content-shell">
@@ -91,12 +92,15 @@ function shortTitle(title: string): string {
 
 <style scoped>
 .content-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .content-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 150px);
@@ -116,6 +120,7 @@ function shortTitle(title: string): string {
 }
 
 .content-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

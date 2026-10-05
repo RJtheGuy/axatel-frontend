@@ -4,7 +4,7 @@
 
         <div class="hero-copy">
             <p class="hero-kicker">Tecnologia che protegge</p>
-            <h1>Sistemi di monitoraggio <span>real-time</span> per la mitigazione del rischio</h1>
+            <h1>Sistemi di monitoraggio <span>real-time</span> per la riduzione del rischio</h1>
             <p class="hero-intro">
                 Dati, automazione e controllo continuo per anticipare gli eventi e proteggere
                 infrastrutture, territori e persone.

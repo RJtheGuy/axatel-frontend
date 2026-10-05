@@ -1,7 +1,10 @@
 <template>
     <main class="topic-page">
         <header class="topic-hero">
-            <ArticleParticleHero :title="topic.title" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero
+                :title="topic.title"
+                :asset-url="topic.titleParticleImage || undefined"
+            />
         </header>
 
         <div class="topic-light-stage">
@@ -47,6 +50,7 @@ type TopicData = {
     image_alt: string;
     image_width?: number;
     image_height?: number;
+    titleParticleImage: string;
     body: Array<{ type: string; value: any; id: string }>;
     meta?: { search_description?: string };
 };
@@ -74,6 +78,7 @@ const topic = computed<TopicData>(() => ({
     image_alt: raw.value.cover_image?.alt || "",
     image_width: raw.value.cover_image?.width,
     image_height: raw.value.cover_image?.height,
+    titleParticleImage: imageUrl(raw.value.title_particle_image),
     body: raw.value.body || [],
     meta: raw.value.meta
 }));
@@ -90,12 +95,15 @@ useSeoMeta({
 
 <style scoped>
 .topic-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .topic-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 200px);
@@ -115,6 +123,7 @@ useSeoMeta({
 }
 
 .topic-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

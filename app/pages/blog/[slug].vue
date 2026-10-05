@@ -1,7 +1,10 @@
 <template>
     <main class="post-page">
         <header class="post-hero">
-            <ArticleParticleHero :title="post.title" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero
+                :title="post.title"
+                :asset-url="post.titleParticleImage || undefined"
+            />
         </header>
 
         <div class="post-light-stage">
@@ -58,6 +61,7 @@ type BlogPostData = {
     date: string;
     intro: string;
     image: string;
+    titleParticleImage: string;
     tags: string[];
     body: Array<{ type: string; value: any; id: string }>;
     meta?: { search_description?: string };
@@ -84,6 +88,7 @@ const post = computed<BlogPostData>(() => ({
     date: raw.value.date || "",
     intro: raw.value.intro || "",
     image: raw.value.cover_image?.url || "",
+    titleParticleImage: imageUrl(raw.value.title_particle_image),
     tags: raw.value.tags || [],
     body: raw.value.body || [],
     meta: raw.value.meta
@@ -110,12 +115,15 @@ useSeoMeta({
 <style scoped>
 /* Same visual language as blog/index.vue and casi's detail styling. */
 .post-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .post-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 200px);
@@ -135,6 +143,7 @@ useSeoMeta({
 }
 
 .post-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

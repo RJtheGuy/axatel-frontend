@@ -6,6 +6,7 @@
     @pointerleave="onPointerLeave"
     @pointerup="onPointerEnd"
     @pointercancel="onPointerEnd"
+    @lostpointercapture="onPointerCaptureLost"
 >
 
     <div class="sensor" :class="{ alarm: isAlarm }">
@@ -26,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, onUnmounted } from "vue"
 
 const emit = defineEmits<{
     (e: "alarm"): void
@@ -111,8 +112,9 @@ function onPointerDown(event: PointerEvent) {
     activePointerId = event.pointerId
     ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
     initialized = true
-    lastX = event.clientX
-    lastY = event.clientY
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    lastX = event.clientX - rect.left
+    lastY = event.clientY - rect.top
     lastT = performance.now()
     wasInside = false
     peakSpeed = 0
@@ -196,6 +198,15 @@ function onPointerEnd(event: PointerEvent) {
     }
 
 }
+
+function onPointerCaptureLost() {
+    finishImpact()
+    activePointerId = null
+}
+
+onUnmounted(() => {
+    if (alarmTimer) clearTimeout(alarmTimer)
+})
 </script>
 
 <style scoped>

@@ -10,10 +10,16 @@
 // and every component can resolve images the same way successCases.ts
 // already did for its own narrower case.
 
+import titleWingImage from "../assets/immagini/ala-axatel.png";
+import dashboardWingImage from "../assets/immagini/ala.png";
+
 const images = import.meta.glob<string>(
     "../assets/immagini/**/*.{png,jpg,jpeg,webp,svg,gif}",
     { eager: true, import: "default" }
 );
+
+export const DEFAULT_WING_IMAGE = titleWingImage;
+export const DASHBOARD_WING_IMAGE = dashboardWingImage;
 
 export function resolveImage(pathOrFilename: string | undefined | null): string {
     const config = useRuntimeConfig();

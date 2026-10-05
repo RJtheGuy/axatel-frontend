@@ -3,7 +3,7 @@
         <div class="footer-grid">
             <a
                 v-for="item in resolvedContacts"
-                :key="item.title"
+                :key="item.href"
                 class="footer-contact"
                 :href="item.href"
                 :target="item.external ? '_blank' : undefined"
@@ -34,6 +34,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { socialContacts } from "../../data/socialContacts";
 
 type FooterContact = {
     title: string;
@@ -62,12 +63,7 @@ const defaultContacts: FooterContact[] = [
         value: "info@axatel.it",
         href: "mailto:info@axatel.it"
     },
-    {
-        title: "Seguici",
-        value: "su Linkedin",
-        href: "https://www.linkedin.com/company/axatel/",
-        external: true
-    },
+    ...socialContacts,
     {
         title: "Vieni a trovarci",
         value: "Viale del Mercato Nuovo, 75, 36100, Vicenza (VI)",
@@ -77,11 +73,18 @@ const defaultContacts: FooterContact[] = [
 ];
 
 const resolvedContacts = computed(() => {
-    if (props.contacts && props.contacts.length > 0) {
-        return props.contacts;
-    }
-
-    return defaultContacts;
+    const contacts = props.contacts?.length ? props.contacts : defaultContacts;
+    const updated = contacts.map((item) => {
+        const social = socialContacts.find((contact) => {
+            const hostname = new URL(contact.href).hostname.replace(/^www\./, "");
+            return new RegExp(`^https?://(?:www\\.)?${hostname.replace(/\./g, "\\.")}(?:/|$)`, "i").test(item.href);
+        });
+        return social ? { ...item, ...social } : item;
+    });
+    return [
+        ...updated,
+        ...socialContacts.filter((social) => !updated.some((item) => item.href === social.href))
+    ];
 });
 
 const resolvedVatLabel = computed(() => props.vatLabel?.trim() || "Partita IVA:");

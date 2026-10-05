@@ -64,6 +64,8 @@ const isAlarm = ref(false)
 const isRaining = ref(false)
 const maxLevel = ref(0)
 let activePointerId: number | null = null
+let cycleCompleted = false
+let alarmSaved = false
 
 const levelMeters = computed(() => waterLevel.value / 100 * MAX_METERS)
 const thresholdMeters = computed(() => threshold / 100 * MAX_METERS)
@@ -110,8 +112,6 @@ function updateWater(delta: number) {
 
         maxLevel.value = waterLevel.value
 
-        emit("alarm")
-
     }
 
     if (isAlarm.value) {
@@ -123,9 +123,23 @@ function updateWater(delta: number) {
 
     }
 
+    if (waterLevel.value >= 100 && !cycleCompleted) {
+        cycleCompleted = true
+        isRaining.value = false
+        saveAlarm()
+        alarmSaved = true
+        emit("alarm")
+    }
+
     if (isAlarm.value && waterLevel.value < threshold) {
 
-        saveAlarm()
+        if (!alarmSaved) {
+            saveAlarm()
+            alarmSaved = true
+            emit("alarm")
+        }
+        cycleCompleted = true
+        isRaining.value = false
 
         isAlarm.value = false
 
@@ -137,6 +151,23 @@ function updateWater(delta: number) {
 
 }
 
+function startRain() {
+    if (isRaining.value || activePointerId !== null) return
+    if (cycleCompleted) {
+        waterLevel.value = 0
+        maxLevel.value = 0
+        if (isAlarm.value) {
+            isAlarm.value = false
+            emit("normal")
+        }
+    }
+    if (!isAlarm.value) {
+        cycleCompleted = false
+        alarmSaved = false
+    }
+    if (!cycleCompleted) isRaining.value = true
+}
+
 function tick() {
     updateWater(gsap.ticker.deltaRatio(60) / 60)
 }
@@ -144,15 +175,16 @@ function tick() {
 function onPointerDown(event: PointerEvent) {
     if (!event.isPrimary || activePointerId !== null) return
 
+    if (event.pointerType !== "mouse") startRain()
     activePointerId = event.pointerId
     ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
-    isRaining.value = true
+    if (!cycleCompleted) isRaining.value = true
 
 }
 
 function onPointerEnter(event: PointerEvent) {
     if (event.pointerType === "mouse" && activePointerId === null) {
-        isRaining.value = true
+        startRain()
     }
 }
 

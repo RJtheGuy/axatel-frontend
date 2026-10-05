@@ -1,7 +1,10 @@
 <template>
     <main class="svc-page">
         <header class="svc-hero">
-            <ArticleParticleHero title="Servizi" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero
+                title="Servizi"
+                :asset-url="imageUrl(indexPage?.title_particle_image) || undefined"
+            />
         </header>
 
         <div class="svc-light-stage">
@@ -35,6 +38,7 @@ import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 
 const { getPage, getPageBySlug } = useCms();
+const { imageUrl } = useCmsImage();
 
 type ServiceItem = {
     title: string;
@@ -80,12 +84,15 @@ useSeoMeta({
 <style scoped>
 /* Same visual language as monitoraggio/index.vue, blog/index.vue, casi/index.vue. */
 .svc-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .svc-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 200px);
@@ -105,6 +112,7 @@ useSeoMeta({
 }
 
 .svc-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

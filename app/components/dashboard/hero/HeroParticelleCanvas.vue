@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { SequenceManager } from "@/classes/hero/SequenceManager";
+import { DASHBOARD_WING_IMAGE } from "@/utils/resolveImage";
 type HeroEngine = import("@/classes/hero/HeroEngine").default;
 
 const props = defineProps<{
@@ -111,7 +112,8 @@ function applySectionState(next: SectionKey): void {
 
     if (next === "quote") {
         engine.setFormationSuppressed(false);
-engine.setForcedLogoAsset(resolveImage("/immagini/ala.png"), "forced-quote-logo");        return;
+        engine.setForcedLogoAsset(DASHBOARD_WING_IMAGE, "forced-quote-logo");
+        return;
     }
 
     engine.setFormationSuppressed(false);

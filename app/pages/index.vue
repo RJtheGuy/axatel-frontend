@@ -37,6 +37,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import DashboardHeroParticelleSection from "../components/dashboard/HeroParticelle.vue";
+import { socialContacts } from "../data/socialContacts";
 
 const DashboardDemoSection = defineAsyncComponent(() => import("../components/dashboard/Demo.vue"));
 const DashboardDemoSpiegazione = defineAsyncComponent(() => import("../components/dashboard/demo/Spiegazione.vue"));
@@ -874,12 +875,7 @@ L'esperienza maturata sul campo continua a dimostrare come la tecnologia possa t
                 value: "info@axatel.it",
                 href: "mailto:info@axatel.it"
             },
-            {
-                title: "Seguici",
-                value: "su Linkedin",
-                href: "https://www.linkedin.com/company/axatel/",
-                external: true
-            },
+            ...socialContacts,
             {
                 title: "Vieni a trovarci",
                 value: "Viale del Mercato Nuovo, 75, 36100, Vicenza (VI)",

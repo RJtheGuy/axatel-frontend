@@ -14,6 +14,7 @@ import { ParticleSystem } from "./ParticleSystem";
 import { FlowField } from "./FlowField";
 import type { SequenceManager } from "./SequenceManager";
 import type { SequenceStage } from "./SequenceManager";
+import { DEFAULT_WING_IMAGE } from "@/utils/resolveImage";
 
 export default class HeroEngine {
 
@@ -171,12 +172,13 @@ export default class HeroEngine {
         this.setForcedStage({
             id: stageId,
             type: "logo",
-            text: normalized,
+            text: "AXATEL",
+            asset: normalized,
             duration: 9999
         });
     }
 
-    public setForcedComposite(text: string, assetUrl = "/immagini/ala.png"): void {
+    public setForcedComposite(text: string, assetUrl = DEFAULT_WING_IMAGE): void {
         this.ambientFlow = false;
         const normalizedText = text.trim();
 
@@ -299,6 +301,11 @@ export default class HeroEngine {
         this.renderer.setSize(width, height, false);
         this.updateParticleBounds();
         this.particleSystem.resize(this.getRenderPixelRatio());
+        if (this.forcedStage?.type === "composite") {
+            this.particleSystem.setStage(this.forcedStage).catch((error) => {
+                console.error("HeroEngine title resize failed", error);
+            });
+        }
         this.updateScrollAnchor();
     };
 

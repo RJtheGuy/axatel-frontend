@@ -6,18 +6,20 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { SequenceManager } from "@/classes/hero/SequenceManager";
+import { DEFAULT_WING_IMAGE } from "@/utils/resolveImage";
 
 type HeroEngine = import("@/classes/hero/HeroEngine").default;
 
 const props = defineProps<{
     title: string;
-    assetUrl: string;
+    assetUrl?: string;
 }>();
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 const engineReady = ref(false);
+const assetUrl = computed(() => props.assetUrl?.trim() || DEFAULT_WING_IMAGE);
 let engine: HeroEngine | null = null;
 let readyFrame = 0;
 let mounted = false;
@@ -33,7 +35,7 @@ async function startEngine(): Promise<void> {
     if (!mounted || !canvasEl.value) return;
 
     engine = new HeroEngine(canvasEl.value, new SequenceManager([props.title]));
-    engine.setForcedComposite(props.title, props.assetUrl);
+    engine.setForcedComposite(props.title, assetUrl.value);
     engine.start();
     readyFrame = requestAnimationFrame(() => {
         engineReady.value = true;
@@ -46,8 +48,8 @@ onMounted(() => {
 });
 
 watch(
-    [() => props.title, () => props.assetUrl],
-    ([title, assetUrl]) => engine?.setForcedComposite(title, assetUrl)
+    [() => props.title, assetUrl],
+    ([title, nextAssetUrl]) => engine?.setForcedComposite(title, nextAssetUrl)
 );
 
 onBeforeUnmount(() => {

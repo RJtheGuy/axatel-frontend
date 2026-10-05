@@ -117,6 +117,7 @@ const isAlarm=ref(false)
 
 let closing=false
 let pressureOpen=false
+let cycleCompleted=false
 let activePointerId:number|null=null
 let alarmTimer:ReturnType<typeof setTimeout>|null=null
 
@@ -170,6 +171,8 @@ function updateValue(){
     ){
 
         isAlarm.value=true
+        cycleCompleted=true
+        pressureOpen=false
 
         maxValue.value=currentValue.value
 
@@ -269,12 +272,14 @@ function onPointerDown(event:PointerEvent){
 
     activePointerId=event.pointerId
     ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
-    pressureOpen=true
+    if(event.pointerType!=="mouse" && !isAlarm.value) cycleCompleted=false
+    pressureOpen=!cycleCompleted
 }
 
 function onPointerEnter(event:PointerEvent){
     if(event.pointerType==="mouse" && activePointerId===null){
-        pressureOpen=true
+        if(!isAlarm.value) cycleCompleted=false
+        pressureOpen=!cycleCompleted
     }
 }
 

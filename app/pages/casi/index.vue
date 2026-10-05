@@ -1,7 +1,11 @@
 <template>
     <main class="cases-page">
         <header class="cases-hero">
-<ArticleParticleHero title="Tutti i casi" :asset-url="resolveImage('/immagini/ala.png')" />        </header>
+            <ArticleParticleHero
+                title="Tutti i casi"
+                :asset-url="imageUrl(indexPage?.title_particle_image) || undefined"
+            />
+        </header>
 
         <div class="cases-light-stage">
             <section class="cases-shell">
@@ -56,6 +60,7 @@ import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 
 const { getPage, getPageBySlug } = useCms();
+const { imageUrl } = useCmsImage();
 
 type CaseItem = {
     title: string;
@@ -113,12 +118,15 @@ useSeoMeta({
 
 <style scoped>
 .cases-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .cases-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 200px);
@@ -138,6 +146,7 @@ useSeoMeta({
 }
 
 .cases-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

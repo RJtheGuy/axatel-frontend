@@ -48,6 +48,18 @@ export default defineNuxtConfig({
     '/articoli/**': {
       redirect: { to: '/casi/**', statusCode: 301 }
     },
+    '/azienda/invia-il-cv': {
+      redirect: { to: '/contatti?tipo=candidatura#contact-form', statusCode: 302 }
+    },
+    '/azienda/diventa-partner': {
+      redirect: { to: '/contatti?tipo=partner#contact-form', statusCode: 302 }
+    },
+    '/azienda/invia-il-cv/': {
+      redirect: { to: '/contatti?tipo=candidatura#contact-form', statusCode: 302 }
+    },
+    '/azienda/diventa-partner/': {
+      redirect: { to: '/contatti?tipo=partner#contact-form', statusCode: 302 }
+    },
 
     '/**': {
       headers: {

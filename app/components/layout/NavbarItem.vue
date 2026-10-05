@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { NavigationItem } from "../../types/navigation";
+import { balanceNavigationGroups } from "../../utils/balanceNavigationGroups";
 
 const props = defineProps<{
     item: NavigationItem;
@@ -13,13 +14,35 @@ const emit = defineEmits<{
 }>();
 
 const dropdown = ref<HTMLDetailsElement | null>(null);
+const panel = ref<HTMLDivElement | null>(null);
+const groupPlacements = ref<ReturnType<typeof balanceNavigationGroups>>([]);
 const activeMobileGroup = ref<number | null>(null);
+let groupObserver: ResizeObserver | null = null;
+let desktopMedia: MediaQueryList | null = null;
+
+const updateGroupLayout = () => {
+    if (!isDesktop()) {
+        groupPlacements.value = [];
+        return;
+    }
+    const groups = Array.from(panel.value?.querySelectorAll<HTMLElement>(".dropdown-group") ?? []);
+    if (!groups.length || !panel.value?.getClientRects().length) return;
+    groupPlacements.value = balanceNavigationGroups(groups.map((group) => group.getBoundingClientRect().height));
+};
+
+const observeGroups = async () => {
+    await nextTick();
+    groupObserver?.disconnect();
+    panel.value?.querySelectorAll(".dropdown-group").forEach((group) => groupObserver?.observe(group));
+    updateGroupLayout();
+};
 
 const isDesktop = () => window.matchMedia("(min-width: 1101px)").matches;
 
 const openOnHover = () => {
     if (dropdown.value && isDesktop()) {
         dropdown.value.open = true;
+        void nextTick(updateGroupLayout);
     }
 };
 
@@ -54,6 +77,20 @@ watch(() => props.mobileExpanded, (expanded) => {
         activeMobileGroup.value = null;
     }
 });
+
+watch(() => props.item.groups, observeGroups, { deep: true });
+
+onMounted(() => {
+    groupObserver = new ResizeObserver(updateGroupLayout);
+    desktopMedia = window.matchMedia("(min-width: 1101px)");
+    desktopMedia.addEventListener("change", updateGroupLayout);
+    void observeGroups();
+});
+
+onUnmounted(() => {
+    groupObserver?.disconnect();
+    desktopMedia?.removeEventListener("change", updateGroupLayout);
+});
 </script>
 
 <template>
@@ -80,12 +117,16 @@ watch(() => props.mobileExpanded, (expanded) => {
             </svg>
         </summary>
 
-        <div class="dropdown-panel">
+        <div ref="panel" class="dropdown-panel" :class="{ 'is-balanced': groupPlacements.length > 0 }">
             <section
                 v-for="(group, groupIndex) in item.groups"
                 :key="group.label"
                 class="dropdown-group"
                 :class="{ 'group-open': activeMobileGroup === groupIndex }"
+                :style="groupPlacements[groupIndex] ? {
+                    gridColumn: groupPlacements[groupIndex].column,
+                    gridRow: `${groupPlacements[groupIndex].row} / span ${groupPlacements[groupIndex].span}`
+                } : undefined"
             >
                 <button
                     class="group-toggle"
@@ -275,6 +316,15 @@ summary::-webkit-details-marker {
 }
 
 @media (min-width: 1101px) {
+    .dropdown-panel.is-balanced {
+        grid-auto-rows: 1px;
+        row-gap: 0;
+    }
+
+    .dropdown-group {
+        align-self: start;
+    }
+
     .nav-dropdown > .dropdown-panel {
         display: none;
     }

@@ -56,6 +56,7 @@ import ArticleParticleHero from "../../components/articles/ArticleParticleHero.v
 import DashboardCasiDiSuccessoSection from "../../components/dashboard/CasiDiSuccesso.vue";
 import articleSettingsData from "../../data/articleSettings.json";
 import { successCases } from "../../data/successCases";
+import { DEFAULT_WING_IMAGE } from "@/utils/resolveImage";
 
 type ArticleVisualSettings = {
     defaults: {
@@ -94,7 +95,10 @@ const titleParticleAsset = computed(() => {
         && !relativeName.split("/").includes("..")
         && /^[a-zA-Z0-9_./-]+$/.test(relativeName);
 
-    return resolveImage(isSafeName ? relativeName : "ala.png");
+    if (!isSafeName || relativeName === "ala-axatel.png") {
+        return DEFAULT_WING_IMAGE;
+    }
+    return resolveImage(relativeName);
 });
 
 function sanitizeArticleHtml(value: string): string {
@@ -162,12 +166,15 @@ const articleHeroStyle = computed<Record<string, string>>(() => {
 
 <style scoped>
 .article-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .article-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + var(--article-title-height, 200px));
@@ -227,6 +234,7 @@ const articleHeroStyle = computed<Record<string, string>>(() => {
 }
 
 .article-light-stage {
+    flex: 1;
     position: relative;
     color: #0b355b;
     background:

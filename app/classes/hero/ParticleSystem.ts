@@ -14,7 +14,8 @@ import { FlowField } from "./FlowField";
 import type { ForceVector } from "./FlowField";
 import { ShapeFactory } from "./ShapeFactory";
 import type { SequenceStage } from "./SequenceManager";
-import { resolveImage } from "../../utils/resolveImage";
+import { DEFAULT_WING_IMAGE } from "../../utils/resolveImage";
+import axatelLogo from "../../assets/immagini/Axatel.svg";
 
 export class ParticleSystem {
     public readonly PARTICLE_COUNT: number;
@@ -364,27 +365,31 @@ export class ParticleSystem {
             if (stage.type === "composite") {
                 formation = await ShapeFactory.createCompositeFormation(
                     text,
-                    stage.asset || resolveImage("/immagini/ala.png"),                    this.PARTICLE_COUNT,
+                    stage.asset || DEFAULT_WING_IMAGE,
+                    this.PARTICLE_COUNT,
                     this.worldHalfWidth * 2,
                     this.worldHalfHeight * 2,
                     this.getPixelsPerWorldUnit()
                 );
             } else if (stage.type === "logo") {
-                const isCustomLogoAsset = Boolean(stage.text && /^\/immagini\//.test(stage.text));
+                const isCustomLogoAsset = Boolean(stage.asset);
                 const logoWidth = isCustomLogoAsset
                     ? this.worldHalfWidth * 2 * 0.92
                     : this.worldHalfWidth * 2 * 0.69;
                 const logoHeight = isCustomLogoAsset
                     ? this.worldHalfHeight * 2 * 0.92
                     : this.worldHalfHeight * 2 * 0.42;
-                    const logoAssetUrl = isCustomLogoAsset ? stage.text! : resolveImage("/immagini/Axatel.svg");                try {
+                const logoAssetUrl = stage.asset || axatelLogo;
+                try {
                     formation = await ShapeFactory.createSvgFormation(
                         logoAssetUrl,
                         this.PARTICLE_COUNT,
                         logoWidth,
-                        logoHeight
+                        logoHeight,
+                        isCustomLogoAsset ? undefined : { ignoreDarkPixels: true }
                     );
-                } catch {
+                } catch (error) {
+                    console.warn(`[ParticleSystem] Could not load hero logo "${logoAssetUrl}"; displaying "${text}" instead.`, error);
                     formation = ShapeFactory.createTextFormation(
                         text,
                         this.PARTICLE_COUNT,

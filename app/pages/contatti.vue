@@ -23,7 +23,7 @@
                     </div>
                 </div>
 
-                <form class="contact-form" @submit.prevent="submitForm">
+                <form id="contact-form" class="contact-form" @submit.prevent="submitForm">
                     <div class="form-mode" role="group" aria-label="Tipo di richiesta">
                         <label class="form-mode-option">
                             <input v-model="form.submission_type" type="radio" value="contact" />
@@ -40,21 +40,37 @@
                             Nome e cognome
                             <input v-model="form.name" type="text" name="name" autocomplete="name" required />
                         </label>
-                        <label>
+                        <label v-if="form.submission_type === 'contact'">
                             Azienda / ente
-                            <input v-model="form.company" type="text" name="company" autocomplete="organization" />
+                            <input v-model="form.company" type="text" name="company" autocomplete="organization" required />
                         </label>
                         <label>
                             Email
-                            <input v-model="form.email" type="email" name="email" autocomplete="email" required />
+                            <input
+                                v-model="form.email"
+                                type="email"
+                                name="email"
+                                autocomplete="email"
+                                :required="!form.phone.trim()"
+                            />
                         </label>
                         <label>
                             Telefono
-                            <input v-model="form.phone" type="tel" name="phone" autocomplete="tel" />
+                            <input
+                                v-model="form.phone"
+                                type="tel"
+                                name="phone"
+                                autocomplete="tel"
+                                :required="!form.email.trim()"
+                            />
                         </label>
                     </div>
+                    <p id="contact-requirement" class="contact-requirement">
+                        {{ form.submission_type === 'candidate' ? "Il nome e obbligatorio." : "Nome e azienda sono obbligatori." }}
+                        Indica almeno un recapito: email o telefono.
+                    </p>
 
-                    <fieldset>
+                    <fieldset v-if="form.submission_type === 'contact'">
                         <legend>Di cosa vorresti parlare?</legend>
                         <div class="interest-grid">
                             <label v-for="interest in interests" :key="interest" class="interest-option">
@@ -64,12 +80,7 @@
                         </div>
                     </fieldset>
 
-                    <label>
-                        Messaggio
-                        <textarea v-model="form.message" name="message" rows="6" placeholder="Descrivi il progetto, il territorio o l'infrastruttura da monitorare."></textarea>
-                    </label>
-
-                    <label v-if="form.submission_type === 'candidate'">
+                    <label v-else>
                         CV o documento
                         <input
                             type="file"
@@ -78,6 +89,16 @@
                             @change="selectAttachment"
                         />
                         <small>PDF, DOC, DOCX, ODT, RTF o TXT. Massimo 10 MB.</small>
+                    </label>
+
+                    <label>
+                        Messaggio
+                        <textarea
+                            v-model="form.message"
+                            name="message"
+                            rows="6"
+                            :placeholder="messagePlaceholder"
+                        ></textarea>
                     </label>
 
                     <label class="honeypot" aria-hidden="true">
@@ -101,8 +122,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import DashboardTitoloParticelle from "../components/dashboard/TitoloParticelle.vue";
+
+const route = useRoute();
 
 // Contact submission has no dedicated useCms() method (that composable
 // only covers GET-shaped page fetches) — this mirrors its server/client
@@ -139,34 +162,66 @@ const form = reactive({
     attachment: null as File | null,
 });
 
+const messagePlaceholder = computed(() => form.submission_type === "candidate"
+    ? "Presentati e raccontaci perche vorresti lavorare con noi."
+    : "Descrivi il progetto, il territorio o l'infrastruttura da monitorare.");
+
+watch(
+    () => route.query.tipo,
+    (queryType) => {
+        const type = Array.isArray(queryType) ? queryType[0] : queryType;
+        form.submission_type = type === "candidatura" ? "candidate" : "contact";
+        if (type === "partner" && !form.message.trim()) {
+            form.message = "Vorrei parlare con Axatel di una possibile partnership.";
+        }
+    },
+    { immediate: true }
+);
+
 function selectAttachment(event: Event): void {
     const input = event.target as HTMLInputElement;
     form.attachment = input.files?.[0] ?? null;
 }
 
+watch(() => form.submission_type, () => {
+    form.attachment = null;
+    submitError.value = "";
+    submitted.value = false;
+}, { flush: "sync" });
+
 async function submitForm(): Promise<void> {
     submitError.value = "";
     submitted.value = false;
+
+    const isCandidate = form.submission_type === "candidate";
+    if (!form.name.trim() || (!isCandidate && !form.company.trim()) || (!form.email.trim() && !form.phone.trim())) {
+        submitError.value = isCandidate
+            ? "Inserisci nome e almeno un recapito: email o telefono."
+            : "Inserisci nome, azienda e almeno un recapito: email o telefono.";
+        return;
+    }
+
     submitting.value = true;
 
     try {
         const body = new FormData();
         body.append("name", form.name);
-        body.append("company", form.company);
+        body.append("company", isCandidate ? "" : form.company);
         body.append("email", form.email);
         body.append("phone", form.phone);
         body.append("message", form.message);
         body.append("submission_type", form.submission_type);
         body.append("website", form.website);
-        form.interests.forEach((interest) => body.append("interests", interest));
-        if (form.attachment) body.append("attachment", form.attachment);
+        if (!isCandidate) {
+            form.interests.forEach((interest) => body.append("interests", interest));
+        }
+        if (isCandidate && form.attachment) body.append("attachment", form.attachment);
 
         await $fetch(`${apiBase()}/contact/`, {
             method: "POST",
             body
         });
 
-        submitted.value = true;
         form.name = "";
         form.company = "";
         form.email = "";
@@ -176,6 +231,7 @@ async function submitForm(): Promise<void> {
         form.submission_type = "contact";
         form.website = "";
         form.attachment = null;
+        submitted.value = true;
     } catch (error) {
         // Backend validation error or the endpoint being unreachable —
         // either way, tell the visitor honestly rather than showing the
@@ -347,6 +403,17 @@ input:focus,
 textarea:focus {
     border-color: var(--ax-color-accent-red-border);
     box-shadow: 0 0 0 3px rgba(234, 63, 48, 0.12);
+}
+
+.contact-form {
+    scroll-margin-top: calc(var(--ax-navbar-height, 74px) + 20px);
+}
+
+.contact-requirement {
+    margin: -8px 0 0;
+    color: var(--ax-color-text-muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
 }
 
 textarea {

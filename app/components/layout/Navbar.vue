@@ -16,7 +16,28 @@ const { settings } = useSiteSettings()
 // Navigazione, this switches over automatically, no code change.
 const navigationItems = computed(() => {
     const cmsItems = settings.value?.navigation?.items
-    return Array.isArray(cmsItems) && cmsItems.length > 0 ? cmsItems : fallbackNavigationItems
+    const items = Array.isArray(cmsItems) && cmsItems.length > 0 ? cmsItems : fallbackNavigationItems
+
+    return items.map((item) => ({
+        ...item,
+        groups: item.groups?.map((group) => {
+            if (group.label !== "Lavora con noi") return group
+
+            return {
+                ...group,
+                links: group.links.map((link) => {
+                    const label = link.label.trim().toLocaleLowerCase("it")
+                    if (label.includes("partner")) {
+                        return { ...link, href: "/contatti?tipo=partner#contact-form" }
+                    }
+                    if (label.includes("cv") || label.includes("lavora con noi") || label.includes("candidatur")) {
+                        return { ...link, href: "/contatti?tipo=candidatura#contact-form" }
+                    }
+                    return link
+                })
+            }
+        })
+    }))
 })
 
 const headerCta = computed(() => settings.value?.navigation?.cta ?? {
