@@ -67,6 +67,7 @@
                                 v-if="m.link"
                                 :to="localePath(m.link)"
                                 class="msg-link"
+                                @click="followLink($event, m.link)"
                             >{{ t("chat.more") }} <span aria-hidden="true">→</span></NuxtLink></div>
                     </transition-group>
 
@@ -325,6 +326,19 @@ async function toggle() {
         await nextTick();
         inputEl.value?.focus();
     }
+}
+
+// "Scopri di più" on an answer about the page the visitor is already on
+// (typically a question from the page suggestion): there is nowhere to go,
+// so close the chat and bring the visitor to the top of the page instead
+// of a click that seems to do nothing.
+const samePath = (a: string, b: string) => (a.replace(/\/+$/, "") || "/") === (b.replace(/\/+$/, "") || "/");
+function followLink(event: MouseEvent, link: string) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+    if (!samePath(localePath(link), route.path)) return;
+    event.preventDefault();
+    open.value = false;
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
 
 function reset() {
