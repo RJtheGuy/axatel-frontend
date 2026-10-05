@@ -10,6 +10,9 @@
 // and every component can resolve images the same way successCases.ts
 // already did for its own narrower case.
 
+import titleWingImage from "../assets/immagini/ala-axatel.png";
+import dashboardWingImage from "../assets/immagini/ala.png";
+
 const images = import.meta.glob<string>(
     "../assets/immagini/**/*.{png,jpg,jpeg,webp,svg,gif}",
     { eager: true, import: "default" }
@@ -36,6 +39,26 @@ export function setImageOverrides(entries: Record<string, string | null | undefi
     for (const [name, url] of Object.entries(entries)) {
         if (url) overrides.set(name, url);
     }
+}
+
+/** Built-in wings: next to page titles, and in the homepage quote. */
+export const DEFAULT_WING_IMAGE = titleWingImage;
+export const DASHBOARD_WING_IMAGE = dashboardWingImage;
+
+/**
+ * A bundled image by file name, for static data modules (no CMS override,
+ * no Nuxt context). A missing file is an error, caught by the tests/build.
+ */
+export function resolveBundledImage(pathOrFilename: string): string {
+    if (/^(https?:)?\/\//.test(pathOrFilename) || pathOrFilename.startsWith("data:")) {
+        return pathOrFilename;
+    }
+    const clean = pathOrFilename.replace(/^\/?immagini\//, "").replace(/^\//, "");
+    const match = Object.entries(images).find(([path]) => path.endsWith(`/${clean}`));
+    if (!match) {
+        throw new Error(`[resolveBundledImage] Image not found: ${pathOrFilename}`);
+    }
+    return match[1];
 }
 
 export function resolveImage(pathOrFilename: string | undefined | null): string {
@@ -68,3 +91,13 @@ export function resolveImage(pathOrFilename: string | undefined | null): string 
 
 /** URL of the Axatel logo, used when an image can't be loaded. */
 export const imageFallbackUrl = fallback;
+
+/** Wing next to page titles: the one uploaded in the CMS, else the built-in one. */
+export function headerWing(): string {
+    return overrides.get("ala.png") || DEFAULT_WING_IMAGE;
+}
+
+/** Wing in the homepage quote: the one uploaded in the CMS, else the built-in one. */
+export function homeWing(): string {
+    return overrides.get("ala.png") || DASHBOARD_WING_IMAGE;
+}

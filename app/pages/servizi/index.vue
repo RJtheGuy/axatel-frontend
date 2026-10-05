@@ -1,7 +1,7 @@
 <template>
     <main class="svc-page">
         <header class="svc-hero">
-            <ArticleParticleHero :title="t('services.title')" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero :title="t('services.title')" :asset-url="headerWing()" />
         </header>
 
         <div class="svc-light-stage">
@@ -11,7 +11,8 @@
                 <div class="page-kicker">{{ t("solutions.kicker") }}</div>
                 <p class="lead">{{ lead }}</p>
 
-                <p v-if="!items.length" class="empty">{{ t("services.empty") }}</p>
+                <p v-if="serviceError" class="empty" role="alert">{{ t("errors.unavailable") }}</p>
+                <p v-else-if="!items.length" class="empty">{{ t("services.empty") }}</p>
 
                 <div v-else class="svc-grid">
                     <article v-for="item in items" :key="item.slug" class="svc-card">
@@ -43,8 +44,8 @@ type ServiceItem = {
     slug: string;
 };
 
-const { data: svcData } = await useAsyncData(() => `servizi-list-${locale.value}`, () =>
-    getPage("services.ServicePage", { order: "title" }).catch(() => null)
+const { data: svcData, error: serviceError } = await useAsyncData(() => `servizi-list-${locale.value}`, () =>
+    getPage("services.ServicePage", { order: "title" })
 );
 
 const { data: indexPage } = await useAsyncData(() => `servizi-index-${locale.value}`, () =>
@@ -80,12 +81,15 @@ useSeoMeta({
 <style scoped>
 /* Same visual language as monitoraggio/index.vue, blog/index.vue, casi/index.vue. */
 .svc-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .svc-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 200px);
@@ -105,6 +109,7 @@ useSeoMeta({
 }
 
 .svc-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

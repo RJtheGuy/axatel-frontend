@@ -1,7 +1,7 @@
 <template>
     <main class="prod-page">
         <header class="prod-hero">
-            <ArticleParticleHero :title="t('products.title')" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero :title="t('products.title')" :asset-url="headerWing()" />
         </header>
 
         <div class="prod-light-stage">

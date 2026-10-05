@@ -30,60 +30,68 @@ function isReadable(fg: string, bg: string): boolean {
     return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 4.5;
 }
 
-export default defineNuxtPlugin(async () => {
+// Applied after the page is mounted, so a slow CMS can never delay the
+// first paint or hydration.
+export default defineNuxtPlugin((nuxtApp) => {
     if (import.meta.server) return;
 
     const { getActiveTheme } = useCms();
 
-    try {
-        const theme = await getActiveTheme<any>();
-        if (!theme) return;
+    nuxtApp.hook("app:mounted", () => {
+        void applyTheme();
+    });
 
-        const root = document.documentElement;
-        const set = (name: string, value: unknown) => {
-            if (value === null || value === undefined || value === "") return;
-            root.style.setProperty(name, String(value));
-        };
+    async function applyTheme(): Promise<void> {
+        try {
+            const theme = await getActiveTheme<any>();
+            if (!theme) return;
 
-        // Colors — same --ax-color-* variable names the static block
-        // already defines, so every existing component that reads them
-        // (all the Cms*.vue components, dashboard components, etc.)
-        // picks up the change with zero changes to those files.
-        set("--ax-color-bg-main", theme.background_color);
-        set("--ax-color-bg-surface", theme.surface_color);
-        set("--ax-color-text-primary", theme.text_color);
-        // Secondary text must stay readable: skip a CMS value that falls
-        // below WCAG AA (4.5:1) against the background and keep the
-        // built-in colour instead.
-        if (isReadable(theme.muted_color, theme.background_color)) {
-            set("--ax-color-text-muted", theme.muted_color);
+            const root = document.documentElement;
+            const set = (name: string, value: unknown) => {
+                if (value === null || value === undefined || value === "") return;
+                root.style.setProperty(name, String(value));
+            };
+
+            // Colors — same --ax-color-* variable names the static block
+            // already defines, so every existing component that reads them
+            // (all the Cms*.vue components, dashboard components, etc.)
+            // picks up the change with zero changes to those files.
+            set("--ax-color-bg-main", theme.background_color);
+            set("--ax-color-bg-surface", theme.surface_color);
+            set("--ax-color-text-primary", theme.text_color);
+            // Secondary text must stay readable: skip a CMS value that falls
+            // below WCAG AA (4.5:1) against the background and keep the
+            // built-in colour instead.
+            if (isReadable(theme.muted_color, theme.background_color)) {
+                set("--ax-color-text-muted", theme.muted_color);
+            }
+            set("--ax-color-border-soft", theme.border_color);
+            set("--ax-color-accent-red", theme.primary_color);
+            set("--ax-color-accent-red-soft", theme.accent_color);
+            set("--color-primary", theme.background_color);
+            set("--color-secondary", theme.primary_color);
+
+            // Fonts — these variables don't exist in the static block by
+            // default; they need the two-line nuxt.config.ts edit
+            // (nuxt_config_font_diff) for this to actually take visual
+            // effect. Setting them here is harmless even without that
+            // edit — they just won't be read by anything yet.
+            set("--ax-font-heading", theme.heading_font);
+            set("--ax-font-body", theme.body_font);
+
+            // Shape
+            set("--ax-card-radius", theme.radius);
+
+            // Base font size — applied to <html> so rem-based sizing
+            // throughout the site scales from it automatically.
+            if (theme.base_font_size) {
+                root.style.fontSize = `${theme.base_font_size}px`;
+            }
+        } catch (error) {
+            // Deliberately silent beyond a console warning — see module
+            // docstring. A broken/unreachable theme endpoint must never
+            // break the page.
+            console.warn("[theme] failed to load active theme, using static defaults", error);
         }
-        set("--ax-color-border-soft", theme.border_color);
-        set("--ax-color-accent-red", theme.primary_color);
-        set("--ax-color-accent-red-soft", theme.accent_color);
-        set("--color-primary", theme.background_color);
-        set("--color-secondary", theme.primary_color);
-
-        // Fonts — these variables don't exist in the static block by
-        // default; they need the two-line nuxt.config.ts edit
-        // (nuxt_config_font_diff) for this to actually take visual
-        // effect. Setting them here is harmless even without that
-        // edit — they just won't be read by anything yet.
-        set("--ax-font-heading", theme.heading_font);
-        set("--ax-font-body", theme.body_font);
-
-        // Shape
-        set("--ax-card-radius", theme.radius);
-
-        // Base font size — applied to <html> so rem-based sizing
-        // throughout the site scales from it automatically.
-        if (theme.base_font_size) {
-            root.style.fontSize = `${theme.base_font_size}px`;
-        }
-    } catch (error) {
-        // Deliberately silent beyond a console warning — see module
-        // docstring. A broken/unreachable theme endpoint must never
-        // break the page.
-        console.warn("[theme] failed to load active theme, using static defaults", error);
     }
-});
+});

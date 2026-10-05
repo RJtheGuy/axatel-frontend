@@ -21,7 +21,7 @@
                     </div>
                 </div>
 
-                <form class="contact-form" @submit.prevent="submitForm">
+                <form id="contact-form" class="contact-form" @submit.prevent="submitForm">
                     <div class="form-mode" role="group" :aria-label="t('contact.requestType')">
                         <label class="form-mode-option">
                             <input v-model="form.submission_type" type="radio" value="contact" />
@@ -44,17 +44,34 @@
                         </label>
                         <label v-if="!isCandidate">
                             {{ t("contact.company") }}
-                            <input v-model="form.company" type="text" name="company" autocomplete="organization" />
+                            <input v-model="form.company" type="text" name="company" autocomplete="organization" required />
                         </label>
                         <label>
                             {{ t("contact.email") }}
-                            <input v-model="form.email" type="email" name="email" autocomplete="email" required />
+                            <input
+                                v-model="form.email"
+                                type="email"
+                                name="email"
+                                autocomplete="email"
+                                :required="!form.phone.trim()"
+                                aria-describedby="contact-requirement"
+                            />
                         </label>
                         <label>
                             {{ t("contact.phone") }}
-                            <input v-model="form.phone" type="tel" name="phone" autocomplete="tel" />
+                            <input
+                                v-model="form.phone"
+                                type="tel"
+                                name="phone"
+                                autocomplete="tel"
+                                :required="!form.email.trim()"
+                                aria-describedby="contact-requirement"
+                            />
                         </label>
                     </div>
+                    <p id="contact-requirement" class="contact-requirement">
+                        {{ isCandidate ? t("contact.requiredCandidate") : t("contact.requiredContact") }}
+                    </p>
 
                     <!-- Quote requests: a few short answers so the team can reply with a proposal. -->
                     <div v-if="form.submission_type === 'quote'" class="form-grid quote-grid">
@@ -178,6 +195,9 @@ const form = reactive({
 });
 
 const isCandidate = computed(() => form.submission_type === "candidate");
+// Arrived from a "Diventa partner" link (?tipo=partner): a contact request
+// sent as a partnership proposal, so it reaches the partnership recipients.
+const isPartner = ref(false);
 const attachmentInput = ref<HTMLInputElement | null>(null);
 const messagePlaceholder = computed(() =>
     isCandidate.value ? t("contact.messagePlaceholderCandidate")
@@ -191,12 +211,17 @@ const submitLabel = computed(() =>
 // Switching type drops what the new type does not ask for, so nothing
 // hidden is sent (topics only for a contact, the CV only for an application).
 watch(() => form.submission_type, (type) => {
-    if (type !== "contact") form.interests = [];
+    if (type !== "contact") {
+        form.interests = [];
+        isPartner.value = false;
+    }
+    submitError.value = "";
+    submitted.value = false;
     if (type !== "candidate") {
         form.attachment = null;
         if (attachmentInput.value) attachmentInput.value.value = "";
     }
-});
+}, { flush: "sync" });
 
 // Quote mode: /contatti?tipo=preventivo&oggetto=Angel%20River
 // (used by the "Richiedi un preventivo" buttons on product and solution pages).
@@ -210,6 +235,11 @@ function applyQuery(): void {
     const oggetto = String(route.query.oggetto ?? "").slice(0, 300);
     if (tipo === "preventivo") form.submission_type = "quote";
     else if (tipo === "candidatura") form.submission_type = "candidate";
+    else if (tipo === "partner") {
+        form.submission_type = "contact";
+        isPartner.value = true;
+        if (!form.message.trim()) form.message = t("contact.partnerMessage");
+    }
     if (oggetto) quote.subject = oggetto;
 }
 applyQuery();
@@ -229,6 +259,21 @@ function selectAttachment(event: Event): void {
 async function submitForm(): Promise<void> {
     submitError.value = "";
     submitted.value = false;
+
+    // Name (and company, except for applications) plus at least one way to
+    // reply: e-mail or phone. The privacy box is checked by its own field.
+    if (!form.name.trim() || (!isCandidate.value && !form.company.trim()) || (!form.email.trim() && !form.phone.trim())) {
+        submitError.value = isCandidate.value ? t("contact.missingCandidate") : t("contact.missingContact");
+        return;
+    }
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        submitError.value = t("contact.invalidEmail");
+        return;
+    }
+    if (!consent.value) {
+        submitError.value = t("consent.required");
+        return;
+    }
     submitting.value = true;
 
     try {
@@ -238,7 +283,7 @@ async function submitForm(): Promise<void> {
         body.append("email", form.email);
         body.append("phone", form.phone);
         body.append("message", form.message);
-        body.append("submission_type", form.submission_type);
+        body.append("submission_type", isPartner.value && form.submission_type === "contact" ? "partner" : form.submission_type);
         body.append("website", form.website);
         body.append("privacy", consent.value ? "true" : "");
         body.append("consent_text", consentText.value);
@@ -257,7 +302,6 @@ async function submitForm(): Promise<void> {
             body
         });
 
-        submitted.value = true;
         form.name = "";
         form.company = "";
         form.email = "";
@@ -268,6 +312,8 @@ async function submitForm(): Promise<void> {
         form.website = "";
         form.attachment = null;
         Object.assign(quote, { subject: "", sector: "", sites: "", timeline: "" });
+        isPartner.value = false;
+        submitted.value = true;
     } catch (error) {
         // Backend validation error or the endpoint being unreachable —
         // either way, tell the visitor honestly rather than showing the
@@ -467,6 +513,17 @@ textarea:focus {
 
 textarea {
     resize: vertical;
+}
+
+.contact-form {
+    scroll-margin-top: calc(var(--ax-navbar-height, 74px) + 20px);
+}
+
+.contact-requirement {
+    margin: -8px 0 0;
+    color: var(--ax-color-text-muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
 }
 
 fieldset {

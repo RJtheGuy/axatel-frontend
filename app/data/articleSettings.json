@@ -1,10 +1,10 @@
 {
     "defaults": {
-        "titleParticleImage": "ala.png"
+        "titleParticleImage": "ala-axatel.png"
     },
     "articles": {
         "automazione-e-monitoraggio-in-ss51-alemagna-bl": {
-            "titleParticleImage": "ala.png"
+            "titleParticleImage": "ala-axatel.png"
         }
     }
 }

@@ -9,6 +9,17 @@ const publicApiOrigin = (publicApiBase.startsWith('/')
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
+  css: ['~/assets/scss/main.scss'],
+  hooks: {
+    'build:manifest'(manifest) {
+      for (const entry of Object.values(manifest)) {
+        if (entry.resourceType === 'video') {
+          entry.prefetch = false
+          entry.preload = false
+        }
+      }
+    }
+  },
 
   modules: ['@nuxtjs/i18n'],
 
@@ -78,6 +89,44 @@ export default defineNuxtConfig({
     // 301 so any shared or indexed old links still resolve.
     '/articoli/**': {
       redirect: { to: '/casi/**', statusCode: 301 }
+    },
+    // "Invia il CV" and "Diventa partner" use the form on /contatti,
+    // already set to the right request type (in every language).
+    '/azienda/invia-il-cv': {
+      redirect: { to: '/contatti?tipo=candidatura#contact-form', statusCode: 302 }
+    },
+    '/azienda/invia-il-cv/': {
+      redirect: { to: '/contatti?tipo=candidatura#contact-form', statusCode: 302 }
+    },
+    '/azienda/diventa-partner': {
+      redirect: { to: '/contatti?tipo=partner#contact-form', statusCode: 302 }
+    },
+    '/azienda/diventa-partner/': {
+      redirect: { to: '/contatti?tipo=partner#contact-form', statusCode: 302 }
+    },
+    '/en/azienda/invia-il-cv': {
+      redirect: { to: '/en/contatti?tipo=candidatura#contact-form', statusCode: 302 }
+    },
+    '/en/azienda/invia-il-cv/': {
+      redirect: { to: '/en/contatti?tipo=candidatura#contact-form', statusCode: 302 }
+    },
+    '/en/azienda/diventa-partner': {
+      redirect: { to: '/en/contatti?tipo=partner#contact-form', statusCode: 302 }
+    },
+    '/en/azienda/diventa-partner/': {
+      redirect: { to: '/en/contatti?tipo=partner#contact-form', statusCode: 302 }
+    },
+    '/fr/azienda/invia-il-cv': {
+      redirect: { to: '/fr/contatti?tipo=candidatura#contact-form', statusCode: 302 }
+    },
+    '/fr/azienda/invia-il-cv/': {
+      redirect: { to: '/fr/contatti?tipo=candidatura#contact-form', statusCode: 302 }
+    },
+    '/fr/azienda/diventa-partner': {
+      redirect: { to: '/fr/contatti?tipo=partner#contact-form', statusCode: 302 }
+    },
+    '/fr/azienda/diventa-partner/': {
+      redirect: { to: '/fr/contatti?tipo=partner#contact-form', statusCode: 302 }
     },
 
     // The blog became "News" at /news. Old links (shared, bookmarked,

@@ -1,4 +1,4 @@
-import { resolveImage } from "../utils/resolveImage";
+import { resolveBundledImage as resolveImage } from "../utils/resolveImage";
 
 export type TeamMember = {
     id: string;

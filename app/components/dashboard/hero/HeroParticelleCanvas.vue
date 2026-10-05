@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { SequenceManager } from "@/classes/hero/SequenceManager";
+import { homeWing } from "@/utils/resolveImage";
 type HeroEngine = import("@/classes/hero/HeroEngine").default;
 
 const props = defineProps<{
@@ -23,8 +24,6 @@ const defaultFrasi = [
 ];
 
 const DEFAULT_QUOTE_TEXT = "Tutti noi di Axatel abbiamo un obiettivo in comune:\nabbiamo a cuore ciò che facciamo e l'impatto positivo che generiamo per i nostri partner e per le comunità in cui viviamo e operiamo.\nPer noi e sempre una questione personale";
-// Resolved when used (not at import time) so the backend URL is known.
-const DEFAULT_CASES_LOGO_PATH = "/immagini/angelo.png";
 
 
 const resolveFrasi = (frasi?: string[]): string[] => {
@@ -40,9 +39,10 @@ const resolveQuoteText = (quoteText?: string): string => {
 // Always goes through resolveImage: a bare "/immagini/angelo.png" was
 // requested from the frontend itself, where it doesn't exist (404 + a
 // wasted CMS lookup via the catch-all route).
+// Empty = the homepage wing (the CMS one if uploaded).
 const resolveCasesLogoAsset = (asset?: string): string => {
     const normalized = (asset ?? "").trim();
-    return resolveImage(normalized || DEFAULT_CASES_LOGO_PATH);
+    return normalized ? resolveImage(normalized) : homeWing();
 };
 
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -114,11 +114,12 @@ function applySectionState(next: SectionKey): void {
 
     if (next === "quote") {
         engine.setFormationSuppressed(false);
-engine.setForcedLogoAsset(resolveImage("/immagini/ala.png"), "forced-quote-logo");        return;
+        engine.setForcedLogoAsset(homeWing(), "forced-quote-logo");
+        return;
     }
 
     engine.setFormationSuppressed(false);
-    engine.setForcedLogoAsset(resolveCasesLogoAsset(props.casesLogoAsset));
+    engine.setForcedLogoAsset(resolveCasesLogoAsset(props.casesLogoAsset), "forced-cases-logo");
 }
 
 function updateSectionRefs(): void {

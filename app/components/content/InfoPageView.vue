@@ -3,7 +3,7 @@
          Approfondimenti): "Pagina informativa" or "Glossario". -->
     <main class="info-page">
         <header class="info-hero">
-            <ArticleParticleHero :title="page.title" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero :title="page.title" :asset-url="headerWing()" />
         </header>
 
         <div class="info-light-stage">

@@ -55,29 +55,18 @@ const { data: page, error } = await useAsyncData(
             // failure mode (wrong host, CORS, 404, network error, bad
             // params) look identical from the outside.
             // A 404 is a normal "no such page" (often a bot probing
-            // addresses): not worth a log line. Anything else is logged.
+            // addresses). Anything else means the CMS could not answer:
+            // passed on, so the visitor gets "try again" (503), not 404.
             const statusCode = err?.statusCode ?? err?.response?.status;
-            if (statusCode !== 404) {
-                console.error("[catch-all] findByPath FAILED for", path.value, {
-                    message: err?.message,
-                    statusCode,
-                    data: err?.data ?? err?.response?._data
-                });
-            }
-            return null;
+            if (statusCode === 404) return null;
+            throw err;
         }
     },
     { watch: [path] }
 );
 
 if (!page.value) {
-    throw createError({
-        statusCode: 404,
-        statusMessage: useNuxtApp().$i18n.t("errors.page"),
-        // Fatal in the browser so the error page shows; on the server a
-        // 404 renders the error page anyway and is not logged as a crash.
-        fatal: import.meta.client
-    });
+    throw cmsPageError(error.value, useNuxtApp().$i18n.t("errors.page"));
 }
 
 const { data: children } = await useAsyncData(

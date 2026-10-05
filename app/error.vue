@@ -5,7 +5,7 @@
     <NuxtLayout>
         <main class="err-page">
             <header class="err-hero">
-                <ArticleParticleHero :title="is404 ? t('notFound.title') : t('notFound.errorTitle')" :asset-url="resolveImage('/immagini/ala.png')" />
+                <ArticleParticleHero :title="is404 ? t('notFound.title') : t('notFound.errorTitle')" :asset-url="headerWing()" />
             </header>
 
             <div class="err-stage">

@@ -28,7 +28,7 @@
         "label": "Azienda",
         "groups": [
             { "label": "Axatel", "links": [{ "label": "Chi siamo?", "href": "/azienda/chi-siamo" }, { "label": "Team", "href": "/azienda/team" }, { "label": "Bilancio di sostenibilità", "href": "/azienda/bilancio-sostenibilita" }] },
-            { "label": "Lavora con noi", "links": [{ "label": "Invia il CV", "href": "/azienda/invia-il-cv" }, { "label": "Diventa Partner", "href": "/azienda/diventa-partner" }] },
+            { "label": "Lavora con noi", "links": [{ "label": "Invia il CV", "href": "/contatti?tipo=candidatura#contact-form" }, { "label": "Diventa Partner", "href": "/contatti?tipo=partner#contact-form" }] },
             { "label": "Contatti", "links": [{ "label": "Parla con noi", "href": "/contatti" }] }
         ]
     }

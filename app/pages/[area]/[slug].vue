@@ -50,10 +50,14 @@ const builtInPage = computed<ContentPageData | undefined>(() =>
 
 const { findByPath } = useCms();
 
-// The CMS page at this address, if one is published.
-const { data: cmsPage } = await useAsyncData(
+// The CMS page at this address, if one is published. A 404 is "no such
+// page"; any other failure means the CMS could not answer (kept in cmsError).
+const { data: cmsPage, error: cmsError } = await useAsyncData(
     () => `area-cms-${locale.value}-${area.value}-${slug.value}`,
-    () => findByPath<any>(`/${area.value}/${slug.value}/`).catch(() => null),
+    () => findByPath<any>(`/${area.value}/${slug.value}/`).catch((err: any) => {
+        if ((err?.statusCode ?? err?.response?.status) === 404) return null;
+        throw err;
+    }),
     { watch: [area, slug] }
 );
 
@@ -61,16 +65,14 @@ const isInfoPage = computed(() =>
     ["home.InfoPage", "home.GlossaryPage"].includes(cmsPage.value?.meta?.type)
 );
 
+// With the CMS down, a built-in page still shows; otherwise 404 or 503.
 if (!cmsPage.value && !builtInPage.value) {
-    throw createError({
-        statusCode: 404,
-        statusMessage: hasBuiltIn.value
+    throw cmsPageError(
+        cmsError.value,
+        hasBuiltIn.value
             ? contentAreas[area.value as ContentAreaKey].notFoundMessage
             : useNuxtApp().$i18n.t("errors.page"),
-        // In the browser (a click inside the site) the error page must take
-        // over the whole page, otherwise only the footer is left.
-        fatal: import.meta.client,
-    });
+    );
 }
 
 // ── Built-in branch, only used when the CMS has no page here ──

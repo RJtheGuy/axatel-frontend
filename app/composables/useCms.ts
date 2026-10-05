@@ -25,6 +25,20 @@ export function useCms() {
 
     const markFallback = <T extends AnyPage>(page: T): T => ({ ...page, __fallback: true })
 
+    // Every CMS call: 5 s at most and no automatic retry, so a slow or
+    // unreachable CMS cannot hold a page. Failures other than "not found"
+    // are logged; the error is passed on so pages can tell "page does not
+    // exist" (404) from "CMS unavailable" (503).
+    async function request<T>(url: string, options: { params?: Record<string, any> } = {}): Promise<T> {
+        try {
+            return await $fetch<T>(url, { ...options, timeout: 5000, retry: 0 })
+        } catch (error: any) {
+            const status = error?.statusCode ?? error?.response?.status
+            if (status !== 404) console.error("[cms] Request failed:", url, status ?? error?.message)
+            throw error
+        }
+    }
+
     /**
      * List pages of a given Wagtail page type.
      * In English/French: every Italian page is replaced by its translation
@@ -32,12 +46,12 @@ export function useCms() {
      */
     async function getPage<T = any>(type: string, params: Record<string, any> = {}) {
         const locale = currentLocale()
-        const italian = await $fetch<{ items: T[]; meta?: any }>(`${base}/pages/`, {
+        const italian = await request<{ items: T[]; meta?: any }>(`${base}/pages/`, {
             params: { type, fields: "*", locale: "it", ...params },
         })
         if (locale === "it") return italian
 
-        const translated = await $fetch<{ items: T[] }>(`${base}/pages/`, {
+        const translated = await request<{ items: T[] }>(`${base}/pages/`, {
             params: { type, fields: "*", ...params, locale },
         }).catch(() => ({ items: [] as T[] }))
 
@@ -58,13 +72,13 @@ export function useCms() {
     /** One page by type + slug (current language, else Italian). */
     async function getPageBySlug<T = any>(type: string, slug: string): Promise<T | null> {
         const locale = currentLocale()
+        // An unknown slug is an empty list (null); a CMS failure is thrown.
         const fetchIn = (lang: string) =>
-            $fetch<{ items: T[] }>(`${base}/pages/`, { params: { type, fields: "*", slug, locale: lang } })
+            request<{ items: T[] }>(`${base}/pages/`, { params: { type, fields: "*", slug, locale: lang } })
                 .then((res) => res?.items?.[0] ?? null)
-                .catch(() => null)
 
         if (locale !== "it") {
-            const translated = await fetchIn(locale)
+            const translated = await fetchIn(locale).catch(() => null)
             if (translated) return translated
             const italian = await fetchIn("it")
             return italian ? (markFallback(italian as AnyPage) as T) : null
@@ -81,17 +95,17 @@ export function useCms() {
         const locale = currentLocale()
         if (locale !== "it") {
             try {
-                return await $fetch<T>(`${base}/pages/find/`, {
+                return await request<T>(`${base}/pages/find/`, {
                     params: { html_path: htmlPath, fields: "*", locale },
                 })
             } catch {
-                const italian = await $fetch<T>(`${base}/pages/find/`, {
+                const italian = await request<T>(`${base}/pages/find/`, {
                     params: { html_path: htmlPath, fields: "*" },
                 })
                 return markFallback(italian as AnyPage) as T
             }
         }
-        return await $fetch<T>(`${base}/pages/find/`, {
+        return await request<T>(`${base}/pages/find/`, {
             params: { html_path: htmlPath, fields: "*" },
         })
     }
@@ -101,19 +115,19 @@ export function useCms() {
      * "Azienda" section), in the language the parent is in.
      */
     async function getChildren<T = any>(parentId: number, lang?: string, params: Record<string, any> = {}) {
-        return await $fetch<{ items: T[] }>(`${base}/pages/`, {
+        return await request<{ items: T[] }>(`${base}/pages/`, {
             params: { child_of: parentId, locale: lang || currentLocale(), limit: 20, ...params },
         })
     }
 
     /** People for the team page (Impostazioni → Team), in the current language. */
     async function getTeam<T = any>() {
-        return await $fetch<{ members: T[] }>(`${base}/team/`, { params: { locale: currentLocale() } })
+        return await request<{ members: T[] }>(`${base}/team/`, { params: { locale: currentLocale() } })
     }
 
     /** Active site theme (falls back to DEFAULT_THEME server-side). */
     async function getActiveTheme<T = any>() {
-        return await $fetch<T>(`${base}/themes/active/`)
+        return await request<T>(`${base}/themes/active/`)
     }
 
     return { getPage, getPageBySlug, findByPath, getChildren, getTeam, getActiveTheme, currentLocale }

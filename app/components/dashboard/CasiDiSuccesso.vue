@@ -28,7 +28,9 @@
                     </div>
 
                     <div class="case-body">
-                        <h3>{{ item.title }}</h3>
+                        <!-- Title hidden on the card (it is in the picture) but kept for
+                             screen readers and search engines. -->
+                        <h3 class="visually-hidden">{{ item.title }}</h3>
                         <p>{{ item.description }}</p>
                     </div>
                 </NuxtLink>

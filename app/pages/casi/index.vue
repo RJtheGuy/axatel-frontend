@@ -1,7 +1,8 @@
 <template>
     <main class="cases-page">
         <header class="cases-hero">
-<ArticleParticleHero :title="t('cases.title')" :asset-url="resolveImage('/immagini/ala.png')" />        </header>
+            <ArticleParticleHero :title="t('cases.title')" :asset-url="headerWing()" />
+        </header>
 
         <div class="cases-light-stage">
             <section class="cases-shell">
@@ -51,16 +52,17 @@
                             </div>
 
                             <div class="case-content">
-                                <div class="case-kicker">{{ item.category }}</div>
-                                <h2>{{ item.title }}</h2>
+                                <!-- Category and title are in the picture: the title stays
+                                     for screen readers and search engines. -->
+                                <h2 class="visually-hidden">{{ item.title }}</h2>
                                 <p>{{ item.description }}</p>
 
-                                <div class="case-meta">
+                                <!-- <div class="case-meta">
                                     <span>{{ item.client }}</span>
                                     <div class="case-tags">
                                         <small v-for="tag in item.tags" :key="tag">{{ tag }}</small>
                                     </div>
-                                </div>
+                                </div> -->
                             </div>
                         </NuxtLink>
                     </article>
@@ -74,6 +76,7 @@
 import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
+import { successCases } from "../../data/successCases";
 
 const { getPage, getPageBySlug } = useCms();
 const { t, locale } = useI18n();
@@ -91,8 +94,9 @@ type CaseItem = {
     slug: string;
 };
 
-const { data: casiData } = await useAsyncData(() => `casi-list-${locale.value}`, () =>
-    getPage("casi.CasoSuccessoPage", { order: "-first_published_at" }).catch(() => null)
+// With the CMS unreachable, the built-in list of cases is shown instead.
+const { data: casiData, error: casesError } = await useAsyncData(() => `casi-list-${locale.value}`, () =>
+    getPage("casi.CasoSuccessoPage", { order: "-first_published_at" })
 );
 
 // Intro copy now comes from CasiIndexPage.intro, editable in the admin.
@@ -107,7 +111,7 @@ const hasUntranslated = computed(() => ((casiData.value?.items ?? []) as any[]).
 const lead = computed(() => (!indexPage.value?.__fallback && indexPage.value?.intro?.trim()) || t("cases.lead"));
 
 const cases = computed<CaseItem[]>(() =>
-    (casiData.value?.items ?? []).map((c: any) => ({
+    casiData.value ? casiData.value.items.map((c: any) => ({
         title: c.title,
         client: c.client || "",
         category: c.category || "",
@@ -115,7 +119,7 @@ const cases = computed<CaseItem[]>(() =>
         description: c.description || "",
         tags: c.tags || [],
         slug: c.meta?.slug
-    }))
+    })) : casesError.value ? successCases : []
 );
 
 // Sectors = the "Categoria" field of each case, most used first.
@@ -163,12 +167,15 @@ useSeoMeta({
 
 <style scoped>
 .cases-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .cases-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 200px);
@@ -188,6 +195,7 @@ useSeoMeta({
 }
 
 .cases-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

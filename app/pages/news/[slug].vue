@@ -1,7 +1,10 @@
 <template>
     <main class="post-page">
         <header class="post-hero">
-            <ArticleParticleHero :title="post.title" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero
+                :title="post.title"
+                :asset-url="headerWing()"
+            />
         </header>
 
         <div class="post-light-stage">
@@ -71,14 +74,14 @@ const slug = computed(() => {
     return Array.isArray(s) ? s[0] : s;
 });
 
-const { data: raw } = await useAsyncData(
+const { data: raw, error: postError } = await useAsyncData(
     () => `blog-post-${locale.value}-${slug.value}`,
-    () => getPageBySlug<any>("blog.BlogPost", slug.value as string).catch(() => null),
+    () => getPageBySlug<any>("blog.BlogPost", slug.value as string),
     { watch: [slug] }
 );
 
 if (!raw.value) {
-    throw createError({ statusCode: 404, statusMessage: t("blog.notFound"), fatal: import.meta.client });
+    throw cmsPageError(postError.value, t("blog.notFound"));
 }
 
 const post = computed<BlogPostData>(() => ({
@@ -152,12 +155,15 @@ onMounted(() => {
 <style scoped>
 /* Same visual language as blog/index.vue and casi's detail styling. */
 .post-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .post-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 200px);
@@ -177,6 +183,7 @@ onMounted(() => {
 }
 
 .post-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

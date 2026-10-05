@@ -1,3 +1,5 @@
+import angelBpmLogo from "../../assets/immagini/angel_bpm.png";
+
 export type SequenceStageType = "flow" | "text" | "logo" | "composite" | "scatter";
 
 export interface SequenceStage {
@@ -6,6 +8,7 @@ export interface SequenceStage {
     duration: number;
     text?: string;
     asset?: string;
+    fontSizeReference?: string;
 }
 
 export class SequenceManager {
@@ -68,7 +71,14 @@ export class SequenceManager {
     }
 
     private buildSteps(): SequenceStage[] {
-        const steps: SequenceStage[] = [];
+        const steps: SequenceStage[] = [{
+            id: "angel-bpm",
+            type: "composite",
+            text: "AngelBPM",
+            asset: angelBpmLogo,
+            fontSizeReference: this.phrases[0],
+            duration: 6
+        }];
 
         this.phrases.forEach((text, index) => {
             steps.push({
@@ -96,7 +106,6 @@ export class SequenceManager {
         });
 
         steps.push({ id: "logo", type: "logo", text: "AXATEL", duration: 9 });
-        steps.push({ id: "flow-loop", type: "flow", duration: 2.8 });
 
         return steps;
     }

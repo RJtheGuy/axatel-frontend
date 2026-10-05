@@ -3,7 +3,7 @@
          the built-in version from data/contentPages.ts is shown instead. -->
     <main v-if="cms" class="sol-page">
         <header class="sol-hero">
-            <ArticleParticleHero :title="cms.title" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero :title="cms.title" :asset-url="headerWing()" />
         </header>
 
         <div class="sol-light-stage">

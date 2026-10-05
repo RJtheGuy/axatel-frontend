@@ -1,7 +1,7 @@
 <template>
     <main class="blog-page">
         <header class="blog-hero">
-            <ArticleParticleHero :title="t('blog.title')" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero :title="t('blog.title')" :asset-url="headerWing()" />
         </header>
 
         <div class="blog-light-stage">
@@ -11,7 +11,8 @@
                 <div class="page-kicker">{{ t("blog.title") }}</div>
                 <p class="lead">{{ lead }}</p>
 
-                <p v-if="!posts.length" class="empty">{{ t("blog.empty") }}</p>
+                <p v-if="blogError" class="empty" role="alert">{{ t("errors.unavailable") }}</p>
+                <p v-else-if="!posts.length" class="empty">{{ t("blog.empty") }}</p>
 
                 <div v-else class="blog-grid">
                     <article v-for="item in posts" :key="item.slug" class="post-card">
@@ -68,8 +69,8 @@ type PostItem = {
     slug: string;
 };
 
-const { data: blogData } = await useAsyncData(() => `blog-list-${locale.value}`, () =>
-    getPage("blog.BlogPost", { order: "-date", limit: 20 }).catch(() => null)
+const { data: blogData, error: blogError } = await useAsyncData(() => `blog-list-${locale.value}`, () =>
+    getPage("blog.BlogPost", { order: "-date", limit: 20 })
 );
 
 // Intro copy comes from BlogIndexPage.intro, editable in the admin —
@@ -131,12 +132,15 @@ useSeoMeta({
 /* Deliberately near-identical to casi/index.vue's styling — same
    visual language across all listing pages on the site. */
 .blog-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .blog-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 200px);
@@ -156,6 +160,7 @@ useSeoMeta({
 }
 
 .blog-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

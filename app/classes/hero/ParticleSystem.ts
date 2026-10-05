@@ -14,7 +14,8 @@ import { FlowField } from "./FlowField";
 import type { ForceVector } from "./FlowField";
 import { ShapeFactory } from "./ShapeFactory";
 import type { SequenceStage } from "./SequenceManager";
-import { resolveImage } from "../../utils/resolveImage";
+import { DEFAULT_WING_IMAGE } from "../../utils/resolveImage";
+import axatelLogo from "../../assets/immagini/Axatel.svg";
 
 export class ParticleSystem {
     public readonly PARTICLE_COUNT: number;
@@ -29,6 +30,7 @@ export class ParticleSystem {
     private readonly canvas: HTMLCanvasElement;
     private readonly positions: Float32Array;
     private readonly velocities: Float32Array;
+    private readonly particleOpacities: Float32Array;
     private targetPositions: Float32Array | null = null;
     private readonly geometry: BufferGeometry;
     private readonly material: ShaderMaterial;
@@ -49,7 +51,6 @@ export class ParticleSystem {
     private hasMouse = false;
     private anchorOffsetY = 0;
     private formationSuppressed = false;
-    private hasPrimedInitialText = false;
     private lastPhraseText: string | null = null;
     private lastPhraseFormation: Float32Array | null = null;
     private lockedPrefixParticles: Uint8Array | null = null;
@@ -213,6 +214,7 @@ export class ParticleSystem {
                 : 9000;
         this.positions = new Float32Array(this.PARTICLE_COUNT * 3);
         this.velocities = new Float32Array(this.PARTICLE_COUNT * 3);
+        this.particleOpacities = new Float32Array(this.PARTICLE_COUNT).fill(1);
         this.mouseLatch = new Float32Array(this.PARTICLE_COUNT);
 
         this.uniforms = {
@@ -237,6 +239,10 @@ export class ParticleSystem {
         this.geometry.setAttribute(
             "position",
             new BufferAttribute(this.positions, 3)
+        );
+        this.geometry.setAttribute(
+            "aOpacity",
+            new BufferAttribute(this.particleOpacities, 1)
         );
 
         this.material = new ShaderMaterial({
@@ -335,6 +341,8 @@ export class ParticleSystem {
 
         if (stage.type === "flow") {
             this.targetPositions = null;
+            this.particleOpacities.fill(1);
+            (this.geometry.attributes.aOpacity as BufferAttribute).needsUpdate = true;
             this.lockedPrefixParticles = null;
             this.suffixCarrierParticles = null;
             this.dissolvingSuffixParticles = null;
@@ -357,34 +365,42 @@ export class ParticleSystem {
         }
 
         const text = stage.text || "AXATEL";
-        const cacheKey = `${this.worldCacheKey}:${stage.type}:${text}:${stage.asset || ""}`;
+        const cacheKey = `${this.worldCacheKey}:${stage.type}:${text}:${stage.asset || ""}:${stage.fontSizeReference || ""}`;
         let formation = this.formationCache.get(cacheKey);
 
         if (!formation) {
             if (stage.type === "composite") {
                 formation = await ShapeFactory.createCompositeFormation(
                     text,
-                    stage.asset || resolveImage("/immagini/ala.png"),                    this.PARTICLE_COUNT,
+                    stage.asset || DEFAULT_WING_IMAGE,
+                    this.PARTICLE_COUNT,
                     this.worldHalfWidth * 2,
                     this.worldHalfHeight * 2,
-                    this.getPixelsPerWorldUnit()
+                    this.getPixelsPerWorldUnit(),
+                    stage.id === "angel-bpm",
+                    stage.fontSizeReference
                 );
             } else if (stage.type === "logo") {
-                const isCustomLogoAsset = Boolean(stage.text && /^\/immagini\//.test(stage.text));
+                const isCustomLogoAsset = Boolean(stage.asset);
                 const logoWidth = isCustomLogoAsset
                     ? this.worldHalfWidth * 2 * 0.92
                     : this.worldHalfWidth * 2 * 0.69;
                 const logoHeight = isCustomLogoAsset
                     ? this.worldHalfHeight * 2 * 0.92
                     : this.worldHalfHeight * 2 * 0.42;
-                    const logoAssetUrl = isCustomLogoAsset ? stage.text! : resolveImage("/immagini/Axatel.svg");                try {
+                const logoAssetUrl = stage.asset || axatelLogo;
+                try {
                     formation = await ShapeFactory.createSvgFormation(
                         logoAssetUrl,
                         this.PARTICLE_COUNT,
                         logoWidth,
-                        logoHeight
+                        logoHeight,
+                        stage.id === "forced-cases-logo" || stage.id === "forced-quote-logo"
+                            ? { ignoreLightPixels: false, ignoreDarkPixels: true }
+                            : isCustomLogoAsset ? undefined : { ignoreDarkPixels: true }
                     );
-                } catch {
+                } catch (error) {
+                    console.warn(`[ParticleSystem] Could not load hero logo "${logoAssetUrl}"; displaying "${text}" instead.`, error);
                     formation = ShapeFactory.createTextFormation(
                         text,
                         this.PARTICLE_COUNT,
@@ -409,6 +425,8 @@ export class ParticleSystem {
         }
 
         const rawFormation = formation;
+        this.particleOpacities.fill(1);
+        (this.geometry.attributes.aOpacity as BufferAttribute).needsUpdate = true;
         this.lockedPrefixParticles = null;
         this.suffixCarrierParticles = null;
         this.dissolvingSuffixParticles = null;
@@ -453,6 +471,19 @@ export class ParticleSystem {
         const isNarrowWorld = this.worldHalfWidth / Math.max(1, this.worldHalfHeight) < 0.82;
         this.targetPositions = formation;
         this.formationElapsed = 0;
+        if (stage.id === "angel-bpm") {
+            const counts = new Map<string, number>();
+            const keys: string[] = [];
+            for (let i = 0; i < this.PARTICLE_COUNT; i++) {
+                const key = `${formation[i * 3]},${formation[i * 3 + 1]}`;
+                keys.push(key);
+                counts.set(key, (counts.get(key) ?? 0) + 1);
+            }
+            // Additive blending must not brighten grid cells that carry multiple particles.
+            for (let i = 0; i < this.PARTICLE_COUNT; i++) {
+                this.particleOpacities[i] = 1 / counts.get(keys[i]!)!;
+            }
+        }
         this.uniforms.uOpacity.value = stage.type === "logo" ? 1.0 : isNarrowWorld ? 0.84 : 0.9;
         this.uniforms.uPointSize.value = stage.type === "logo" ? 3.9 : isNarrowWorld ? 2.45 : 2.7;
 
@@ -461,10 +492,6 @@ export class ParticleSystem {
             this.lastPhraseFormation = rawFormation;
         }
 
-        if (stage.type === "text" && stage.id === "phrase-1" && !this.hasPrimedInitialText) {
-            this.primeInitialTextFormation(formation);
-            this.hasPrimedInitialText = true;
-        }
     }
 
     public update(
@@ -485,7 +512,7 @@ export class ParticleSystem {
         const isForcedLogoStage = this.currentStageType === "logo" && this.currentStageId.startsWith("forced-");
         const isQuoteLogoStage = this.currentStageId === "forced-quote-logo";
         const logoEndBoost = this.currentStageType === "logo" && !isForcedLogoStage
-            ? this.clamp01((stageProgress - 0.78) / 0.22)
+            ? this.clamp01((stageProgress - 0.72) / 0.28)
             : 0;
         const logoEndBoostEase = logoEndBoost * logoEndBoost;
 
@@ -539,22 +566,13 @@ export class ParticleSystem {
         let logoScaleY = 1;
 
         if (isLogoStage && !isForcedLogoStage) {
-            const holdProgress = this.clamp01(stageProgress / 0.42);
-            const rampProgress = this.clamp01((stageProgress - 0.38) / 0.62);
+            const rampProgress = this.clamp01((stageProgress - 0.2) / 0.8);
             const rampEase = rampProgress * rampProgress * (3 - 2 * rampProgress);
 
-            // Phase 1: logo visible and slightly wider.
-            // Phase 2: hold.
-            // Phase 3: aggressive zoom beyond viewport.
-            logoScaleX = 1.0 + rampEase * 4.8;
-            logoScaleY = 1.0 + rampEase * 5.4;
-
-            this.uniforms.uPointSize.value = 3.9 + rampEase * 1.8;
-
-            const holdOpacity = 1 - holdProgress * 0.03;
-            const fadeProgress = this.clamp01((stageProgress - 0.9) / 0.1);
-            const dissolve = 1 - fadeProgress * 0.62;
-            this.uniforms.uOpacity.value = holdOpacity * dissolve;
+            logoScaleX = 1.0 + rampEase * 6.5;
+            logoScaleY = 1.0 + rampEase * 7.2;
+            this.uniforms.uPointSize.value = 3.0 - rampEase * 1.5;
+            this.uniforms.uOpacity.value = 1;
         } else if (isLogoStage) {
             // Forced section logos must remain stable and visible.
             logoScaleX = isQuoteLogoStage ? 0.62 : 1;
@@ -568,6 +586,7 @@ export class ParticleSystem {
             let px = this.positions[index]!;
             let py = this.positions[index + 1]!;
             let isReleasedLogoParticle = false;
+            let isDissolvingLogoParticle = false;
             let isFreeTextParticle = false;
             let isFreeLogoParticle = false;
             const isLockedPrefixParticle = this.lockedPrefixParticles?.[i] === 1;
@@ -584,20 +603,32 @@ export class ParticleSystem {
             fx += chaosX;
             fy += chaosY;
 
+            let tx = 0;
+            let ty = 0;
             if (target) {
+                if (isLogoStage && !isForcedLogoStage) {
+                    const dissolveThreshold = 0.48 + ((i * 73 + 19) % 101) / 100 * 0.36;
+                    isDissolvingLogoParticle = stageProgress >= dissolveThreshold;
+                    isReleasedLogoParticle = isDissolvingLogoParticle;
+                    this.particleOpacities[i] = 1;
+                } else if (this.currentStageId !== "angel-bpm") {
+                    this.particleOpacities[i] = 1;
+                }
+
                 isFreeTextParticle = isTextStage &&
                     this.isFreeTextParticleIndex(i) &&
                     !isLockedPrefixParticle &&
                     (!isSuffixCarrierParticle || isSuffixDissolving);
-                isFreeLogoParticle = isLogoStage && (i % 14 === 0);
+                isFreeLogoParticle = isLogoStage && !isForcedLogoStage &&
+                    stageProgress < 0.28 && i % 40 === 0;
 
                 if (!isFreeTextParticle && !isFreeLogoParticle) {
                     fx *= 0.12;
                     fy *= 0.12;
                 }
 
-                let tx = target[index]!;
-                let ty = target[index + 1]!;
+                tx = target[index]!;
+                ty = target[index + 1]!;
 
                 if (isLogoStage) {
                     tx *= logoScaleX;
@@ -610,16 +641,6 @@ export class ParticleSystem {
                         ty += forcedLogoOffsetY;
                     }
 
-                    // As soon as a logo target point moves outside viewport bounds,
-                    // release the corresponding particle from shape constraints.
-                    if (Math.abs(tx) > halfX || Math.abs(ty) > halfY) {
-                        isReleasedLogoParticle = true;
-                        const outX = Math.sign(tx) || (Math.random() > 0.5 ? 1 : -1);
-                        const outY = Math.sign(ty) || (Math.random() > 0.5 ? 1 : -1);
-                        const burst = 0.018 + logoEndBoostEase * 0.07;
-                        fx += outX * burst;
-                        fy += outY * burst;
-                    }
                 }
 
                 if (isAnchoredFormationStage) {
@@ -631,6 +652,19 @@ export class ParticleSystem {
                     fx += (tx - px) * particleAttraction;
                     fy += (ty - py) * particleAttraction;
                 }
+            }
+
+            if (isDissolvingLogoParticle) {
+                const directionLength = Math.hypot(tx, ty);
+                const direction = directionLength > 0.001
+                    ? Math.atan2(ty, tx)
+                    : i * 2.399963229728653;
+                const directionX = Math.cos(direction);
+                const directionY = Math.sin(direction);
+                const finalExplosion = this.clamp01((stageProgress - 0.84) / 0.16);
+                const drift = 0.025 + finalExplosion * 0.32;
+                fx += directionX * drift + Math.sin(i * 2.17 + elapsed * 3) * 0.025;
+                fy += directionY * drift + Math.cos(i * 1.73 - elapsed * 3) * 0.025;
             }
 
             if (isDissolvingSuffixParticle) {
@@ -700,7 +734,19 @@ export class ParticleSystem {
             px += vx * delta * 60;
             py += vy * delta * 60;
 
-            if (target && isFreeParticle) {
+            if (isLogoStage && !isForcedLogoStage) {
+                // Keep the burst in view so the same particles can form the next title.
+                const safeX = halfX * 0.94;
+                const safeY = halfY * 0.94;
+                if (Math.abs(px) > safeX) {
+                    px = Math.sign(px) * safeX;
+                    vx = -Math.sign(px) * Math.abs(vx) * 0.65;
+                }
+                if (Math.abs(py) > safeY) {
+                    py = Math.sign(py) * safeY;
+                    vy = -Math.sign(py) * Math.abs(vy) * 0.65;
+                }
+            } else if (target && isFreeParticle) {
                 const ambientHalfX = halfX * 1.35;
                 const ambientHalfY = halfY * 1.35;
 
@@ -765,8 +811,10 @@ export class ParticleSystem {
             this.velocities[index + 1] = vy;
         }
 
-        (this.geometry.attributes
-            .position as BufferAttribute).needsUpdate = true;
+        (this.geometry.attributes.position as BufferAttribute).needsUpdate = true;
+        if (isLogoStage && !isForcedLogoStage) {
+            (this.geometry.attributes.aOpacity as BufferAttribute).needsUpdate = true;
+        }
     }
 
     private createScatterTargets(): Float32Array {
@@ -782,27 +830,4 @@ export class ParticleSystem {
         return result;
     }
 
-    private primeInitialTextFormation(target: Float32Array): void {
-        for (let i = 0; i < this.PARTICLE_COUNT; i++) {
-            const index = i * 3;
-
-            // Keep a small free subset to preserve natural motion while text appears immediately.
-            if (i % 12 === 0) {
-                continue;
-            }
-
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 3.5 + Math.random() * 9.5;
-
-            this.positions[index] = target[index]! + Math.cos(angle) * radius;
-            this.positions[index + 1] = target[index + 1]! + Math.sin(angle) * radius * 0.62;
-            this.positions[index + 2] = 0;
-
-            this.velocities[index] = -Math.cos(angle) * 0.045 + (Math.random() - 0.5) * 0.012;
-            this.velocities[index + 1] = -Math.sin(angle) * 0.035 + (Math.random() - 0.5) * 0.012;
-            this.velocities[index + 2] = 0;
-        }
-
-        (this.geometry.attributes.position as BufferAttribute).needsUpdate = true;
-    }
 }

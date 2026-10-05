@@ -1,18 +1,25 @@
+import { DEFAULT_WING_IMAGE } from "@/utils/resolveImage";
+
 export class ShapeFactory {
     private static readonly DRAW_WIDTH = 1600;
     private static readonly DRAW_HEIGHT = 520;
     private static readonly FONT_FAMILY = 'Montserrat, system-ui, sans-serif';
     private static readonly DESKTOP_COMPOSITE_FONT_SIZE = 138;
+    private static readonly MOBILE_COMPOSITE_FONT_SIZE = 126;
     // Dimensioni rese in pixel CSS: su desktop la composizione non scala con il viewport.
     private static readonly DESKTOP_COMPOSITE_TEXT_PX = 54;
+    private static readonly MOBILE_COMPOSITE_TEXT_PX = 32;
     private static readonly DESKTOP_COMPOSITE_ASSET_PX = 118;
     private static readonly DESKTOP_COMPOSITE_GAP_PX = 26;
+    private static readonly DEFAULT_WING_HEIGHT_PX = 76;
+    private static readonly DEFAULT_WING_OFFSET_PX = 6;
 
     public static async createSvgFormation(
         svgUrl: string,
         particleCount: number,
         worldWidth: number,
-        worldHeight: number
+        worldHeight: number,
+        options: { ignoreLightPixels?: boolean; ignoreDarkPixels?: boolean } = {}
     ): Promise<Float32Array> {
         const canvas = document.createElement("canvas");
         canvas.width = ShapeFactory.DRAW_WIDTH;
@@ -26,17 +33,7 @@ export class ShapeFactory {
         const image = new Image();
         image.crossOrigin = "anonymous";
         image.src = svgUrl;
-
-        try {
-            await image.decode();
-        } catch {
-            return ShapeFactory.createTextFormation(
-                "AXATEL",
-                particleCount,
-                worldWidth,
-                worldHeight
-            );
-        }
+        await image.decode();
 
         context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -61,7 +58,8 @@ export class ShapeFactory {
             {
                 useOpaqueBounds: true,
                 preserveAspect: true,
-                ignoreLightPixels: /\.png(?:\?|$)/i.test(svgUrl)
+                ignoreDarkPixels: options.ignoreDarkPixels,
+                ignoreLightPixels: options.ignoreLightPixels ?? /\.png(?:\?|$)/i.test(svgUrl)
             }
         );
     }
@@ -76,6 +74,8 @@ export class ShapeFactory {
             maxLines?: number;
             fixedFontSize?: number;
             maxScale?: number;
+            onMetrics?: (fontSize: number, scale: number) => void;
+            narrowLayout?: boolean;
         } = {}
     ): Float32Array {
         const canvas = document.createElement("canvas");
@@ -89,7 +89,7 @@ export class ShapeFactory {
 
         context.clearRect(0, 0, canvas.width, canvas.height);
 
-        const isNarrowWorld = worldWidth / Math.max(1, worldHeight) < 0.82;
+        const isNarrowWorld = options.narrowLayout ?? worldWidth / Math.max(1, worldHeight) < 0.82;
         const isDesktopQuote = !isNarrowWorld && /\nCEO,\s*Axatel$/i.test(text.trim());
         const { lines, fontSize } = ShapeFactory.layoutTextLines(
             context,
@@ -127,7 +127,8 @@ export class ShapeFactory {
             {
                 useOpaqueBounds: true,
                 preserveAspect: true,
-                maxScale: options.maxScale
+                maxScale: options.maxScale,
+                onScale: (scale) => options.onMetrics?.(fontSize, scale)
             }
         );
     }
@@ -138,24 +139,52 @@ export class ShapeFactory {
         particleCount: number,
         worldWidth: number,
         worldHeight: number,
-        pixelsPerWorldUnit = 0
+        pixelsPerWorldUnit = 0,
+        emphasized = false,
+        fontSizeReference?: string
     ): Promise<Float32Array> {
         const useMobileLayout = window.innerWidth <= 768 || worldWidth / Math.max(1, worldHeight) < 0.82;
         const pxPerUnit = pixelsPerWorldUnit > 0
             ? pixelsPerWorldUnit
             : window.innerHeight / Math.max(1, worldHeight);
+        if (emphasized && fontSizeReference) {
+            return ShapeFactory.createBrandFormation(
+                text, assetUrl, fontSizeReference, particleCount, worldWidth, worldHeight
+            );
+        }
+        if (assetUrl === DEFAULT_WING_IMAGE) {
+            return ShapeFactory.createDefaultWingTitleFormation(
+                text, particleCount, worldWidth, worldHeight, pxPerUnit, useMobileLayout
+            );
+        }
         const assetParticleCount = Math.round(particleCount * (useMobileLayout ? 0.24 : 0.26));
         const textParticleCount = particleCount - assetParticleCount;
-        const assetFormation = await ShapeFactory.createSvgFormation(
-            assetUrl,
-            assetParticleCount,
-            useMobileLayout
-                ? worldWidth * 0.28
-                : Math.min(worldWidth * 0.25, (ShapeFactory.DESKTOP_COMPOSITE_ASSET_PX * 1.7) / pxPerUnit),
-            useMobileLayout
-                ? worldHeight * 0.72
-                : Math.min(worldHeight * 0.96, ShapeFactory.DESKTOP_COMPOSITE_ASSET_PX / pxPerUnit)
-        );
+        const assetSizePx = emphasized ? 250 : ShapeFactory.DESKTOP_COMPOSITE_ASSET_PX;
+        const textSizePx = emphasized ? 106 : ShapeFactory.DESKTOP_COMPOSITE_TEXT_PX;
+        const assetWidth = useMobileLayout
+            ? worldWidth * (emphasized ? 0.33 : 0.28)
+            : Math.min(worldWidth * (emphasized ? 0.42 : 0.25), (assetSizePx * 1.7) / pxPerUnit);
+        const assetHeight = useMobileLayout
+            ? worldHeight * 0.82
+            : Math.min(worldHeight * 0.96, assetSizePx / pxPerUnit);
+        let assetFormation: Float32Array;
+        try {
+            assetFormation = await ShapeFactory.createSvgFormation(
+                assetUrl,
+                assetParticleCount,
+                assetWidth,
+                assetHeight,
+                { ignoreLightPixels: !emphasized }
+            );
+        } catch (error) {
+            if (assetUrl === DEFAULT_WING_IMAGE) {
+                throw error;
+            }
+            console.warn(`[ShapeFactory] Could not load custom hero image "${assetUrl}"; using the default wing.`, error);
+            return ShapeFactory.createDefaultWingTitleFormation(
+                text, particleCount, worldWidth, worldHeight, pxPerUnit, useMobileLayout
+            );
+        }
         const textFormation = ShapeFactory.createTextFormation(
             text,
             textParticleCount,
@@ -164,10 +193,13 @@ export class ShapeFactory {
             {
                 align: "left",
                 maxLines: useMobileLayout ? 8 : 5,
-                fixedFontSize: useMobileLayout ? 126 : ShapeFactory.DESKTOP_COMPOSITE_FONT_SIZE,
+                fixedFontSize: emphasized
+                    ? (useMobileLayout ? 164 : 210)
+                    : (useMobileLayout ? ShapeFactory.MOBILE_COMPOSITE_FONT_SIZE : ShapeFactory.DESKTOP_COMPOSITE_FONT_SIZE),
                 maxScale: useMobileLayout
-                    ? undefined
-                    : (ShapeFactory.DESKTOP_COMPOSITE_TEXT_PX / ShapeFactory.DESKTOP_COMPOSITE_FONT_SIZE) / pxPerUnit
+                    ? ((emphasized ? 54 : ShapeFactory.MOBILE_COMPOSITE_TEXT_PX) /
+                        (emphasized ? 164 : ShapeFactory.MOBILE_COMPOSITE_FONT_SIZE)) / pxPerUnit
+                    : (textSizePx / (emphasized ? 210 : ShapeFactory.DESKTOP_COMPOSITE_FONT_SIZE)) / pxPerUnit
             }
         );
         const result = new Float32Array(particleCount * 3);
@@ -176,17 +208,19 @@ export class ShapeFactory {
         let assetMaxRawX = Number.NEGATIVE_INFINITY;
         let textMinX = Number.POSITIVE_INFINITY;
         let textMaxX = Number.NEGATIVE_INFINITY;
+        let textMinY = Number.POSITIVE_INFINITY;
         let textMaxY = Number.NEGATIVE_INFINITY;
 
         for (let index = 0; index < assetParticleCount; index++) {
-            const mirroredX = -assetFormation[index * 3]!;
-            assetMinRawX = Math.min(assetMinRawX, mirroredX);
-            assetMaxRawX = Math.max(assetMaxRawX, mirroredX);
+            const assetX = assetFormation[index * 3]!;
+            assetMinRawX = Math.min(assetMinRawX, assetX);
+            assetMaxRawX = Math.max(assetMaxRawX, assetX);
         }
 
         for (let index = 0; index < textParticleCount; index++) {
             textMinX = Math.min(textMinX, textFormation[index * 3]!);
             textMaxX = Math.max(textMaxX, textFormation[index * 3]!);
+            textMinY = Math.min(textMinY, textFormation[index * 3 + 1]!);
             textMaxY = Math.max(textMaxY, textFormation[index * 3 + 1]!);
         }
 
@@ -200,11 +234,19 @@ export class ShapeFactory {
         let textOffsetY: number;
 
         if (useMobileLayout) {
-            assetOffsetX = -worldWidth * 0.36;
-            textOffsetX = safeAssetMaxX + assetOffsetX + worldWidth * 0.035 - safeTextMinX;
-            textOffsetY = worldHeight * 0.43 - (Number.isFinite(textMaxY) ? textMaxY : 0);
+            if (emphasized) {
+                const formationGap = worldWidth * 0.035;
+                const formationWidth = safeAssetMaxX - safeAssetMinX + safeTextMaxX - safeTextMinX + formationGap;
+                assetOffsetX = -formationWidth / 2 - safeAssetMinX;
+                textOffsetX = safeAssetMaxX + assetOffsetX + formationGap - safeTextMinX;
+                textOffsetY = -((safeTextMinY + textMaxY) / 2);
+            } else {
+                assetOffsetX = -worldWidth * 0.36;
+                textOffsetX = safeAssetMaxX + assetOffsetX + worldWidth * 0.035 - safeTextMinX;
+                textOffsetY = worldHeight * 0.43 - (Number.isFinite(textMaxY) ? textMaxY : 0);
+            }
         } else {
-            const formationGap = ShapeFactory.DESKTOP_COMPOSITE_GAP_PX / pxPerUnit;
+            const formationGap = (emphasized ? 38 : ShapeFactory.DESKTOP_COMPOSITE_GAP_PX) / pxPerUnit;
             const textSpan = safeTextMaxX - safeTextMinX;
             // Il testo resta centrato sull'asse: l'ala viene appoggiata alla sua sinistra.
             const textStartX = -textSpan / 2;
@@ -215,7 +257,7 @@ export class ShapeFactory {
 
         for (let index = 0; index < assetParticleCount; index++) {
             const source = index * 3;
-            result[source] = -assetFormation[source]! + assetOffsetX;
+            result[source] = assetFormation[source]! + assetOffsetX;
             result[source + 1] = assetFormation[source + 1]! + assetOffsetY;
         }
 
@@ -226,6 +268,122 @@ export class ShapeFactory {
             result[target + 1] = textFormation[source + 1]! + textOffsetY;
         }
 
+        return result;
+    }
+
+    private static async createBrandFormation(
+        text: string,
+        assetUrl: string,
+        reference: string,
+        particleCount: number,
+        worldWidth: number,
+        worldHeight: number
+    ): Promise<Float32Array> {
+        const narrow = worldWidth / Math.max(1, worldHeight) < 0.82;
+        let fontSize = 0;
+        let textScale = 0;
+        ShapeFactory.createTextFormation(
+            reference, 1, worldWidth * (narrow ? 0.76 : 0.92), worldHeight * (narrow ? 0.9 : 0.84),
+            { onMetrics: (size, scale) => { fontSize = size; textScale = scale; } }
+        );
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Could not create the AngelBPM particle canvas.");
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.src = assetUrl;
+        await image.decode();
+
+        context.font = `${narrow ? 300 : 350} ${fontSize}px ${ShapeFactory.FONT_FAMILY}`;
+        const metrics = context.measureText(text);
+        const titleHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+        const logoHeight = titleHeight * 1.6;
+        const logoWidth = logoHeight * image.width / image.height;
+        const gap = logoHeight * 0.16;
+        canvas.width = Math.ceil(logoWidth + gap + metrics.width);
+        canvas.height = Math.ceil(logoHeight);
+        context.font = `${narrow ? 300 : 350} ${fontSize}px ${ShapeFactory.FONT_FAMILY}`;
+        context.fillStyle = "#fff";
+        context.textAlign = "left";
+        context.textBaseline = "alphabetic";
+        context.drawImage(image, 0, 0, logoWidth, logoHeight);
+        context.fillText(text, logoWidth + gap, (logoHeight - titleHeight) / 2 + metrics.actualBoundingBoxAscent);
+
+        const scale = Math.min(worldWidth * 0.69 / canvas.width, worldHeight * 0.42 / canvas.height);
+        return ShapeFactory.createFormationFromCanvas(
+            canvas, particleCount, worldWidth * 0.69, worldHeight * 0.42,
+            {
+                useOpaqueBounds: true,
+                preserveAspect: true,
+                sampleStep: Math.max(3, Math.round(3 * textScale / scale)),
+                jitter: false
+            }
+        );
+    }
+
+    private static async createDefaultWingTitleFormation(
+        text: string,
+        particleCount: number,
+        worldWidth: number,
+        worldHeight: number,
+        pixelsPerWorldUnit: number,
+        useMobileLayout: boolean
+    ): Promise<Float32Array> {
+        const wingParticleCount = Math.floor(particleCount * 0.15);
+        const textParticleCount = particleCount - wingParticleCount * 2;
+        const wingWidth = Math.min(worldWidth * 0.14, 92 / pixelsPerWorldUnit);
+        const wingHeight = Math.min(worldHeight * 0.55, ShapeFactory.DEFAULT_WING_HEIGHT_PX / pixelsPerWorldUnit);
+        const wing = await ShapeFactory.createSvgFormation(
+            DEFAULT_WING_IMAGE, wingParticleCount, wingWidth, wingHeight,
+            { ignoreLightPixels: false }
+        );
+        const title = ShapeFactory.createTextFormation(
+            text, textParticleCount, worldWidth * 0.6, worldHeight * 0.72,
+            {
+                align: "center",
+                maxLines: useMobileLayout ? 8 : 5,
+                fixedFontSize: useMobileLayout ? ShapeFactory.MOBILE_COMPOSITE_FONT_SIZE : ShapeFactory.DESKTOP_COMPOSITE_FONT_SIZE,
+                maxScale: useMobileLayout
+                    ? (ShapeFactory.MOBILE_COMPOSITE_TEXT_PX / ShapeFactory.MOBILE_COMPOSITE_FONT_SIZE) / pixelsPerWorldUnit
+                    : (ShapeFactory.DESKTOP_COMPOSITE_TEXT_PX / ShapeFactory.DESKTOP_COMPOSITE_FONT_SIZE) / pixelsPerWorldUnit
+            }
+        );
+        let textMinX = Number.POSITIVE_INFINITY;
+        let textMaxX = Number.NEGATIVE_INFINITY;
+        let wingMinX = Number.POSITIVE_INFINITY;
+        let wingMinY = Number.POSITIVE_INFINITY;
+        let wingMaxY = Number.NEGATIVE_INFINITY;
+        for (let index = 0; index < textParticleCount; index++) {
+            textMinX = Math.min(textMinX, title[index * 3]!);
+            textMaxX = Math.max(textMaxX, title[index * 3]!);
+        }
+        for (let index = 0; index < wingParticleCount; index++) {
+            wingMinX = Math.min(wingMinX, wing[index * 3]!);
+            wingMinY = Math.min(wingMinY, wing[index * 3 + 1]!);
+            wingMaxY = Math.max(wingMaxY, wing[index * 3 + 1]!);
+        }
+        const textCenterX = (textMinX + textMaxX) / 2;
+        const textHalfWidth = (textMaxX - textMinX) / 2;
+        const gap = Math.min(worldWidth * 0.025, 16 / pixelsPerWorldUnit);
+        const wingOffsetX = textHalfWidth + gap - wingMinX;
+        const wingCenterY = (wingMinY + wingMaxY) / 2;
+        const result = new Float32Array(particleCount * 3);
+        for (let index = 0; index < wingParticleCount; index++) {
+            const source = index * 3;
+            const right = (wingParticleCount + index) * 3;
+            const x = wing[source]! + wingOffsetX;
+            const y = wing[source + 1]! - wingCenterY + ShapeFactory.DEFAULT_WING_OFFSET_PX / pixelsPerWorldUnit;
+            result[source] = -x;
+            result[source + 1] = y;
+            result[right] = x;
+            result[right + 1] = y;
+        }
+        for (let index = 0; index < textParticleCount; index++) {
+            const source = index * 3;
+            const target = (wingParticleCount * 2 + index) * 3;
+            result[target] = title[source]! - textCenterX;
+            result[target + 1] = title[source + 1]!;
+        }
         return result;
     }
 
@@ -332,7 +490,11 @@ export class ShapeFactory {
             useOpaqueBounds?: boolean;
             preserveAspect?: boolean;
             ignoreLightPixels?: boolean;
+            ignoreDarkPixels?: boolean;
             maxScale?: number;
+            onScale?: (scale: number) => void;
+            sampleStep?: number;
+            jitter?: boolean;
         }
     ): Float32Array {
         const context = canvas.getContext("2d");
@@ -348,7 +510,7 @@ export class ShapeFactory {
         ).data;
 
         const points: number[] = [];
-        const step = 3;
+        const step = options?.sampleStep ?? 3;
         const threshold = 10;
 
         for (let y = 0; y < canvas.height; y += step) {
@@ -359,7 +521,11 @@ export class ShapeFactory {
                     imageData[offset]! > 242 &&
                     imageData[offset + 1]! > 242 &&
                     imageData[offset + 2]! > 242;
-                if (alpha > threshold && !isLightPixel) {
+                const isDarkPixel = options?.ignoreDarkPixels === true &&
+                    imageData[offset]! < 16 &&
+                    imageData[offset + 1]! < 16 &&
+                    imageData[offset + 2]! < 16;
+                if (alpha > threshold && !isLightPixel && !isDarkPixel) {
                     points.push(x, y);
                 }
             }
@@ -412,6 +578,7 @@ export class ShapeFactory {
             ? Math.min(fitScale, options.maxScale)
             : fitScale;
         const pointCount = points.length / 2;
+        options?.onScale?.(uniformScale);
 
         for (let i = 0; i < particleCount; i++) {
             const pointIndex = pointCount > particleCount
@@ -423,9 +590,10 @@ export class ShapeFactory {
             const centeredX = x - (minX + sourceWidth / 2);
             const centeredY = (minY + sourceHeight / 2) - y;
 
+            const jitter = options?.jitter === false ? 0 : 0.12;
             if (preserveAspect) {
-                result[i * 3] = centeredX * uniformScale + (Math.random() - 0.5) * uniformScale * 0.12;
-                result[i * 3 + 1] = centeredY * uniformScale + (Math.random() - 0.5) * uniformScale * 0.12;
+                result[i * 3] = centeredX * uniformScale + (Math.random() - 0.5) * uniformScale * jitter;
+                result[i * 3 + 1] = centeredY * uniformScale + (Math.random() - 0.5) * uniformScale * jitter;
             } else {
                 result[i * 3] = centeredX * xScale + (Math.random() - 0.5) * xScale * 0.12;
                 result[i * 3 + 1] = centeredY * yScale + (Math.random() - 0.5) * yScale * 0.12;

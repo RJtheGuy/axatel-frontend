@@ -7,6 +7,7 @@
 	@pointerleave="onPointerLeave"
 	@pointerup="onPointerEnd"
 	@pointercancel="onPointerEnd"
+	@lostpointercapture="onPointerCaptureLost"
 >
 
 	<div class="sensor" :class="{ alarm: isAlarm }">
@@ -71,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, onUnmounted } from "vue"
 
 const { t } = useI18n()
 
@@ -229,6 +230,16 @@ function onPointerEnd(event: PointerEvent) {
 		target.releasePointerCapture(event.pointerId)
 	}
 }
+
+function onPointerCaptureLost() {
+	finishImpact()
+	activePointerId = null
+}
+
+onUnmounted(() => {
+	if (alarmTimer) clearTimeout(alarmTimer)
+	if (resetTimer) clearTimeout(resetTimer)
+})
 </script>
 
 <style scoped>

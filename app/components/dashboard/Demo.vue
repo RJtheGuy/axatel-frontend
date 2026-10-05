@@ -1,9 +1,11 @@
 <template>
     <section
+        ref="sectionEl"
         class="demo-section"
+        tabindex="-1"
     >
 
-        <div class="demo-content">
+        <div class="demo-content" :inert="!introDismissed">
 
             <DashboardDemoAngel
                 :alarm-event="alarmEvent"
@@ -17,11 +19,85 @@
 
         </div>
 
+        <Transition name="demo-intro">
+            <button
+                v-if="!introDismissed"
+                ref="introEl"
+                class="demo-intro-overlay"
+                type="button"
+                aria-label="Prova AngelBPM: scopri le demo interattive"
+                @click="dismissIntro"
+            >
+                <span class="demo-intro-copy">
+                    <span class="demo-intro-brand">
+                        <img :src="angelBpmLogo" alt="" width="240" height="185" />
+                        <span class="demo-intro-title">AngelBPM</span>
+                    </span>
+                    <span class="demo-intro-invitation">
+                        Prova il sistema: interagisci con le demo e scopri come
+                        ogni evento diventa un allarme in tempo reale.
+                    </span>
+                    <span class="demo-intro-hint">Tocca o clicca ovunque per iniziare</span>
+                </span>
+            </button>
+        </Transition>
+
     </section>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, onMounted, onBeforeUnmount } from "vue"
+import angelBpmLogo from "@/assets/immagini/angel_bpm.png"
+
+const sectionEl = ref<HTMLElement | null>(null)
+const introEl = ref<HTMLButtonElement | null>(null)
+const introDismissed = ref(false)
+let introObserver: IntersectionObserver | null = null
+let introTimeout: ReturnType<typeof setTimeout> | null = null
+let introAcknowledged = false
+let demoVisible = false
+
+function clearIntroTimeout(): void {
+    if (introTimeout === null) return
+    clearTimeout(introTimeout)
+    introTimeout = null
+}
+
+function hideIntro(): void {
+    const restoreFocus = document.activeElement === introEl.value
+    introDismissed.value = true
+    clearIntroTimeout()
+    if (restoreFocus) sectionEl.value?.focus({ preventScroll: true })
+}
+
+function dismissIntro(): void {
+    if (introAcknowledged) return
+    introAcknowledged = true
+    introObserver?.disconnect()
+    hideIntro()
+}
+
+onMounted(() => {
+    if (!sectionEl.value) return
+
+    introObserver = new IntersectionObserver((entries) => {
+        if (introAcknowledged) return
+        const visible = entries.some(entry => entry.isIntersecting)
+        if (visible === demoVisible) return
+        demoVisible = visible
+        clearIntroTimeout()
+        if (!visible) return
+
+        introDismissed.value = false
+        introTimeout = setTimeout(hideIntro, 9000)
+    }, { rootMargin: "0px 0px -35% 0px", threshold: 0 })
+    introObserver.observe(sectionEl.value)
+})
+
+onBeforeUnmount(() => {
+    introObserver?.disconnect()
+    clearIntroTimeout()
+})
 
 type DemoApplication = {
     name: string;
@@ -100,6 +176,103 @@ function onNormal(){
 .demo-content {
     position: relative;
     z-index: 1;
+}
+
+.demo-intro-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(2, 7, 18, 0.62);
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.demo-intro-overlay:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -8px;
+}
+
+.demo-intro-copy {
+    position: sticky;
+    top: var(--ax-navbar-height, 74px);
+    display: flex;
+    min-height: calc(100svh - var(--ax-navbar-height, 74px));
+    padding: clamp(32px, 6vh, 80px) 6vw;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.demo-intro-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(16px, 3vw, 48px);
+}
+
+.demo-intro-brand img {
+    display: block;
+    width: clamp(100px, 20vw, 280px);
+    height: auto;
+    flex-shrink: 0;
+    filter: brightness(0) invert(1);
+}
+
+.demo-intro-title {
+    color: #fff;
+    font-size: clamp(2.4rem, 8vw, 8rem);
+    font-weight: 350;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+}
+
+.demo-intro-invitation {
+    max-width: 740px;
+    margin-top: 36px;
+    color: #fff;
+    font-size: clamp(1rem, 1.7vw, 1.4rem);
+    font-weight: 400;
+    line-height: 1.6;
+}
+
+.demo-intro-hint {
+    margin-top: 24px;
+    color: #fff;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.demo-intro-leave-active {
+    transition: opacity 350ms ease;
+}
+
+.demo-intro-leave-to {
+    opacity: 0;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .demo-intro-leave-active {
+        transition: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .demo-intro-brand img {
+        width: 24vw;
+    }
+
+    .demo-intro-title {
+        font-size: 10vw;
+    }
 }
 
 @media (max-width: 900px) {

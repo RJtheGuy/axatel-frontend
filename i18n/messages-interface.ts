@@ -202,6 +202,7 @@ export const interfaceMessages = {
             before: "Ho letto l'",
             link: "informativa privacy",
             after: " e acconsento al trattamento dei miei dati per ricevere una risposta.",
+            required: "Per inviare la richiesta accetta l'informativa privacy.",
         },
         video: {
             play: "Guarda il video",
@@ -219,6 +220,7 @@ export const interfaceMessages = {
         },
         errors: {
             page: "Pagina non trovata",
+            unavailable: "Il sito è momentaneamente non disponibile. Riprova tra qualche minuto.",
             product: "Prodotto non trovato",
             topic: "Argomento non trovato",
         },
@@ -426,6 +428,7 @@ export const interfaceMessages = {
             before: "I have read the ",
             link: "privacy notice",
             after: " and agree to my data being processed to answer my request.",
+            required: "Please accept the privacy notice to send your request.",
         },
         video: {
             play: "Watch the video",
@@ -443,6 +446,7 @@ export const interfaceMessages = {
         },
         errors: {
             page: "Page not found",
+            unavailable: "The site is temporarily unavailable. Please try again in a few minutes.",
             product: "Product not found",
             topic: "Topic not found",
         },
@@ -650,6 +654,7 @@ export const interfaceMessages = {
             before: "J'ai lu la ",
             link: "politique de confidentialité",
             after: " et j'accepte le traitement de mes données pour recevoir une réponse.",
+            required: "Acceptez la politique de confidentialité pour envoyer votre demande.",
         },
         video: {
             play: "Regarder la vidéo",
@@ -667,6 +672,7 @@ export const interfaceMessages = {
         },
         errors: {
             page: "Page introuvable",
+            unavailable: "Le site est momentanément indisponible. Réessayez dans quelques minutes.",
             product: "Produit introuvable",
             topic: "Sujet introuvable",
         },

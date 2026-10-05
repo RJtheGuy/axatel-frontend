@@ -37,6 +37,7 @@
                  Do not "fix" this to {{ }} — it would render escaped
                  markup as literal text. -->
             <div v-if="caso?.body" class="caso-body" v-html="caso.body"></div>
+            <p v-else-if="caso?.description" class="caso-body">{{ caso.description }}</p>
 
             <NuxtLink class="caso-back ax-cta-outline" :to="localePath('/casi')">
                 {{ t("caseDetail.all") }}
@@ -47,6 +48,8 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { successCases } from "../../data/successCases";
+import { homepageCases } from "../../data/homepageCases";
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
@@ -56,18 +59,30 @@ const localePath = useLocalePath();
 
 const slug = computed(() => String(route.params.slug));
 
-const { data: caso } = await useAsyncData(
+// With the CMS unreachable, a built-in case with the same address is
+// shown instead (data/successCases.ts + data/homepageCases.ts).
+const { data: caso, error: caseError } = await useAsyncData(
     () => `caso-${locale.value}-${slug.value}`,
-    () => getPageBySlug("casi.CasoSuccessoPage", slug.value),
+    async () => {
+        try {
+            return await getPageBySlug<any>("casi.CasoSuccessoPage", slug.value);
+        } catch (error) {
+            const fallback = successCases.find((item) => item.slug === slug.value);
+            if (!fallback) throw error;
+            const content = homepageCases.find((item) => item.slug === slug.value)?.content;
+            return {
+                ...fallback,
+                body: typeof content === "string" ? content : (content ?? []).join(""),
+                cover_image: { url: fallback.image, alt: fallback.title },
+                meta: {}
+            };
+        }
+    },
     { watch: [slug] }
 );
 
 if (!caso.value) {
-    throw createError({
-        statusCode: 404,
-        statusMessage: t("caseDetail.notFound"),
-        fatal: import.meta.client
-    });
+    throw cmsPageError(caseError.value, t("caseDetail.notFound"));
 }
 
 useSeoMeta({

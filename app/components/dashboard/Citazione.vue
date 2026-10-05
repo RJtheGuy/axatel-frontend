@@ -1,6 +1,9 @@
 <template>
     <section ref="sectionEl" class="citazione-section">
-        <div class="hero-grid" aria-hidden="true"></div>
+        <video class="hero-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true" ref="videoEl">
+            <source :src="heroVideoUrl" type="video/mp4" />
+        </video>
+        <div class="hero-video-overlay" aria-hidden="true"></div>
 
         <div class="hero-copy">
             <p v-if="text.kicker" class="hero-kicker">{{ text.kicker }}</p>
@@ -20,15 +23,12 @@
             </div>
         </div>
 
-        <div class="guardian" aria-hidden="true">
-            <div class="guardian-orbit guardian-orbit-outer"></div>
-            <div class="guardian-orbit guardian-orbit-inner"></div>
-        </div>
     </section>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from "vue";
+import heroVideoUrl from "@/assets/video/video_hero.mp4";
 
 // Texts of the first screen: Pagine → Home → "Prima schermata" in the CMS;
 // anything left empty there uses the built-in text in the visitor's language.
@@ -46,7 +46,9 @@ const text = computed(() => {
     const c = props.content ?? {};
     const secondary = pick(c.secondaryLabel, t("hero.ctaSecondary"));
     return {
-        kicker: pick(c.kicker, t("hero.kicker")),
+        // The kicker line shows only when one is written in the CMS
+        // (the new video hero has none by default).
+        kicker: c.kicker && c.kicker.trim() !== "-" ? c.kicker.trim() : "",
         titleBefore: pick(c.titleBefore, t("hero.titleBefore")),
         titleAccent: pick(c.titleAccent, t("hero.titleAccent")),
         titleAfter: pick(c.titleAfter, t("hero.titleAfter")),
@@ -62,6 +64,7 @@ const text = computed(() => {
 const link = (url: string) => (url.startsWith("/") ? localePath(url) : url);
 
 const sectionEl = ref<HTMLElement | null>(null);
+const videoEl = ref<HTMLVideoElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
 function emitQuoteVisibility(active: boolean): void {
@@ -73,6 +76,10 @@ function emitQuoteVisibility(active: boolean): void {
 }
 
 onMounted(() => {
+    // Visitors who ask for less motion see the first frame, not a loop.
+    if (videoEl.value && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        videoEl.value.pause();
+    }
     if (!sectionEl.value) return;
 
     observer = new IntersectionObserver(
@@ -102,60 +109,55 @@ onBeforeUnmount(() => {
     position: relative;
     z-index: 1;
     width: 100vw;
-    height: 100vh;
+    height: auto;
+    min-height: max(100vh, calc(50vh + 460px));
     min-height: 700px;
     isolation: isolate;
-    background: transparent;
+    background: #020712;
     overflow: hidden;
 }
 
-.citazione-section::before {
-    content: "";
+.hero-video,
+.hero-video-overlay {
     position: absolute;
     inset: 0;
-    z-index: -1;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
-    background-image: radial-gradient(circle, rgba(126, 205, 247, 0.42) 0 1px, transparent 1.5px);
-    background-size: 30px 30px;
-    mask-image: linear-gradient(90deg, transparent, #000 34%, #000 100%);
-    opacity: 0.35;
+}
+
+.hero-video {
+    z-index: -2;
+    object-fit: cover;
+    object-position: center;
+}
+
+.hero-video-overlay {
+    z-index: -1;
+    background:
+        linear-gradient(90deg, rgba(2, 7, 18, 0.58), rgba(2, 9, 18, 0.28) 62%, rgba(2, 9, 18, 0.14)),
+        linear-gradient(0deg, rgba(2, 7, 18, 0.46), transparent 72%);
 }
 
 .citazione-section::after {
     content: "";
     position: absolute;
-    right: -12vw;
-    bottom: -42vh;
-    width: 72vw;
-    height: 72vw;
-    border: 1px solid rgba(112, 198, 244, 0.12);
-    border-radius: 50%;
+    inset: 0;
+    z-index: 0;
     pointer-events: none;
-}
-
-.hero-grid {
-    position: absolute;
-    inset: auto 0 0;
-    height: 28vh;
-    background:
-        linear-gradient(rgba(92, 173, 218, 0.08) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(92, 173, 218, 0.08) 1px, transparent 1px);
-    background-size: 42px 42px;
-    mask-image: linear-gradient(transparent, #000);
-    transform: perspective(420px) rotateX(58deg) scale(1.35);
-    transform-origin: bottom;
-    opacity: 0.5;
+    background: linear-gradient(0deg, rgba(2, 7, 18, 0.12), transparent 40%);
 }
 
 .hero-copy {
     position: relative;
-    z-index: 3;
+    z-index: 1;
     display: flex;
-    width: min(60vw, 880px);
-    height: 100%;
-    padding: 15vh 0 12vh clamp(36px, 8vw, 140px);
+    width: min(92vw, 1400px);
+    min-height: max(100vh, calc(50vh + 460px));
+    height: auto;
+    padding: 50vh 0 5vh clamp(36px, 8vw, 140px);
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .hero-kicker {
@@ -168,28 +170,111 @@ onBeforeUnmount(() => {
 }
 
 .hero-copy h1 {
-    max-width: 790px;
+    max-width: 1100px;
     margin: 0;
     color: #fff;
-    font-size: clamp(2.6rem, 4.6vw, 5.2rem);
-    font-weight: 250 !important;
-    line-height: 1.02;
+    font-size: clamp(2.5rem, 4.5vw, 5.2rem);
+    font-weight: 220 !important;
+    line-height: 0.98;
     letter-spacing: 0;
     text-wrap: balance;
 }
 
 .hero-copy h1 span {
-    color: #8bd9ff;
+    color: #ca3d33;
     font-weight: 380;
+    white-space: nowrap;
 }
 
 .hero-intro {
-    max-width: 610px;
+    max-width: 900px;
     margin: 28px 0 0;
     color: var(--ax-color-text-secondary);
     font-size: clamp(1rem, 1.2vw, 1.18rem);
     font-weight: 320;
     line-height: 1.65;
+}
+
+.hero-status {
+    display: flex;
+    margin-top: 34px;
+    align-items: center;
+    gap: 10px;
+    color: var(--ax-color-text-muted);
+    font-size: 0.7rem;
+    font-weight: 450;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #4ce6a4;
+    box-shadow: 0 0 14px rgba(76, 230, 164, 0.9);
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+.status-separator {
+    width: 30px;
+    height: 1px;
+    margin: 0 4px;
+    background: rgba(198, 220, 239, 0.28);
+}
+
+.hero-index {
+    position: absolute;
+    right: 3vw;
+    bottom: 28px;
+    left: 3vw;
+    z-index: 3;
+    display: flex;
+    justify-content: space-between;
+    color: rgba(198, 220, 239, 0.48);
+    font-size: 0.62rem;
+    font-weight: 450;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+@keyframes statusPulse {
+    50% { opacity: 0.45; }
+}
+
+@media (max-width: 900px) {
+    .citazione-section {
+        min-height: 760px;
+    }
+
+    .hero-copy {
+        width: 78vw;
+        padding-left: 7vw;
+        min-height: max(100vh, calc(50vh + 460px));
+    }
+}
+
+@media (max-width: 640px) {
+    .citazione-section {
+        min-height: max(680px, 100svh, calc(50svh + 500px));
+    }
+
+    .hero-copy {
+        width: 100%;
+        padding: 50svh 7vw max(32px, 5svh);
+        min-height: max(100svh, calc(50svh + 500px));
+    }
+
+    .hero-copy h1 {
+        max-width: 94%;
+        font-size: clamp(2.2rem, 9vw, 3.2rem);
+    }
+
+    .hero-intro {
+        max-width: 92%;
+        font-size: 1.4rem;
+    }
+
 }
 
 .hero-actions {
@@ -239,140 +324,7 @@ onBeforeUnmount(() => {
     outline-offset: 3px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .hero-btn,
-    .hero-btn:hover {
-        transition: none;
-        transform: none;
-    }
-}
-
-.hero-status {
-    display: flex;
-    margin-top: 28px;
-    align-items: center;
-    gap: 10px;
-    color: var(--ax-color-text-muted);
-    font-size: 0.7rem;
-    font-weight: 450;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-
-.status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #4ce6a4;
-    box-shadow: 0 0 14px rgba(76, 230, 164, 0.9);
-    animation: statusPulse 2s ease-in-out infinite;
-}
-
-.status-separator {
-    width: 30px;
-    height: 1px;
-    margin: 0 4px;
-    background: rgba(198, 220, 239, 0.28);
-}
-
-.guardian {
-    position: absolute;
-    z-index: 2;
-    top: 50%;
-    right: -3vw;
-    width: min(55vw, 900px);
-    aspect-ratio: 1.25;
-    transform: translateY(-48%);
-}
-
-.guardian-orbit {
-    position: absolute;
-    border: 1px solid rgba(114, 204, 251, 0.2);
-    border-radius: 50%;
-}
-
-.guardian-orbit-outer {
-    inset: 4%;
-    animation: orbitSpin 28s linear infinite;
-}
-
-.guardian-orbit-outer::before,
-.guardian-orbit-inner::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: -4px;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #7bd4ff;
-    box-shadow: 0 0 14px rgba(123, 212, 255, 0.9);
-}
-
-.guardian-orbit-inner {
-    inset: 15%;
-    border-style: dashed;
-    opacity: 0.52;
-    animation: orbitSpin 20s linear infinite reverse;
-}
-
-.hero-index {
-    position: absolute;
-    right: 3vw;
-    bottom: 28px;
-    left: 3vw;
-    z-index: 3;
-    display: flex;
-    justify-content: space-between;
-    color: rgba(198, 220, 239, 0.48);
-    font-size: 0.62rem;
-    font-weight: 450;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-}
-
-@keyframes orbitSpin {
-    to { transform: rotate(360deg); }
-}
-
-@keyframes statusPulse {
-    50% { opacity: 0.45; }
-}
-
-@media (max-width: 900px) {
-    .citazione-section {
-        min-height: 760px;
-    }
-
-    .hero-copy {
-        width: 72vw;
-        padding-left: 7vw;
-    }
-
-    .guardian {
-        right: -22vw;
-        width: 72vw;
-        opacity: 0.6;
-    }
-}
-
 @media (max-width: 640px) {
-    .citazione-section {
-        height: 100svh;
-        min-height: 680px;
-    }
-
-    .hero-copy {
-        width: 100%;
-        padding: 96px 6vw 64px;
-        justify-content: flex-end;
-    }
-
-    .hero-copy h1 {
-        max-width: 100%;
-        font-size: clamp(2.2rem, 10.5vw, 3.4rem);
-    }
-
     .hero-actions {
         margin-top: 26px;
     }
@@ -381,17 +333,13 @@ onBeforeUnmount(() => {
         min-height: 46px;
         padding: 0 20px;
     }
+}
 
-    .hero-intro {
-        max-width: 92%;
-        font-size: 0.94rem;
-    }
-
-    .guardian {
-        top: 25%;
-        right: -18vw;
-        width: 96vw;
-        opacity: 0.42;
+@media (prefers-reduced-motion: reduce) {
+    .hero-btn,
+    .hero-btn:hover {
+        transition: none;
+        transform: none;
     }
 }
 

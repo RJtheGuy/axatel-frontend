@@ -1,7 +1,7 @@
 <template>
     <main class="mon-page">
         <header class="mon-hero">
-            <ArticleParticleHero :title="t('monitoring.title')" :asset-url="resolveImage('/immagini/ala.png')" />
+            <ArticleParticleHero :title="t('monitoring.title')" :asset-url="headerWing()" />
         </header>
 
         <div class="mon-light-stage">
@@ -224,12 +224,15 @@ useSeoMeta({
 <style scoped>
 /* Same visual language as casi/index.vue (Casi di successo). */
 .mon-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     overflow: hidden;
     background: var(--ax-color-bg-main);
 }
 
 .mon-hero {
+    flex-shrink: 0;
     position: relative;
     z-index: 2;
     min-height: calc(var(--ax-navbar-height, 74px) + 200px);
@@ -249,6 +252,7 @@ useSeoMeta({
 }
 
 .mon-light-stage {
+    flex: 1;
     color: #0b355b;
     background:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),

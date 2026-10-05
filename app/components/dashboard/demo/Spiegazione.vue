@@ -2,12 +2,15 @@
 import { computed } from "vue"
 
 // Same five steps as the solution pages ("process.steps" in the i18n files).
-const { t, tm, rt } = useI18n()
+const { t: translate, tm, rt } = useI18n()
+// The homepage shows these lines without a closing full stop.
+const noStop = (text: string) => text.replace(/\.\s*$/, "")
+const t = (key: string) => noStop(translate(key))
 const processSteps = computed(() =>
 	(tm("process.steps") as Array<{ title: unknown; text: unknown }>).map((step, index) => ({
 		number: String(index + 1).padStart(2, "0"),
 		title: rt(step.title as never),
-		description: rt(step.text as never)
+		description: noStop(rt(step.text as never))
 	}))
 )
 
