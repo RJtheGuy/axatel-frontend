@@ -3,27 +3,27 @@ const processSteps = [
 	{
 		number: "01",
 		title: "Programmiamo",
-		description: "Configuriamo sensori e firmware sulla misura reale da controllare."
+		description: "Configuriamo sensori e firmware sulla misura reale da controllare"
 	},
 	{
 		number: "02",
 		title: "Installiamo",
-		description: "Portiamo la tecnologia sul campo e la integriamo con l'infrastruttura."
+		description: "Portiamo la tecnologia sul campo e la integriamo con l'infrastruttura"
 	},
 	{
 		number: "03",
 		title: "Raccogliamo",
-		description: "Acquisiamo dati continui e affidabili da ogni punto monitorato."
+		description: "Acquisiamo dati continui e affidabili da ogni punto monitorato"
 	},
 	{
 		number: "04",
 		title: "Analizziamo",
-		description: "Trasformiamo i segnali in informazioni utili e soglie operative."
+		description: "Trasformiamo i segnali in informazioni utili e soglie operative"
 	},
 	{
 		number: "05",
 		title: "Automatizziamo",
-		description: "Attiviamo risposte immediate, come un semaforo rosso in caso di pericolo."
+		description: "Attiviamo risposte immediate, come un semaforo rosso in caso di pericolo"
 	}
 ];
 
@@ -37,10 +37,10 @@ function requestDemoScroll(): void {
 		<div class="process-content">
 			<header class="process-heading">
 				<p class="eyebrow">Dall'hardware alla decisione</p>
-				<h2 id="process-title">Gestiamo tutta la filiera.</h2>
+				<h2 id="process-title">Gestiamo tutta la filiera</h2>
 				<p class="lead">
 					Un unico processo connette il campo, i dati e le azioni. Progettiamo ogni
-					passaggio per trasformare una misura in una risposta concreta e tempestiva.
+					passaggio per trasformare una misura in una risposta concreta e tempestiva
 				</p>
 			</header>
 
@@ -61,7 +61,7 @@ function requestDemoScroll(): void {
 				<p>
 					L'evento raggiunge le piattaforme verticali, come <b>GeoAngel</b> e
 					<b>Angel Bridge</b>, e alimenta <b>AngelBPM</b>, dove ogni allarme attiva
-					procedure, responsabilità e interventi tracciabili.
+					procedure, responsabilità e interventi tracciabili
 				</p>
 			</div>
 		</div>

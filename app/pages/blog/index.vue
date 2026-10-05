@@ -14,7 +14,10 @@
                 <div class="page-kicker">Blog</div>
                 <p class="lead">{{ lead }}</p>
 
-                <p v-if="!posts.length" class="empty">
+                <p v-if="blogError" class="empty" role="alert">
+                    Gli articoli sono temporaneamente non disponibili. Riprova piu tardi.
+                </p>
+                <p v-else-if="!posts.length" class="empty">
                     Nessun articolo pubblicato al momento.
                 </p>
 
@@ -72,8 +75,8 @@ type PostItem = {
     slug: string;
 };
 
-const { data: blogData } = await useAsyncData("blog-list", () =>
-    getPage("blog.BlogPost", { order: "-date" }).catch(() => null)
+const { data: blogData, error: blogError } = await useAsyncData("blog-list", () =>
+    getPage("blog.BlogPost", { order: "-date" })
 );
 
 // Intro copy comes from BlogIndexPage.intro, editable in the admin —

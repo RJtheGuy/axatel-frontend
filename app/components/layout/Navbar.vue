@@ -293,7 +293,7 @@ onUnmounted(() => {
     z-index:1000;
 
     background:rgba(4, 13, 23, 0.72);
-    border-bottom:1px solid rgba(198, 220, 239, 0.12);
+    border-bottom:0;
     backdrop-filter:blur(18px);
     -webkit-backdrop-filter:blur(18px);
 
@@ -304,6 +304,17 @@ onUnmounted(() => {
         background-color .35s ease,
         backdrop-filter .35s ease,
         box-shadow .35s ease;
+}
+
+.navbar::after {
+    content:"";
+    position:absolute;
+    top:100%;
+    right:0;
+    left:0;
+    height:10px;
+    background:linear-gradient(to bottom, rgba(4, 13, 23, 0.72), transparent);
+    pointer-events:none;
 }
 
 .corporate-bar {

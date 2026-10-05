@@ -36,6 +36,7 @@
 import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
+import { solutionPages } from "../../data/contentPages";
 
 const { getPage, getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
@@ -74,11 +75,13 @@ const lead = computed(() => {
 });
 
 const items = computed<SolutionItem[]>(() =>
-    (solData.value?.items ?? []).map((p: any) => ({
+    solData.value ? solData.value.items.map((p: any) => ({
         title: p.title,
         icon: p.icon || "",
         description: p.short_description || "",
         slug: p.meta?.slug
+    })) : Object.values(solutionPages).map(page => ({
+        title: page.title, icon: "", description: page.introduction, slug: page.slug
     }))
 );
 

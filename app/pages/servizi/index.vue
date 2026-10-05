@@ -14,7 +14,10 @@
                 <div class="page-kicker">Come lo realizziamo</div>
                 <p class="lead">{{ lead }}</p>
 
-                <p v-if="!items.length" class="empty">
+                <p v-if="serviceError" class="empty" role="alert">
+                    I servizi sono temporaneamente non disponibili. Riprova piu tardi.
+                </p>
+                <p v-else-if="!items.length" class="empty">
                     Nessun servizio pubblicato al momento.
                 </p>
 
@@ -47,8 +50,8 @@ type ServiceItem = {
     slug: string;
 };
 
-const { data: svcData } = await useAsyncData("servizi-list", () =>
-    getPage("services.ServicePage", { order: "title" }).catch(() => null)
+const { data: svcData, error: serviceError } = await useAsyncData("servizi-list", () =>
+    getPage("services.ServicePage", { order: "title" })
 );
 
 const { data: indexPage } = await useAsyncData("servizi-index", () =>

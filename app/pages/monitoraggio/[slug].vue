@@ -26,6 +26,26 @@
                 <!-- MonitoringPage.body is a real StreamField(BODY_BLOCKS) —
                      same rendering path as Servizio/Blog, not plain v-html. -->
                 <div class="topic-body">
+                    <template v-if="fallbackPage">
+                        <section v-if="fallbackPage.feature">
+                            <h2>{{ fallbackPage.feature.name }}</h2>
+                            <p>{{ fallbackPage.feature.description }}</p>
+                            <a v-if="fallbackPage.feature.href" :href="fallbackPage.feature.href">
+                                {{ fallbackPage.feature.hrefLabel }}
+                            </a>
+                        </section>
+                        <section v-for="section in fallbackPage.sections" :key="section.title">
+                            <h2>{{ section.title }}</h2>
+                            <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
+                            <ul v-if="section.highlights?.length">
+                                <li v-for="highlight in section.highlights" :key="highlight">{{ highlight }}</li>
+                            </ul>
+                        </section>
+                        <p v-if="fallbackPage.cta">
+                            {{ fallbackPage.cta.text }}
+                            <NuxtLink :to="fallbackPage.cta.href">{{ fallbackPage.cta.label }}</NuxtLink>
+                        </p>
+                    </template>
                     <CmsBlockRenderer :blocks="topic.body ?? []" />
                 </div>
             </article>
@@ -37,6 +57,7 @@
 import { computed } from "vue";
 import { createError, useRoute, useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
+import { monitoringPages } from "../../data/monitoring";
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
@@ -60,17 +81,30 @@ const slug = computed(() => {
     return Array.isArray(s) ? s[0] : s;
 });
 
-const { data: raw } = await useAsyncData(
+const { data: raw, error: topicError } = await useAsyncData(
     () => `monitoraggio-topic-${slug.value}`,
-    () => getPageBySlug<any>("monitoring.MonitoringPage", slug.value as string).catch(() => null),
+    () => getPageBySlug<any>("monitoring.MonitoringPage", slug.value as string),
     { watch: [slug] }
 );
 
-if (!raw.value) {
-    throw createError({ statusCode: 404, statusMessage: "Argomento non trovato" });
+const fallbackPage = computed(() => topicError.value ? monitoringPages[String(slug.value)] : undefined);
+
+if (!raw.value && !fallbackPage.value) {
+    throw createError({
+        statusCode: topicError.value ? 503 : 404,
+        statusMessage: topicError.value ? "CMS temporaneamente non disponibile" : "Argomento non trovato"
+    });
 }
 
-const topic = computed<TopicData>(() => ({
+const topic = computed<TopicData>(() => fallbackPage.value ? {
+    title: fallbackPage.value.title,
+    icon: "",
+    description: fallbackPage.value.introduction,
+    image: fallbackPage.value.image || "",
+    image_alt: fallbackPage.value.imageAlt || "",
+    titleParticleImage: "",
+    body: []
+} : ({
     title: raw.value.title,
     icon: raw.value.icon || "",
     description: raw.value.short_description || "",

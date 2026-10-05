@@ -72,14 +72,17 @@ const slug = computed(() => {
     return Array.isArray(s) ? s[0] : s;
 });
 
-const { data: raw } = await useAsyncData(
+const { data: raw, error: postError } = await useAsyncData(
     () => `blog-post-${slug.value}`,
-    () => getPageBySlug<any>("blog.BlogPost", slug.value as string).catch(() => null),
+    () => getPageBySlug<any>("blog.BlogPost", slug.value as string),
     { watch: [slug] }
 );
 
 if (!raw.value) {
-    throw createError({ statusCode: 404, statusMessage: "Articolo non trovato" });
+    throw createError({
+        statusCode: postError.value ? 503 : 404,
+        statusMessage: postError.value ? "CMS temporaneamente non disponibile" : "Articolo non trovato"
+    });
 }
 
 const post = computed<BlogPostData>(() => ({

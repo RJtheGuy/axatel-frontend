@@ -5,6 +5,17 @@ const publicApiOrigin = publicApiBase.replace(/\/api\/v\d+\/?$/, '')
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
+  css: ['~/assets/scss/main.scss'],
+  hooks: {
+    'build:manifest'(manifest) {
+      for (const entry of Object.values(manifest)) {
+        if (entry.resourceType === 'video') {
+          entry.prefetch = false
+          entry.preload = false
+        }
+      }
+    }
+  },
 
   // Env vars only reach runtimeConfig if the key is declared here.
   // NUXT_API_INTERNAL_BASE  → runtimeConfig.apiInternalBase

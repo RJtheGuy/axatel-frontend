@@ -28,7 +28,7 @@
                     </div>
 
                     <div class="case-body">
-                        <h3>{{ item.title }}</h3>
+                        <!-- <h3>{{ item.title }}</h3> -->
                         <p>{{ item.description }}</p>
                     </div>
                 </NuxtLink>
@@ -127,26 +127,9 @@ function slugify(value: string): string {
         .slice(0, 80);
 }
 
-function buildArticleRoute(item: SuccessCase): { path: string; query: { payload: string } } {
+function buildArticleRoute(item: SuccessCase): string {
     const slug = item.slug && item.slug.length > 0 ? item.slug : slugify(item.title);
-    const payload = encodeURIComponent(
-        JSON.stringify({
-            title: item.title,
-            description: item.description,
-            image: item.image || "",
-            client: item.client || "",
-            category: item.category || "",
-            tags: item.tags || [],
-            content: item.content && item.content.length > 0
-                ? item.content
-                : [item.description]
-        })
-    );
-
-    return {
-        path: `/articoli/${slug}`,
-        query: { payload }
-    };
+    return `/casi/${slug}`;
 }
 
 function emitCaseVisibility(active: boolean): void {

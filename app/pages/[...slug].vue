@@ -47,7 +47,7 @@ const { data: page, error } = await useAsyncData(
                 statusCode: err?.statusCode ?? err?.response?.status,
                 data: err?.data ?? err?.response?._data
             });
-            return null;
+            throw err;
         }
     },
     { watch: [path] }
@@ -55,8 +55,8 @@ const { data: page, error } = await useAsyncData(
 
 if (!page.value) {
     throw createError({
-        statusCode: 404,
-        statusMessage: "Pagina non trovata",
+        statusCode: error.value && error.value.statusCode !== 404 ? 503 : 404,
+        statusMessage: error.value && error.value.statusCode !== 404 ? "CMS temporaneamente non disponibile" : "Pagina non trovata",
         fatal: true
     });
 }

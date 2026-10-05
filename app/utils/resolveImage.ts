@@ -1,14 +1,12 @@
 // app/utils/resolveImage.ts
 //
-// Single source of truth for resolving frontend image paths to backend media.
+// Runtime CMS images and context-free bundled images use separate resolvers.
 // Nuxt auto-imports everything in app/utils/, so `resolveImage(...)` is
 // usable directly in any component template or <script setup>.
 //
 // Covers every subfolder under assets/immagini/ (casi-di-successo/,
-// flat top-level files like Angel.png, etc.) in one glob, so every data
-// file (contentPages.ts, monitoring.ts, team.ts, articleSettings.json)
-// and every component can resolve images the same way successCases.ts
-// already did for its own narrower case.
+// flat top-level files like Angel.png, etc.) in one glob. Static data
+// modules must use resolveBundledImage, which needs no Nuxt context.
 
 import titleWingImage from "../assets/immagini/ala-axatel.png";
 import dashboardWingImage from "../assets/immagini/ala.png";
@@ -20,6 +18,18 @@ const images = import.meta.glob<string>(
 
 export const DEFAULT_WING_IMAGE = titleWingImage;
 export const DASHBOARD_WING_IMAGE = dashboardWingImage;
+
+export function resolveBundledImage(pathOrFilename: string): string {
+    if (/^(https?:)?\/\//.test(pathOrFilename) || pathOrFilename.startsWith("data:")) {
+        return pathOrFilename;
+    }
+    const clean = pathOrFilename.replace(/^\/?immagini\//, "").replace(/^\//, "");
+    const match = Object.entries(images).find(([path]) => path.endsWith(`/${clean}`));
+    if (!match) {
+        throw new Error(`[resolveBundledImage] Image not found: ${pathOrFilename}`);
+    }
+    return match[1];
+}
 
 export function resolveImage(pathOrFilename: string | undefined | null): string {
     const config = useRuntimeConfig();

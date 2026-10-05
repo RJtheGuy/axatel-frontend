@@ -35,6 +35,7 @@
                  Do not "fix" this to {{ }} — it would render escaped
                  markup as literal text. -->
             <div v-if="caso?.body" class="caso-body" v-html="caso.body"></div>
+            <p v-else-if="caso?.description" class="caso-body">{{ caso.description }}</p>
 
             <NuxtLink class="caso-back ax-cta-outline" to="/casi">
                 Tutti i casi di successo
@@ -45,6 +46,8 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { successCases } from "../../data/successCases";
+import { homepageCases } from "../../data/homepageCases";
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
@@ -52,16 +55,30 @@ const { imageUrl } = useCmsImage();
 
 const slug = computed(() => String(route.params.slug));
 
-const { data: caso } = await useAsyncData(
+const { data: caso, error: caseError } = await useAsyncData(
     () => `caso-${slug.value}`,
-    () => getPageBySlug("casi.CasoSuccessoPage", slug.value),
+    async () => {
+        try {
+            return await getPageBySlug("casi.CasoSuccessoPage", slug.value);
+        } catch (error) {
+            const fallback = successCases.find(item => item.slug === slug.value);
+            if (!fallback) throw error;
+            const content = homepageCases.find(item => item.slug === slug.value)?.content;
+            return {
+                ...fallback,
+                body: typeof content === "string" ? content : (content ?? []).join(""),
+                cover_image: { url: fallback.image, alt: fallback.title },
+                meta: {}
+            };
+        }
+    },
     { watch: [slug] }
 );
 
 if (!caso.value) {
     throw createError({
-        statusCode: 404,
-        statusMessage: "Caso di successo non trovato",
+        statusCode: caseError.value ? 503 : 404,
+        statusMessage: caseError.value ? "CMS temporaneamente non disponibile" : "Caso di successo non trovato",
         fatal: true
     });
 }

@@ -24,7 +24,7 @@ const defaultFrasi = [
 ];
 
 const DEFAULT_QUOTE_TEXT = "Tutti noi di Axatel abbiamo un obiettivo in comune:\nabbiamo a cuore ciò che facciamo e l'impatto positivo che generiamo per i nostri partner e per le comunità in cui viviamo e operiamo.\nPer noi e sempre una questione personale";
-const DEFAULT_CASES_LOGO_ASSET = resolveImage("/immagini/angelo.png");
+const DEFAULT_CASES_LOGO_ASSET = DASHBOARD_WING_IMAGE;
 
 
 const resolveFrasi = (frasi?: string[]): string[] => {
@@ -117,7 +117,7 @@ function applySectionState(next: SectionKey): void {
     }
 
     engine.setFormationSuppressed(false);
-    engine.setForcedLogoAsset(resolveCasesLogoAsset(props.casesLogoAsset));
+    engine.setForcedLogoAsset(resolveCasesLogoAsset(props.casesLogoAsset), "forced-cases-logo");
 }
 
 function updateSectionRefs(): void {

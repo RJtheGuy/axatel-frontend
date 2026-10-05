@@ -7,7 +7,7 @@ export function useCms() {
 
     /** List pages of a given Wagtail page type. */
     async function getPage<T = any>(type: string, params: Record<string, any> = {}) {
-        return await $fetch<{ items: T[] }>(`${base}/pages/`, {
+        return await request<{ items: T[] }>(`${base}/pages/`, {
             params: { type, fields: '*', ...params },
         })
     }
@@ -18,7 +18,7 @@ export function useCms() {
      * instead of unwrapping undefined.
      */
     async function getPageBySlug<T = any>(type: string, slug: string): Promise<T | null> {
-        const res = await $fetch<{ items: T[] }>(`${base}/pages/`, {
+        const res = await request<{ items: T[] }>(`${base}/pages/`, {
             params: { type, fields: '*', slug },
         })
         return res?.items?.[0] ?? null
@@ -36,14 +36,23 @@ export function useCms() {
      * warning from BlockRenderer.
      */
     async function findByPath<T = any>(htmlPath: string) {
-        return await $fetch<T>(`${base}/pages/find/`, {
+        return await request<T>(`${base}/pages/find/`, {
             params: { html_path: htmlPath, fields: '*' },
         })
     }
 
     /** Active site theme (falls back to DEFAULT_THEME server-side). */
     async function getActiveTheme<T = any>() {
-        return await $fetch<T>(`${base}/themes/active/`)
+        return await request<T>(`${base}/themes/active/`)
+    }
+
+    async function request<T>(url: string, options: { params?: Record<string, any> } = {}): Promise<T> {
+        try {
+            return await $fetch<T>(url, { ...options, timeout: 5000, retry: 0 })
+        } catch (error) {
+            console.error("[cms] Request failed:", url, error)
+            throw error
+        }
     }
 
     return { getPage, getPageBySlug, findByPath, getActiveTheme }

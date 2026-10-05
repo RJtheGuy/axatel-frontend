@@ -4,6 +4,7 @@ uniform vec3 uColor;
 uniform float uOpacity;
 
 varying float vDepth;
+varying float vParticleOpacity;
 
 void main() {
 
@@ -21,6 +22,6 @@ void main() {
 
     gl_FragColor = vec4(
         uColor,
-        alpha * uOpacity
+        alpha * uOpacity * vParticleOpacity
     );
 }

@@ -45,6 +45,7 @@
 import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
+import { monitoringPages, monitoringOrder } from "../../data/monitoring";
 
 const { getPage, getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
@@ -76,7 +77,7 @@ const lead = computed(() => {
 });
 
 const topics = computed<TopicItem[]>(() =>
-    (monData.value?.items ?? []).map((p: any) => ({
+    monData.value ? monData.value.items.map((p: any) => ({
         title: p.title,
         icon: p.icon || "",
         description: p.short_description || "",
@@ -85,7 +86,14 @@ const topics = computed<TopicItem[]>(() =>
         image_alt: p.cover_image?.alt || "",
         tags: p.tags || [],
         slug: p.meta?.slug
-    }))
+    })) : monitoringOrder.map(slug => {
+        const page = monitoringPages[slug]!;
+        return {
+            title: page.title, icon: "", description: page.introduction,
+            category: page.group, image: page.image || "",
+            image_alt: page.imageAlt || "", tags: [], slug
+        };
+    })
 );
 
 useSeoMeta({

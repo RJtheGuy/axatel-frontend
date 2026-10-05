@@ -19,11 +19,11 @@
         <div class="window-header">
             <div class="window-title">
                 <img
-    :src="resolveImage('/immagini/Angel.png')"
-    alt=""
-    width="38"
-    height="38"
-/>
+                    :src="angelBpmLogo"
+                    alt=""
+                    width="38"
+                    height="38"
+                />
                 <span>Angel BPM</span>
             </div>
 
@@ -186,6 +186,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue"
 import alarmProcedures from "~/data/alarmProcedures.json"
+import angelBpmLogo from "@/assets/immagini/Angel.png"
 type ECharts = import("echarts").ECharts
 type EChartsModule = typeof import("echarts")
 

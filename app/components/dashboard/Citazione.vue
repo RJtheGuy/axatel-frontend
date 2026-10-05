@@ -1,32 +1,32 @@
 <template>
     <section ref="sectionEl" class="citazione-section">
-        <div class="hero-grid" aria-hidden="true"></div>
+        <video class="hero-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true">
+            <source :src="heroVideoUrl" type="video/mp4" />
+        </video>
+        <div class="hero-video-overlay" aria-hidden="true"></div>
 
         <div class="hero-copy">
-            <p class="hero-kicker">Tecnologia che protegge</p>
+            <!-- <p class="hero-kicker">Tecnologia che protegge</p> -->
             <h1>Sistemi di monitoraggio <span>real-time</span> per la riduzione del rischio</h1>
             <p class="hero-intro">
                 Dati, automazione e controllo continuo per anticipare gli eventi e proteggere
                 infrastrutture, territori e persone.
             </p>
 
-            <div class="hero-status" aria-label="Monitoraggio attivo">
+            <!-- <div class="hero-status" aria-label="Monitoraggio attivo">
                 <span class="status-dot"></span>
                 <span>Monitoraggio attivo</span>
                 <span class="status-separator"></span>
                 <span>24 / 7</span>
-            </div>
+            </div> -->
         </div>
 
-        <div class="guardian" aria-hidden="true">
-            <div class="guardian-orbit guardian-orbit-outer"></div>
-            <div class="guardian-orbit guardian-orbit-inner"></div>
-        </div>
     </section>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
+import heroVideoUrl from "@/assets/video/video_hero.mp4";
 
 const sectionEl = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
@@ -69,60 +69,55 @@ onBeforeUnmount(() => {
     position: relative;
     z-index: 1;
     width: 100vw;
-    height: 100vh;
+    height: auto;
+    min-height: max(100vh, calc(50vh + 460px));
     min-height: 700px;
     isolation: isolate;
-    background: transparent;
+    background: #020712;
     overflow: hidden;
 }
 
-.citazione-section::before {
-    content: "";
+.hero-video,
+.hero-video-overlay {
     position: absolute;
     inset: 0;
-    z-index: -1;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
-    background-image: radial-gradient(circle, rgba(126, 205, 247, 0.42) 0 1px, transparent 1.5px);
-    background-size: 30px 30px;
-    mask-image: linear-gradient(90deg, transparent, #000 34%, #000 100%);
-    opacity: 0.35;
+}
+
+.hero-video {
+    z-index: -2;
+    object-fit: cover;
+    object-position: center;
+}
+
+.hero-video-overlay {
+    z-index: -1;
+    background:
+        linear-gradient(90deg, rgba(2, 7, 18, 0.58), rgba(2, 9, 18, 0.28) 62%, rgba(2, 9, 18, 0.14)),
+        linear-gradient(0deg, rgba(2, 7, 18, 0.46), transparent 72%);
 }
 
 .citazione-section::after {
     content: "";
     position: absolute;
-    right: -12vw;
-    bottom: -42vh;
-    width: 72vw;
-    height: 72vw;
-    border: 1px solid rgba(112, 198, 244, 0.12);
-    border-radius: 50%;
+    inset: 0;
+    z-index: 0;
     pointer-events: none;
-}
-
-.hero-grid {
-    position: absolute;
-    inset: auto 0 0;
-    height: 28vh;
-    background:
-        linear-gradient(rgba(92, 173, 218, 0.08) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(92, 173, 218, 0.08) 1px, transparent 1px);
-    background-size: 42px 42px;
-    mask-image: linear-gradient(transparent, #000);
-    transform: perspective(420px) rotateX(58deg) scale(1.35);
-    transform-origin: bottom;
-    opacity: 0.5;
+    background: linear-gradient(0deg, rgba(2, 7, 18, 0.12), transparent 40%);
 }
 
 .hero-copy {
     position: relative;
-    z-index: 3;
+    z-index: 1;
     display: flex;
-    width: min(58vw, 820px);
-    height: 100%;
-    padding: 15vh 0 12vh clamp(36px, 8vw, 140px);
+    width: min(92vw, 1400px);
+    min-height: max(100vh, calc(50vh + 460px));
+    height: auto;
+    padding: 50vh 0 5vh clamp(36px, 8vw, 140px);
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .hero-kicker {
@@ -135,10 +130,10 @@ onBeforeUnmount(() => {
 }
 
 .hero-copy h1 {
-    max-width: 790px;
+    max-width: 1100px;
     margin: 0;
     color: #fff;
-    font-size: clamp(3rem, 5.6vw, 6.4rem);
+    font-size: clamp(2.5rem, 4.5vw, 5.2rem);
     font-weight: 220 !important;
     line-height: 0.98;
     letter-spacing: 0;
@@ -146,12 +141,13 @@ onBeforeUnmount(() => {
 }
 
 .hero-copy h1 span {
-    color: #8bd9ff;
+    color: #ca3d33;
     font-weight: 380;
+    white-space: nowrap;
 }
 
 .hero-intro {
-    max-width: 610px;
+    max-width: 900px;
     margin: 28px 0 0;
     color: var(--ax-color-text-secondary);
     font-size: clamp(1rem, 1.2vw, 1.18rem);
@@ -187,47 +183,6 @@ onBeforeUnmount(() => {
     background: rgba(198, 220, 239, 0.28);
 }
 
-.guardian {
-    position: absolute;
-    z-index: 2;
-    top: 50%;
-    right: -3vw;
-    width: min(55vw, 900px);
-    aspect-ratio: 1.25;
-    transform: translateY(-48%);
-}
-
-.guardian-orbit {
-    position: absolute;
-    border: 1px solid rgba(114, 204, 251, 0.2);
-    border-radius: 50%;
-}
-
-.guardian-orbit-outer {
-    inset: 4%;
-    animation: orbitSpin 28s linear infinite;
-}
-
-.guardian-orbit-outer::before,
-.guardian-orbit-inner::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: -4px;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #7bd4ff;
-    box-shadow: 0 0 14px rgba(123, 212, 255, 0.9);
-}
-
-.guardian-orbit-inner {
-    inset: 15%;
-    border-style: dashed;
-    opacity: 0.52;
-    animation: orbitSpin 20s linear infinite reverse;
-}
-
 .hero-index {
     position: absolute;
     right: 3vw;
@@ -243,10 +198,6 @@ onBeforeUnmount(() => {
     text-transform: uppercase;
 }
 
-@keyframes orbitSpin {
-    to { transform: rotate(360deg); }
-}
-
 @keyframes statusPulse {
     50% { opacity: 0.45; }
 }
@@ -257,45 +208,33 @@ onBeforeUnmount(() => {
     }
 
     .hero-copy {
-        width: 72vw;
+        width: 78vw;
         padding-left: 7vw;
-    }
-
-    .guardian {
-        right: -22vw;
-        width: 72vw;
-        opacity: 0.6;
+        min-height: max(100vh, calc(50vh + 460px));
     }
 }
 
 @media (max-width: 640px) {
     .citazione-section {
-        height: 100svh;
-        min-height: 680px;
+        min-height: max(680px, 100svh, calc(50svh + 500px));
     }
 
     .hero-copy {
         width: 100%;
-        padding: 110px 7vw 110px;
-        justify-content: flex-end;
+        padding: 50svh 7vw max(32px, 5svh);
+        min-height: max(100svh, calc(50svh + 500px));
     }
 
     .hero-copy h1 {
         max-width: 94%;
-        font-size: clamp(2.5rem, 12vw, 4rem);
+        font-size: clamp(2.2rem, 9vw, 3.2rem);
     }
 
     .hero-intro {
         max-width: 92%;
-        font-size: 0.94rem;
+        font-size: 1.4rem;
     }
 
-    .guardian {
-        top: 25%;
-        right: -18vw;
-        width: 96vw;
-        opacity: 0.42;
-    }
 }
 
 </style>

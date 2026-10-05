@@ -35,16 +35,16 @@
                             </div>
 
                             <div class="case-content">
-                                <div class="case-kicker">{{ item.category }}</div>
-                                <h2>{{ item.title }}</h2>
+                                <!-- <div class="case-kicker">{{ item.category }}</div>
+                                <h2>{{ item.title }}</h2> -->
                                 <p>{{ item.description }}</p>
 
-                                <div class="case-meta">
+                                <!-- <div class="case-meta">
                                     <span>{{ item.client }}</span>
                                     <div class="case-tags">
                                         <small v-for="tag in item.tags" :key="tag">{{ tag }}</small>
                                     </div>
-                                </div>
+                                </div> -->
                             </div>
                         </NuxtLink>
                     </article>
@@ -58,6 +58,7 @@
 import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
+import { successCases } from "../../data/successCases";
 
 const { getPage, getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
@@ -72,22 +73,25 @@ type CaseItem = {
     slug: string;
 };
 
-const { data: casiData } = await useAsyncData("casi-list", () =>
-    getPage("casi.CasoSuccessoPage", { order: "-first_published_at" }).catch(() => null)
+const { data: casiData, error: casesError } = await useAsyncData("casi-list", () =>
+    getPage("casi.CasoSuccessoPage", { order: "-first_published_at" })
 );
 
 // Intro copy now comes from CasiIndexPage.intro, editable in the admin.
 const { data: indexPage } = await useAsyncData("casi-index", () =>
-    getPageBySlug("casi.CasiIndexPage", "casi").catch(() => null)
+    getPageBySlug("casi.CasiIndexPage", "casi")
 );
 
 const DEFAULT_LEAD =
     "Progetti, tecnologie e applicazioni sul campo per infrastrutture piu sicure, monitorate e connesse.";
 
-const lead = computed(() => indexPage.value?.intro?.trim() || DEFAULT_LEAD);
+const lead = computed(() => {
+    const intro = indexPage.value?.intro;
+    return typeof intro === "string" && intro.trim() ? intro : DEFAULT_LEAD;
+});
 
 const cases = computed<CaseItem[]>(() =>
-    (casiData.value?.items ?? []).map((c: any) => ({
+    casiData.value ? casiData.value.items.map((c: any) => ({
         title: c.title,
         client: c.client || "",
         category: c.category || "",
@@ -95,7 +99,7 @@ const cases = computed<CaseItem[]>(() =>
         description: c.description || "",
         tags: c.tags || [],
         slug: c.meta?.slug
-    }))
+    })) : casesError.value ? successCases : []
 );
 
 /*

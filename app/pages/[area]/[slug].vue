@@ -43,7 +43,7 @@ const isCmsBacked = computed(() => !(area.value in contentAreas));
 
 const { findByPath } = useCms();
 
-const { data: cmsPage } = await useAsyncData(
+const { data: cmsPage, error: cmsError } = await useAsyncData(
     () => `area-cms-${area.value}-${slug.value}`,
     async () => {
         if (!isCmsBacked.value) return null;
@@ -55,14 +55,17 @@ const { data: cmsPage } = await useAsyncData(
                 statusCode: err?.statusCode ?? err?.response?.status,
                 data: err?.data ?? err?.response?._data
             });
-            return null;
+            throw err;
         }
     },
     { watch: [area, slug] }
 );
 
 if (isCmsBacked.value && !cmsPage.value) {
-    throw createError({ statusCode: 404, statusMessage: "Pagina non trovata" });
+    throw createError({
+        statusCode: cmsError.value && cmsError.value.statusCode !== 404 ? 503 : 404,
+        statusMessage: cmsError.value && cmsError.value.statusCode !== 404 ? "CMS temporaneamente non disponibile" : "Pagina non trovata"
+    });
 }
 
 // ── Legacy branch (unchanged) — only evaluated when isCmsBacked is false ──

@@ -1,5 +1,5 @@
 import type { ContentPageData } from "../types/contentPage";
-import { resolveImage } from "../utils/resolveImage";
+import { resolveBundledImage as resolveImage } from "../utils/resolveImage";
 
 type ContentArea = "soluzioni" | "approfondimenti" | "azienda";
 

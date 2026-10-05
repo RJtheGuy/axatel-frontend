@@ -122,8 +122,7 @@
             <svg v-if="!open" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
                 <path
                     fill="currentColor"
-                    d="M12 3C7 3 3 6.4 3 10.6c0 2.3 1.2 4.4 3.2 5.8L5.5 20l3.7-1.9c.9.2 1.8.3 2.8.3
-                       5 0 9-3.4 9-7.8S17 3 12 3z"
+                    d="M12 3C7 3 3 6.4 3 10.6c0 2.3 1.2 4.4 3.2 5.8L5.5 20l3.7-1.9c.9.2 1.8.3 2.8.3 5 0 9-3.4 9-7.8S17 3 12 3z"
                 />
             </svg>
             <svg v-else viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
