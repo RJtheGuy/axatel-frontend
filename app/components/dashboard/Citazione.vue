@@ -1,6 +1,6 @@
 <template>
     <section ref="sectionEl" class="citazione-section">
-        <video class="hero-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true" ref="videoEl">
+        <video class="hero-video" autoplay muted loop playsinline preload="metadata" :poster="heroPosterUrl" aria-hidden="true" ref="videoEl">
             <source :src="heroVideoUrl" type="video/mp4" />
         </video>
         <div class="hero-video-overlay" aria-hidden="true"></div>
@@ -29,6 +29,9 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from "vue";
 import heroVideoUrl from "@/assets/video/video_hero.mp4";
+// First frame of the video: shown until the video plays, so the hero is
+// never a dark empty box.
+import heroPosterUrl from "@/assets/video/hero-poster.webp";
 
 // Texts of the first screen: Pagine → Home → "Prima schermata" in the CMS;
 // anything left empty there uses the built-in text in the visitor's language.
@@ -75,10 +78,48 @@ function emitQuoteVisibility(active: boolean): void {
     );
 }
 
+// The "autoplay" attribute alone only works reliably on a full page load.
+// When the visitor comes back to the homepage by clicking a link (the logo,
+// the menu), the video is created by JavaScript and browsers may leave it
+// stopped. So the page starts it itself: muted (required for autoplay), and
+// again on the first click, tap, key or scroll if the browser refused, or
+// when the tab becomes visible again.
+const UNLOCK_EVENTS = ["pointerdown", "keydown", "scroll", "touchstart"] as const;
+let reducedMotion = false;
+
+function startVideo(): void {
+    const video = videoEl.value;
+    if (!video || reducedMotion || !video.paused) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute("muted", "");
+    const attempt = video.play();
+    if (attempt && typeof attempt.catch === "function") {
+        attempt.then(removeUnlock).catch(addUnlock);
+    }
+}
+
+function addUnlock(): void {
+    for (const name of UNLOCK_EVENTS) window.addEventListener(name, startVideo, { passive: true, once: true });
+}
+
+function removeUnlock(): void {
+    for (const name of UNLOCK_EVENTS) window.removeEventListener(name, startVideo);
+}
+
+function onVisibility(): void {
+    if (document.visibilityState === "visible") startVideo();
+}
+
 onMounted(() => {
     // Visitors who ask for less motion see the first frame, not a loop.
-    if (videoEl.value && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (videoEl.value && reducedMotion) {
         videoEl.value.pause();
+    } else if (videoEl.value) {
+        videoEl.value.addEventListener("canplay", startVideo);
+        startVideo();
+        document.addEventListener("visibilitychange", onVisibility);
     }
     if (!sectionEl.value) return;
 
@@ -99,6 +140,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    removeUnlock();
+    document.removeEventListener("visibilitychange", onVisibility);
+    videoEl.value?.removeEventListener("canplay", startVideo);
     observer?.disconnect();
     emitQuoteVisibility(false);
 });
