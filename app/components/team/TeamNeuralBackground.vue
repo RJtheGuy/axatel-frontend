@@ -86,6 +86,10 @@ function createParticles(): void {
 
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(positions, 3));
+    // The shared particle shader (also used by the homepage) multiplies each
+    // particle by its own "aOpacity"; without it every particle would be
+    // invisible, so here they all get full opacity.
+    geometry.setAttribute("aOpacity", new BufferAttribute(new Float32Array(positions.length / 3).fill(1), 1));
     const material = new ShaderMaterial({
         vertexShader: renderVertexShader,
         fragmentShader: renderFragmentShader,
