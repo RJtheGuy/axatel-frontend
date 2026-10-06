@@ -12,7 +12,20 @@
                 <p class="lead">{{ lead }}</p>
 
                 <p v-if="blogError" class="empty" role="alert">{{ t("errors.unavailable") }}</p>
-                <p v-else-if="!posts.length" class="empty">{{ t("blog.empty") }}</p>
+                <!-- No article yet: a "coming soon" panel instead of an empty
+                     page. Title and text: Pagine → News → "Quando non ci
+                     sono news" (empty = the built-in text, translated). -->
+                <section v-else-if="!posts.length" class="news-empty" aria-labelledby="news-empty-title">
+                    <div class="news-empty-glow" aria-hidden="true"></div>
+                    <img :src="headerWing()" alt="" class="news-empty-wings" width="180" height="164" decoding="async" />
+                    <span class="news-empty-kicker"><span class="news-empty-dot" aria-hidden="true"></span>{{ t("blog.emptyKicker") }}</span>
+                    <h2 id="news-empty-title">{{ emptyTitle }}</h2>
+                    <p>{{ emptyText }}</p>
+                    <div class="news-empty-actions">
+                        <NuxtLink :to="localePath('/casi')" class="news-empty-btn is-primary">{{ t("blog.emptyCases") }} <span aria-hidden="true">→</span></NuxtLink>
+                        <NuxtLink :to="localePath('/contatti')" class="news-empty-btn is-ghost">{{ t("blog.emptyContact") }}</NuxtLink>
+                    </div>
+                </section>
 
                 <div v-else class="blog-grid">
                     <article v-for="item in posts" :key="item.slug" class="post-card">
@@ -91,6 +104,12 @@ const lead = computed(() => {
     if (indexPage.value?.__fallback) return t("blog.lead");
     return typeof intro === "string" && intro.trim().length > 0 ? intro : t("blog.lead");
 });
+
+// "Quando non ci sono news" on the News index page, else the built-in text.
+const fromIndex = (field: "empty_title" | "empty_text") =>
+    (!indexPage.value?.__fallback && String(indexPage.value?.[field] || "").trim()) || "";
+const emptyTitle = computed(() => fromIndex("empty_title") || t("blog.emptyTitle"));
+const emptyText = computed(() => fromIndex("empty_text") || t("blog.emptyText"));
 
 const posts = computed<PostItem[]>(() =>
     (blogData.value?.items ?? []).map((p: any) => ({
@@ -203,6 +222,135 @@ useSeoMeta({
 .empty {
     color: #667f97;
     padding: 40px 0;
+}
+
+/* "Coming soon" panel while no article is published. */
+.news-empty {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin-top: 8px;
+    padding: clamp(40px, 7vw, 72px) clamp(20px, 5vw, 56px);
+    border-radius: 22px;
+    text-align: center;
+    color: #e8f2ff;
+    background: linear-gradient(150deg, #071a2e 0%, #020712 58%, #0b1d33 100%);
+    box-shadow: 0 24px 60px rgba(2, 7, 18, 0.28);
+}
+
+.news-empty-glow {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(circle at 50% 30%, rgba(76, 154, 255, 0.28), transparent 55%),
+        radial-gradient(circle at 80% 90%, rgba(234, 63, 48, 0.18), transparent 45%);
+}
+
+.news-empty-wings {
+    width: clamp(120px, 18vw, 180px);
+    height: auto;
+    filter: drop-shadow(0 0 18px rgba(120, 190, 255, 0.55));
+}
+
+.news-empty-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border: 1px solid rgba(255, 140, 127, 0.55);
+    border-radius: 999px;
+    color: #ff8a7c;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.news-empty-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ea3f30;
+    box-shadow: 0 0 0 0 rgba(234, 63, 48, 0.6);
+    animation: news-empty-pulse 1.8s ease-out infinite;
+}
+
+@keyframes news-empty-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(234, 63, 48, 0.6); }
+    70% { box-shadow: 0 0 0 10px rgba(234, 63, 48, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(234, 63, 48, 0); }
+}
+
+.news-empty h2 {
+    margin: 4px 0 0;
+    color: #ffffff;
+    font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.news-empty p {
+    max-width: 620px;
+    margin: 0;
+    color: #c6dcef;
+    font-size: 1.05rem;
+    line-height: 1.7;
+}
+
+.news-empty-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.news-empty-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 22px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.news-empty-btn.is-primary {
+    background: #c52317;
+    color: #fff;
+}
+
+.news-empty-btn.is-primary:hover {
+    background: #ea3f30;
+    transform: translateY(-1px);
+}
+
+.news-empty-btn.is-ghost {
+    border: 1px solid rgba(198, 220, 239, 0.45);
+    color: #e8f2ff;
+}
+
+.news-empty-btn.is-ghost:hover {
+    border-color: #e8f2ff;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.news-empty-btn:focus-visible {
+    outline: 2px solid #ff8a7c;
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .news-empty-dot { animation: none; }
+    .news-empty-btn { transition: none; }
 }
 
 .blog-grid {

@@ -30,6 +30,7 @@
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import DashboardHeroParticelleSection from "../components/dashboard/HeroParticelle.vue";
 import { homepageCases } from "../data/homepageCases";
+import { byEventDate } from "../utils/caseOrder";
 
 const DashboardDemoSection = defineAsyncComponent(() => import("../components/dashboard/Demo.vue"));
 const DashboardDemoSpiegazione = defineAsyncComponent(() => import("../components/dashboard/demo/Spiegazione.vue"));
@@ -345,7 +346,8 @@ const { getPage } = useCms();
 
 async function loadCasiFromCms(): Promise<void> {
     try {
-        const res = await getPage<any>("casi.CasoSuccessoPage", { order: "-first_published_at" });
+        // Most recent project first ("Data del progetto"), as on /casi.
+        const res = await getPage<any>("casi.CasoSuccessoPage", { order: "-first_published_at" }, { all: true, sort: byEventDate });
         if (!res?.items?.length) return;
 
         dashboardConfig.successCases.items = res.items.map((page) => ({

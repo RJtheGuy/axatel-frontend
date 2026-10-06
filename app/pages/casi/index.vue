@@ -77,6 +77,7 @@ import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 import { successCases } from "../../data/successCases";
+import { byEventDate } from "../../utils/caseOrder";
 
 const { getPage, getPageBySlug } = useCms();
 const { t, locale } = useI18n();
@@ -96,7 +97,8 @@ type CaseItem = {
 
 // With the CMS unreachable, the built-in list of cases is shown instead.
 const { data: casiData, error: casesError } = await useAsyncData(() => `casi-list-${locale.value}`, () =>
-    getPage("casi.CasoSuccessoPage", { order: "-first_published_at" })
+    // Most recent project first ("Data del progetto"), every story (not only 20).
+    getPage<any>("casi.CasoSuccessoPage", { order: "-first_published_at" }, { all: true, sort: byEventDate })
 );
 
 // Intro copy now comes from CasiIndexPage.intro, editable in the admin.

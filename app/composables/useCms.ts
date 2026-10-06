@@ -44,16 +44,36 @@ export function useCms() {
      * In English/French: every Italian page is replaced by its translation
      * when one exists, so the list is never shorter than the Italian one.
      */
-    async function getPage<T = any>(type: string, params: Record<string, any> = {}) {
+    /**
+     * options.all: every page, not only the first 20 (the API gives at most
+     * 20 per request, so a long list is read in several requests).
+     * options.sort: reorders the Italian list before translations replace
+     * its items, so EN/FR follow the same order as the Italian site.
+     */
+    async function list<T>(params: Record<string, any>, all: boolean) {
+        const first = await request<{ items: T[]; meta?: any }>(`${base}/pages/`, { params })
+        let items = first.items ?? []
+        const total = Number(first.meta?.total_count ?? items.length)
+        while (all && items.length < total) {
+            const next = await request<{ items: T[] }>(`${base}/pages/`, { params: { ...params, offset: items.length } })
+            if (!next.items?.length) break
+            items = items.concat(next.items)
+        }
+        return { ...first, items }
+    }
+
+    async function getPage<T = any>(
+        type: string,
+        params: Record<string, any> = {},
+        options: { all?: boolean; sort?: (items: T[]) => T[] } = {},
+    ) {
         const locale = currentLocale()
-        const italian = await request<{ items: T[]; meta?: any }>(`${base}/pages/`, {
-            params: { type, fields: "*", locale: "it", ...params },
-        })
+        const italian = await list<T>({ type, fields: "*", locale: "it", ...params }, Boolean(options.all))
+        if (options.sort) italian.items = options.sort(italian.items)
         if (locale === "it") return italian
 
-        const translated = await request<{ items: T[] }>(`${base}/pages/`, {
-            params: { type, fields: "*", ...params, locale },
-        }).catch(() => ({ items: [] as T[] }))
+        const translated = await list<T>({ type, fields: "*", ...params, locale }, Boolean(options.all))
+            .catch(() => ({ items: [] as T[] }))
 
         const byKey = new Map<string, T>()
         for (const item of translated.items as AnyPage[]) {
