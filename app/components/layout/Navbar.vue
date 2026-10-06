@@ -2,7 +2,6 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import fallbackNavigationItems from "../../data/navigation.json";
 import corporate from "../../data/corporate.json";
-import axatelLogo from '~/assets/immagini/Axatel.svg'
 
 // Same useSiteSettings() composable the layout already uses for the
 // chatbot config — one shared fetch of /api/v2/site-settings/, not a
@@ -242,7 +241,7 @@ onUnmounted(() => {
     <div class="container">
 
         <NuxtLink class="brand" to="/" aria-label="Axatel, torna alla home" @click="closeMenu">
-            <img :src="axatelLogo" width="128" height="30" alt="Axatel Logo" fetchpriority="high" decoding="async">
+            <img src="/immagini/Axatel.svg" width="128" height="30" alt="Axatel Logo" fetchpriority="high" decoding="async">
         </NuxtLink>
 
         <button
