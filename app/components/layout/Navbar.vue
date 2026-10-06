@@ -230,8 +230,8 @@ onUnmounted(() => {
 
     <div class="container">
 
-        <NuxtLink class="brand" :to="localePath('/')" :aria-label="t('nav.home')" @click="closeMenu">
-            <img :src="brandLogo" width="128" height="30" alt="Axatel Logo" class="brand-logo" fetchpriority="high" decoding="async">
+        <NuxtLink class="brand" to="/" aria-label="Axatel, torna alla home" @click="closeMenu">
+            <img src="/immagini/Axatel.svg" width="128" height="30" alt="Axatel Logo" fetchpriority="high" decoding="async">
         </NuxtLink>
 
         <button
