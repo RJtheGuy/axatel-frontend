@@ -327,7 +327,14 @@ export class ParticleSystem {
         this.material.dispose();
     }
 
+    // Each setStage call gets a number; a stage whose picture finishes
+    // loading after a newer stage was requested is dropped. Without this a
+    // slow picture (the AngelBPM logo of the default sequence) could replace
+    // the page title that was asked for after it.
+    private stageRequest = 0;
+
     public async setStage(stage: SequenceStage): Promise<void> {
+        const request = this.stageRequest = (this.stageRequest || 0) + 1;
         const previousPhraseText = this.lastPhraseText;
         const previousPhraseFormation = this.lastPhraseFormation;
         const wasTextStage = this.currentStageType === "text";
@@ -422,6 +429,10 @@ export class ParticleSystem {
             }
 
             this.formationCache.set(cacheKey, formation);
+        }
+
+        if (request !== this.stageRequest) {
+            return; // a newer stage was requested while this one was loading
         }
 
         const rawFormation = formation;

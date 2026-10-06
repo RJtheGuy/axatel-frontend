@@ -34,7 +34,15 @@ async function startEngine(): Promise<void> {
     const { default: HeroEngine } = await import("@/classes/hero/HeroEngine");
     if (!mounted || !canvasEl.value) return;
 
-    engine = new HeroEngine(canvasEl.value, new SequenceManager([props.title]));
+    // Start straight on this page's title: the default sequence would first
+    // load and show the AngelBPM logo.
+    engine = new HeroEngine(canvasEl.value, new SequenceManager([props.title]), {
+        id: "forced-composite",
+        type: "composite",
+        text: props.title.trim(),
+        asset: assetUrl.value,
+        duration: 9999
+    });
     engine.setForcedComposite(props.title, assetUrl.value);
     engine.start();
     readyFrame = requestAnimationFrame(() => {
