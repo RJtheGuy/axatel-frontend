@@ -15,12 +15,12 @@
                 <NuxtLink v-if="text.secondaryLabel" :to="link(text.secondaryUrl)" class="hero-btn hero-btn-ghost">{{ text.secondaryLabel }} <span aria-hidden="true">→</span></NuxtLink>
             </div>
 
-            <div v-if="text.showStatus" class="hero-status" :aria-label="t('hero.status')">
+           <!-- <div v-if="text.showStatus" class="hero-status" :aria-label="t('hero.status')">
                 <span class="status-dot"></span>
                 <span>{{ t("hero.status") }}</span>
                 <span class="status-separator"></span>
                 <span>24 / 7</span>
-            </div>
+            </div> -->
         </div>
 
     </section>
