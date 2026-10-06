@@ -128,8 +128,10 @@ const topic = computed<TopicData>(() => raw.value ? ({
     icon: raw.value.icon || "",
     category: raw.value.category || "",
     description: raw.value.short_description || "",
-    image: raw.value.cover_image?.url || "",
-    image_alt: raw.value.cover_image?.alt || "",
+    // No picture in the CMS: the built-in one of the same topic, as the
+    // card on /monitoraggio already shows (else the page had none).
+    image: raw.value.cover_image?.url || legacy.value?.image || "",
+    image_alt: raw.value.cover_image?.alt || legacy.value?.imageAlt || "",
     image_width: raw.value.cover_image?.width,
     image_height: raw.value.cover_image?.height,
     frame: raw.value.image_frame === true,
