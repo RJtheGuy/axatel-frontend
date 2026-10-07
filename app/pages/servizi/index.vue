@@ -17,8 +17,14 @@
                 <div v-else class="svc-grid">
                     <article v-for="item in items" :key="item.slug" class="svc-card">
                         <NuxtLink :to="localePath(`/servizi/${item.slug}`)" class="svc-link" :aria-label="t('blog.read', { title: item.title })">
-                            <div class="svc-icon" v-if="item.icon">{{ item.icon }}</div>
-                            <h2>{{ item.title }}</h2>
+                            <div v-if="item.image" class="card-media" aria-hidden="true">
+                                <img :src="imageUrl(item.image)" alt="" width="320" height="180" loading="lazy" decoding="async" />
+                            </div>
+                            <div class="svc-icon" v-else-if="item.icon">{{ item.icon }}</div>
+                            <p v-if="item.category" class="svc-kicker">{{ item.category }}</p>
+                            <!-- Hidden (still read by screen readers) when "Mostra titolo
+                                 nella card" is off because the picture contains it. -->
+                            <h2 :class="{ 'visually-hidden': !item.showTitle }">{{ item.title }}</h2>
                             <p>{{ item.description }}</p>
                         </NuxtLink>
                     </article>
@@ -32,14 +38,19 @@
 import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
+import { showCardTitle } from "../../utils/pageMeta";
 
 const { getPage, getPageBySlug } = useCms();
 const { t, locale } = useI18n();
 const localePath = useLocalePath();
+const { imageUrl } = useCmsImage();
 
 type ServiceItem = {
     title: string;
     icon: string;
+    category: string;
+    image: string;
+    showTitle: boolean;
     description: string;
     slug: string;
 };
@@ -63,6 +74,9 @@ const items = computed<ServiceItem[]>(() =>
     (svcData.value?.items ?? []).map((p: any) => ({
         title: p.title,
         icon: p.icon || "",
+        category: p.category || "",
+        image: p.cover_image?.url || "",
+        showTitle: showCardTitle(p, Boolean(p.cover_image?.url)),
         description: p.short_description || "",
         slug: p.meta?.slug
     }))
@@ -156,7 +170,8 @@ useSeoMeta({
 
 .svc-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    /* auto-fill: a single service keeps a card's width instead of the whole row. */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 18px;
 }
 
@@ -176,6 +191,34 @@ useSeoMeta({
     height: 100%;
     color: inherit;
     text-decoration: none;
+}
+
+/* "Immagine di copertina" (Meta panel): whole picture, never cropped, so a
+   title written inside it stays readable. */
+.card-media {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 9;
+    margin: -26px -26px 6px;
+    padding: 14px;
+    border-bottom: 1px solid rgba(11, 53, 91, 0.08);
+    background: #ffffff;
+}
+
+.card-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.svc-kicker {
+    margin: 0;
+    color: #c52317;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
 .svc-icon {

@@ -19,8 +19,13 @@
                     <div class="sol-grid">
                         <article v-for="item in group.items" :key="item.slug" class="sol-card">
                             <NuxtLink :to="localePath(`/soluzioni/${item.slug}`)" class="sol-link">
-                                <p v-if="item.eyebrow" class="sol-eyebrow">{{ item.eyebrow }}</p>
-                                <h3>{{ item.title }}</h3>
+                                <div v-if="item.image" class="card-media" aria-hidden="true">
+                                    <img :src="imageUrl(item.image)" alt="" width="320" height="180" loading="lazy" decoding="async" />
+                                </div>
+                                <p v-if="item.kicker" class="sol-eyebrow">{{ item.kicker }}</p>
+                                <!-- Hidden (still read by screen readers) when "Mostra titolo
+                                     nella card" is off because the picture contains it. -->
+                                <h3 :class="{ 'visually-hidden': !item.showTitle }">{{ item.title }}</h3>
                                 <p>{{ item.description }}</p>
                             </NuxtLink>
                         </article>
@@ -41,13 +46,16 @@ import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 import { contentAreas } from "../../data/contentPages";
+import { showCardTitle } from "../../utils/pageMeta";
 
 const { t, te, locale } = useI18n();
 const localePath = useLocalePath();
 const { getPage, getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
 
-type SolutionItem = { title: string; eyebrow: string; description: string; slug: string; group: string; image: string };
+type SolutionItem = {
+    title: string; eyebrow: string; kicker: string; description: string; slug: string; group: string; image: string; showTitle: boolean;
+};
 
 const GROUP_ORDER = ["Piattaforme", "Sensori", "Tecnologie", "Servizi"];
 
@@ -76,15 +84,20 @@ const items = computed<SolutionItem[]>(() => {
         return cms.map((p) => ({
             title: p.title,
             eyebrow: p.eyebrow || "",
+            // "Categoria" (Meta panel) before the short subtitle.
+            kicker: [p.category, p.eyebrow].filter(Boolean).join(" · "),
             description: p.short_description || "",
             slug: p.meta?.slug,
             group: p.group || "",
             image: p.cover_image?.url || "",
+            showTitle: showCardTitle(p, Boolean(p.cover_image?.url)),
         }));
     }
     const area = contentAreas.soluzioni;
     return area.order.map((slug) => area.pages[slug]!).map((p) => ({
-        title: p.title, eyebrow: p.eyebrow, description: p.introduction, slug: p.slug, group: p.group, image: p.image || "",
+        title: p.title, eyebrow: p.eyebrow, kicker: p.eyebrow, description: p.introduction, slug: p.slug, group: p.group,
+        // Built-in pages: text cards as before.
+        image: "", showTitle: true,
     }));
 });
 
@@ -206,6 +219,25 @@ useSeoMeta({
     height: 100%;
     color: inherit;
     text-decoration: none;
+}
+
+/* "Immagine di copertina" (Meta panel): whole picture, never cropped, so a
+   title written inside it stays readable. */
+.card-media {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 9;
+    margin: -26px -26px 6px;
+    padding: 14px;
+    border-bottom: 1px solid rgba(11, 53, 91, 0.08);
+    background: #ffffff;
+}
+
+.card-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .sol-icon {

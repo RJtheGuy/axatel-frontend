@@ -12,14 +12,25 @@
 
                 <LayoutTranslationNotice v-if="cms.__fallback" />
 
-                <div class="sol-intro" :class="{ 'has-media': cms.cover_image }">
+                <!-- "Immagine nella pagina" (Meta panel in the CMS): next to the
+                     introduction, large at the top, or only on the card. -->
+                <ContentMetaCover
+                    v-if="cms.cover_image && position === 'top'"
+                    :src="imageUrl(cms.cover_image.url)"
+                    :alt="cms.cover_image.alt || cms.title"
+                    :width="cms.cover_image.width"
+                    :height="cms.cover_image.height"
+                />
+
+                <div class="sol-intro" :class="{ 'has-media': sideImage }">
                     <div>
                         <p v-if="kicker" class="sol-kicker">{{ kicker }}</p>
                         <p v-if="cms.short_description" class="lead">{{ cms.short_description }}</p>
+                        <ContentMetaTags :tags="tags" />
                     </div>
-                    <figure v-if="cms.cover_image" class="sol-badge">
+                    <figure v-if="sideImage" class="sol-badge">
                         <img
-                            :src="cms.cover_image.url"
+                            :src="imageUrl(cms.cover_image.url)"
                             :alt="cms.cover_image.alt || cms.title"
                             :width="cms.cover_image.width"
                             :height="cms.cover_image.height"
@@ -74,11 +85,13 @@ import { createError, useRoute, useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 import ContentPage from "../../components/content/ContentPage.vue";
 import { contentAreas } from "../../data/contentPages";
+import { coverPosition, pageTags } from "../../utils/pageMeta";
 
 const route = useRoute();
 const { t, te, locale } = useI18n();
 const localePath = useLocalePath();
 const { getPage, getPageBySlug } = useCms();
+const { imageUrl } = useCmsImage();
 
 const slug = computed(() => {
     const s = route.params.slug;
@@ -111,9 +124,13 @@ if (!cms.value && !legacy.value) {
 const groupLabel = (group?: string) =>
     group && te(`solutions.groups.${group}`) ? t(`solutions.groups.${group}`) : group || "";
 
+// "Categoria" (Meta panel) replaces the menu group in the label above the text.
 const kicker = computed(() =>
-    [groupLabel(cms.value?.group), cms.value?.eyebrow].filter(Boolean).join(" · ")
+    [cms.value?.category || groupLabel(cms.value?.group), cms.value?.eyebrow].filter(Boolean).join(" · ")
 );
+const position = computed(() => coverPosition(cms.value));
+const sideImage = computed(() => Boolean(cms.value?.cover_image) && position.value === "side");
+const tags = computed(() => pageTags(cms.value));
 
 // A CTA block at the end of the body would repeat the closing call to
 // action, so it's left out here (it still shows on other page types).

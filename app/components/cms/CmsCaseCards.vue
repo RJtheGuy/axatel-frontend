@@ -45,6 +45,11 @@ h2 {
 }
 
 .card {
+    /* main.scss has an old global .card (190×254 px, grey shadow) for the
+       demo cards: without these three lines the CMS cards inherit it. */
+    width: auto;
+    height: auto;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     overflow: hidden;

@@ -12,12 +12,23 @@
 
                 <LayoutTranslationNotice v-if="page.__fallback" />
 
-                <div class="info-intro" :class="{ 'has-media': page.cover_image }">
+                <!-- "Immagine nella pagina" (Meta panel in the CMS): next to the
+                     introduction, large at the top, or not shown. -->
+                <ContentMetaCover
+                    v-if="page.cover_image && position === 'top'"
+                    :src="imageUrl(page.cover_image.url)"
+                    :alt="page.cover_image.alt || page.title"
+                    :width="page.cover_image.width"
+                    :height="page.cover_image.height"
+                />
+
+                <div class="info-intro" :class="{ 'has-media': sideImage }">
                     <div>
                         <p v-if="kicker" class="info-kicker">{{ kicker }}</p>
                         <p v-if="page.introduction" class="lead">{{ page.introduction }}</p>
+                        <ContentMetaTags :tags="tags" />
                     </div>
-                    <figure v-if="page.cover_image" class="info-media">
+                    <figure v-if="sideImage" class="info-media">
                         <img
                             :src="imageUrl(page.cover_image.url)"
                             :alt="page.cover_image.alt || page.title"
@@ -59,6 +70,7 @@
 import { computed } from "vue";
 import ArticleParticleHero from "../articles/ArticleParticleHero.vue";
 import GlossarySearch from "./GlossarySearch.vue";
+import { coverPosition, pageTags } from "../../utils/pageMeta";
 
 const props = defineProps<{ page: any; area: string }>();
 
@@ -69,7 +81,11 @@ const { getChildren } = useCms();
 
 const isGlossary = computed(() => props.page?.meta?.type === "home.GlossaryPage");
 const sectionTitle = computed(() => props.page?.meta?.parent?.title || "");
-const kicker = computed(() => [sectionTitle.value, props.page?.eyebrow].filter(Boolean).join(" · "));
+// "Categoria" (Meta panel) replaces the section name in the label above the text.
+const kicker = computed(() => [props.page?.category || sectionTitle.value, props.page?.eyebrow].filter(Boolean).join(" · "));
+const position = computed(() => coverPosition(props.page));
+const sideImage = computed(() => Boolean(props.page?.cover_image) && position.value === "side");
+const tags = computed(() => pageTags(props.page));
 
 const glossaryTerms = computed(() =>
     ((props.page?.terms ?? []) as Array<{ term: string; definition: string; aliases?: string[] }>)
