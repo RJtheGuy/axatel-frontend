@@ -1,7 +1,7 @@
 <template>
     <section
         class="cms-features"
-        :class="{ 'center-heading': value.center_heading, 'center-items': value.center_items }"
+        :class="{ 'center-heading': value.center_heading, 'center-items': value.center_items }" style="padding: 0px !important"
     >
         <h2 v-if="value.heading" v-html="unwrapParagraph(value.heading)"></h2>
         <div v-if="value.subheading" class="sub" v-html="value.subheading"></div>
