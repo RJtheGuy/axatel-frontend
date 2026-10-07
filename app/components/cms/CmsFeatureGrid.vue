@@ -10,10 +10,10 @@
             <div
                 v-for="(f, i) in features"
                 :key="i"
-                class="feature"
+                class="feature text-center"
                 :class="`w-${f.width || 'normal'}`"
             >
-                <img v-if="f.icon?.url" class="icon" :src="imageUrl(f.icon.url)" alt="" width="40" height="40" loading="lazy" />
+                <img v-if="f.icon?.url" class="icon" :src="imageUrl(f.icon.url)" alt="" width="100" height="100" loading="lazy" />
                 <h3 v-html="unwrapParagraph(f.title)"></h3>
                 <!-- The description is optional: no element at all when it is empty. -->
                 <div v-if="hasText(f.description)" class="description" v-html="f.description"></div>
