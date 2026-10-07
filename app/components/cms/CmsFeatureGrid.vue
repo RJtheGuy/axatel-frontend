@@ -56,7 +56,7 @@ function hasText(html?: string | null): boolean {
 
 <style scoped>
 .cms-features {
-    padding: 64px 8vw;
+    padding: 0px;
 }
 
 h2 {
