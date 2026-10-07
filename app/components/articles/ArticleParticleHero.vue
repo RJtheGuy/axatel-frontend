@@ -8,7 +8,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { SequenceManager } from "@/classes/hero/SequenceManager";
-import { DEFAULT_WING_IMAGE } from "@/utils/resolveImage";
+import { headerWing } from "@/utils/resolveImage";
 
 type HeroEngine = import("@/classes/hero/HeroEngine").default;
 
@@ -19,7 +19,7 @@ const props = defineProps<{
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 const engineReady = ref(false);
-const assetUrl = computed(() => props.assetUrl?.trim() || DEFAULT_WING_IMAGE);
+const assetUrl = computed(() => props.assetUrl?.trim() || headerWing());
 let engine: HeroEngine | null = null;
 let readyFrame = 0;
 let mounted = false;
@@ -28,13 +28,21 @@ async function startEngine(): Promise<void> {
     if (!canvasEl.value || engine) return;
 
     if ("fonts" in document) {
-        await document.fonts.load('350 48px "forma-djr-micro"');
+        await document.fonts.load('350 48px Montserrat');
     }
 
     const { default: HeroEngine } = await import("@/classes/hero/HeroEngine");
     if (!mounted || !canvasEl.value) return;
 
-    engine = new HeroEngine(canvasEl.value, new SequenceManager([props.title]));
+    // Start straight on this page's title: the default sequence would first
+    // load and show the AngelBPM logo.
+    engine = new HeroEngine(canvasEl.value, new SequenceManager([props.title]), {
+        id: "forced-composite",
+        type: "composite",
+        text: props.title.trim(),
+        asset: assetUrl.value,
+        duration: 9999
+    });
     engine.setForcedComposite(props.title, assetUrl.value);
     engine.start();
     readyFrame = requestAnimationFrame(() => {

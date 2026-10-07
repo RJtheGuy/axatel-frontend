@@ -1,77 +1,80 @@
 <template>
-    <main class="topic-page">
+    <!-- CMS page (Pagine → Monitoraggio). If the topic isn't in the CMS yet,
+         the built-in version from data/monitoring.ts is shown instead. -->
+    <main v-if="raw" class="topic-page">
         <header class="topic-hero">
             <ArticleParticleHero
                 :title="topic.title"
-                :asset-url="topic.titleParticleImage || undefined"
+                :asset-url="headerWing()"
             />
         </header>
 
         <div class="topic-light-stage">
             <article class="topic-shell">
-                <NuxtLink to="/monitoraggio" class="back-link">Torna a Cosa monitoriamo</NuxtLink>
+                <NuxtLink :to="localePath('/monitoraggio')" class="back-link">{{ t("monitoring.back") }}</NuxtLink>
 
-                <p v-if="topic.description" class="lead">{{ topic.description }}</p>
+                <LayoutTranslationNotice v-if="raw?.__fallback" />
 
-                <img
-                    v-if="topic.image"
-                    class="topic-cover"
-                    :src="imageUrl(topic.image)"
-                    :alt="topic.image_alt || topic.title"
-                    :width="topic.image_width"
-                    :height="topic.image_height"
-                    decoding="async"
-                />
+                <div class="topic-intro" :class="{ 'has-media': topic.image }">
+                    <div>
+                        <p v-if="topic.category" class="topic-kicker">{{ topic.category }}</p>
+                        <p v-if="topic.description" class="lead">{{ topic.description }}</p>
+                    </div>
+                    <figure v-if="topic.image" class="topic-badge" :class="{ 'is-plain': !topic.frame }">
+                        <img
+                            :src="imageUrl(topic.image)"
+                            :alt="topic.image_alt || topic.title"
+                            :width="topic.image_width"
+                            :height="topic.image_height"
+                            decoding="async"
+                        />
+                    </figure>
+                </div>
 
                 <!-- MonitoringPage.body is a real StreamField(BODY_BLOCKS) —
                      same rendering path as Servizio/Blog, not plain v-html. -->
-                <div class="topic-body">
-                    <template v-if="fallbackPage">
-                        <section v-if="fallbackPage.feature">
-                            <h2>{{ fallbackPage.feature.name }}</h2>
-                            <p>{{ fallbackPage.feature.description }}</p>
-                            <a v-if="fallbackPage.feature.href" :href="fallbackPage.feature.href">
-                                {{ fallbackPage.feature.hrefLabel }}
-                            </a>
-                        </section>
-                        <section v-for="section in fallbackPage.sections" :key="section.title">
-                            <h2>{{ section.title }}</h2>
-                            <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
-                            <ul v-if="section.highlights?.length">
-                                <li v-for="highlight in section.highlights" :key="highlight">{{ highlight }}</li>
-                            </ul>
-                        </section>
-                        <p v-if="fallbackPage.cta">
-                            {{ fallbackPage.cta.text }}
-                            <NuxtLink :to="fallbackPage.cta.href">{{ fallbackPage.cta.label }}</NuxtLink>
-                        </p>
-                    </template>
-                    <CmsBlockRenderer :blocks="topic.body ?? []" />
+                <div v-if="topic.body?.length" class="topic-body">
+                    <CmsBlockRenderer :blocks="topic.body" />
                 </div>
+                <!-- Topic in the menu but not written yet (empty body in the CMS). -->
+                <ContentComingSoon v-else :kicker="topic.category" :text="t('comingSoon.text')" />
+
+                <ContentProjectCta v-if="topic.body?.length" :subject="topic.title" />
             </article>
         </div>
     </main>
+
+    <ContentPage
+        v-else
+        :page="legacy!"
+        :breadcrumb-label="t('monitoring.kicker')"
+        base-path="/monitoraggio"
+        :related-pages="legacyRelated"
+        :related-label="t('monitoring.kicker')"
+    />
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import { createError, useRoute, useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
-import { monitoringPages } from "../../data/monitoring";
+import ContentPage from "../../components/content/ContentPage.vue";
+import { monitoringOrder, monitoringPages } from "../../data/monitoring";
 
 const route = useRoute();
-const { getPageBySlug } = useCms();
+const { getPage, getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
 
 type TopicData = {
     title: string;
     icon: string;
+    category: string;
     description: string;
     image: string;
     image_alt: string;
     image_width?: number;
     image_height?: number;
-    titleParticleImage: string;
+    frame?: boolean;
     body: Array<{ type: string; value: any; id: string }>;
     meta?: { search_description?: string };
 };
@@ -81,40 +84,67 @@ const slug = computed(() => {
     return Array.isArray(s) ? s[0] : s;
 });
 
-const { data: raw, error: topicError } = await useAsyncData(
-    () => `monitoraggio-topic-${slug.value}`,
-    () => getPageBySlug<any>("monitoring.MonitoringPage", slug.value as string),
-    { watch: [slug] }
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
+
+const { data: raw } = await useAsyncData(
+    () => `monitoraggio-topic-${locale.value}-${slug.value}`,
+    () => getPageBySlug<any>("monitoring.MonitoringPage", slug.value as string).catch(() => null),
+    { watch: [slug, locale] }
 );
 
-const fallbackPage = computed(() => topicError.value ? monitoringPages[String(slug.value)] : undefined);
+// Built-in fallback (the topics written in the code before the CMS).
+const legacy = computed(() => monitoringPages[slug.value as string]);
+const legacyRelated = computed(() =>
+    monitoringOrder
+        .filter((s) => s !== slug.value && monitoringPages[s]?.status === "published")
+        .slice(0, 4)
+        .map((s) => monitoringPages[s]!)
+);
 
-if (!raw.value && !fallbackPage.value) {
-    throw createError({
-        statusCode: topicError.value ? 503 : 404,
-        statusMessage: topicError.value ? "CMS temporaneamente non disponibile" : "Argomento non trovato"
-    });
+// A topic that is in the built-in list but not answered by the CMS was
+// unpublished (or deleted) there on purpose: hide it instead of showing the
+// built-in text. The built-in version is used only while the CMS cannot be
+// reached, and for the "coming soon" topics not written in the CMS yet.
+const { data: cmsUp } = await useAsyncData(
+    () => `monitoraggio-cms-up-${slug.value}`,
+    async () => {
+        if (raw.value || !legacy.value || legacy.value.status !== "published") return false;
+        const res = await getPage<any>("monitoring.MonitoringPage", { fields: "_", limit: 1 }).catch(() => null);
+        return Boolean(res?.items?.length);
+    },
+    { watch: [slug] }
+);
+if (!raw.value && legacy.value?.status === "published" && cmsUp.value) {
+    throw createError({ statusCode: 404, statusMessage: t("errors.topic"), fatal: import.meta.client });
 }
 
-const topic = computed<TopicData>(() => fallbackPage.value ? {
-    title: fallbackPage.value.title,
-    icon: "",
-    description: fallbackPage.value.introduction,
-    image: fallbackPage.value.image || "",
-    image_alt: fallbackPage.value.imageAlt || "",
-    titleParticleImage: "",
-    body: []
-} : ({
+if (!raw.value && !legacy.value) {
+    throw createError({ statusCode: 404, statusMessage: t("errors.topic"), fatal: import.meta.client });
+}
+
+const topic = computed<TopicData>(() => raw.value ? ({
     title: raw.value.title,
     icon: raw.value.icon || "",
+    category: raw.value.category || "",
     description: raw.value.short_description || "",
-    image: raw.value.cover_image?.url || "",
-    image_alt: raw.value.cover_image?.alt || "",
+    // No picture in the CMS: the built-in one of the same topic, as the
+    // card on /monitoraggio already shows (else the page had none).
+    image: raw.value.cover_image?.url || legacy.value?.image || "",
+    image_alt: raw.value.cover_image?.alt || legacy.value?.imageAlt || "",
     image_width: raw.value.cover_image?.width,
     image_height: raw.value.cover_image?.height,
-    titleParticleImage: imageUrl(raw.value.title_particle_image),
+    frame: raw.value.image_frame === true,
     body: raw.value.body || [],
     meta: raw.value.meta
+}) : ({
+    title: legacy.value!.title,
+    icon: "",
+    category: legacy.value!.group,
+    description: legacy.value!.introduction,
+    image: legacy.value!.image || "",
+    image_alt: legacy.value!.imageAlt || "",
+    body: [],
 }));
 
 useSeoMeta({
@@ -187,27 +217,81 @@ useSeoMeta({
     line-height: 1.62;
 }
 
-.topic-cover {
-    width: 100%;
-    max-height: 460px;
+.topic-intro {
+    display: grid;
+    gap: 32px;
+    align-items: center;
+    margin: 0 0 40px;
+    padding-bottom: 36px;
+    border-bottom: 1px solid rgba(11, 53, 91, 0.1);
+}
+
+.topic-intro.has-media {
+    grid-template-columns: minmax(0, 1fr) 220px;
+}
+
+.topic-intro .lead {
+    margin: 0;
+}
+
+.topic-kicker {
+    margin: 0 0 10px;
+    color: #c52317;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* Product pictogram (Angel River, Traffic Alert…): shown whole, never cropped. */
+.topic-badge {
+    margin: 0;
+    padding: 22px;
+    border: 1px solid rgba(11, 53, 91, 0.1);
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 18px 40px rgba(17, 48, 78, 0.1);
+}
+
+/* "Riquadro bianco" switched off in the CMS: the picture sits on the page,
+   and its white background blends into the light background. */
+.topic-badge.is-plain {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.topic-badge.is-plain img {
+    mix-blend-mode: multiply;
+}
+
+.topic-badge img {
     display: block;
-    margin: 0 0 32px;
-    border: 1px solid rgba(11, 53, 91, 0.14);
-    object-fit: cover;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+}
+
+/* Rich text blocks carry their own page padding; inside this column they
+   should line up with the intro instead of being indented again. */
+.topic-body :deep(.cms-rich-text) {
+    max-width: none;
+    padding: 0 0 8px;
 }
 
 .topic-body {
+    /* Colours for the CMS blocks on this light page (the blocks read these
+       variables, so dark blocks like "Prodotto in evidenza" keep their own). */
+    --cms-text: #274e72;
+    --cms-heading: #0b355b;
+    --cms-border: rgba(11, 53, 91, 0.12);
+    --cms-surface: #ffffff;
+    --cms-measure: 100%;
+    --cms-wide: 100%;
     color: #0b355b;
-}
-
-.topic-body :deep(h2),
-.topic-body :deep(h3),
-.topic-body :deep(h4) {
-    color: #0b355b;
-}
-
-.topic-body :deep(p) {
-    color: #274e72;
 }
 
 @media (max-width: 768px) {
@@ -217,6 +301,15 @@ useSeoMeta({
 
     .topic-shell {
         padding: 5vh 5vw 6vh;
+    }
+
+    .topic-intro.has-media {
+        grid-template-columns: 1fr;
+    }
+
+    .topic-badge {
+        width: 160px;
+        order: -1;
     }
 }
 </style>

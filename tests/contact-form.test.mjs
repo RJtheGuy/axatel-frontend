@@ -18,11 +18,23 @@ function setup(tipo) {
         ref,
         watch,
         useRoute: () => ({ query: { tipo } }),
+        // The form is translated: the Italian texts the assertions read.
+        useI18n: () => ({
+            t: (key) => ({
+                "contact.missingCandidate": "Inserisci il nome e almeno un recapito: e-mail o telefono.",
+                "contact.missingContact": "Inserisci nome, azienda e almeno un recapito: e-mail o telefono.",
+                "contact.partnerMessage": "Vorrei parlare con Axatel di una possibile partnership."
+            })[key] ?? key,
+            locale: { value: "it" }
+        }),
+        useLocalePath: () => (path) => path,
+        useSeoMeta() {},
+        usePrivacyConsent: () => ({ text: { value: "Ho letto l'informativa privacy." } }),
         useRuntimeConfig: () => ({ public: { apiBase: "/api/v2" } }),
         $fetch: async (url, options) => requests.push({ url, body: options.body })
     });
     vm.runInContext(stripTypeScriptTypes(script.replace("import.meta.server", "false")) +
-        "\nglobalThis.state = { form, submitForm, submitError, submitted };", context);
+        "\nconsent.value = true;\nglobalThis.state = { form, submitForm, submitError, submitted };", context);
     return { ...context.state, requests };
 }
 

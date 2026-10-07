@@ -1,8 +1,6 @@
 export default defineNuxtPlugin(() => {
-    const config = useRuntimeConfig();
-    const apiBase = config.public.apiBase;
-    const backendOrigin = apiBase.replace(/\/api\/v\d+\/?$/, "");
-    const fallbackUrl = `${backendOrigin}/media/frontend/immagini/Axatel.svg`;
+    // Bundled Axatel logo (see utils/resolveImage.ts).
+    const fallbackUrl = new URL(imageFallbackUrl, window.location.href).href;
 
     document.addEventListener(
         "error",

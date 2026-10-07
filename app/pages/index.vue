@@ -1,49 +1,42 @@
 <template>
     <main class="home-page">
         <div class="page-overlay" :class="{ 'is-hidden': isParticleHeroVisible }" aria-hidden="true"></div>
-        <DashboardCitazioneSection />
+        <DashboardCitazioneSection :content="heroTop" />
         <DashboardDemoSpiegazione />
         <DashboardDemoSection id="applicativi" :applications="dashboardConfig.demo.applications" />
         <DashboardCasiDiSuccessoSection
             id="settori"
-            :title="dashboardConfig.successCases.title"
+            :title="t('home.casesTitle')"
             :cases="dashboardConfig.successCases.items"
             :button-label="dashboardConfig.successCases.buttonLabel"
-            :cta-label="dashboardConfig.successCases.cta.label"
+            :cta-label="t('home.casesCta')"
             :cta-href="dashboardConfig.successCases.cta.href"
         />
         <DashboardHeroParticelleSection
-            :frasi="dashboardConfig.hero.frasi"
-            :quote-text="dashboardConfig.hero.quoteText"
+            :frasi="heroFrasi"
+            :quote-text="heroQuote"
             :cases-logo-asset="dashboardConfig.hero.casesLogoAsset"
         />
         <!-- <DashboardPartnersSection
             :title="dashboardConfig.partners.title"
             :partners="dashboardConfig.partners.items"
         /> -->
-        <DashboardFooterInfo
-            :contacts="dashboardConfig.footer.contacts"
-            :vat-label="dashboardConfig.footer.vatLabel"
-            :vat-value="dashboardConfig.footer.vatValue"
-            :tax-label="dashboardConfig.footer.taxLabel"
-            :tax-value="dashboardConfig.footer.taxValue"
-        />
+        <DashboardTrustStrip />
+        <LayoutSiteFooter />
     </main>
 </template>
 
 <script setup lang="ts">
-import { homepageCases } from "../data/homepageCases";
-import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import DashboardHeroParticelleSection from "../components/dashboard/HeroParticelle.vue";
-import { socialContacts } from "../data/socialContacts";
-import { DASHBOARD_WING_IMAGE } from "@/utils/resolveImage";
+import { homepageCases } from "../data/homepageCases";
+import { byEventDate } from "../utils/caseOrder";
 
 const DashboardDemoSection = defineAsyncComponent(() => import("../components/dashboard/Demo.vue"));
 const DashboardDemoSpiegazione = defineAsyncComponent(() => import("../components/dashboard/demo/Spiegazione.vue"));
 const DashboardCitazioneSection = defineAsyncComponent(() => import("../components/dashboard/Citazione.vue"));
 const DashboardCasiDiSuccessoSection = defineAsyncComponent(() => import("../components/dashboard/CasiDiSuccesso.vue"));
 const DashboardPartnersSection = defineAsyncComponent(() => import("../components/dashboard/Partners.vue"));
-const DashboardFooterInfo = defineAsyncComponent(() => import("../components/dashboard/FooterInfo.vue"));
 
 const isParticleHeroVisible = ref(false);
 let sectionSnapTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -148,7 +141,7 @@ async function revealAndScrollToDemo(): Promise<void> {
 
 onMounted(() => {
     void loadCasiFromCms();
-    void loadFooterFromCms();
+    void loadHomeFromCms();
 
     if (window.matchMedia("(min-width: 901px)").matches) {
         document.documentElement.classList.add("home-scroll-snap");
@@ -191,7 +184,8 @@ const dashboardConfig = reactive({
             "La piattaforma che trasforma i dati in\nvalore"
         ],
         quoteText: "Tutti noi di Axatel abbiamo un obiettivo in comune:\nabbiamo a cuore ciò che facciamo e l'impatto positivo che generiamo per i nostri partner e per le comunità in cui viviamo e operiamo.\nPer noi è sempre una questione personale\n\n\nElisa Ziglio\nCEO, Axatel",
-        casesLogoAsset: DASHBOARD_WING_IMAGE
+        // Empty = the homepage wing (CMS one if uploaded).
+        casesLogoAsset: ""
     },
     demo: {
         applications: [
@@ -278,33 +272,69 @@ const dashboardConfig = reactive({
             //     website: ""
             // }
         ]
-    },
-    footer: {
-        contacts: [
-            {
-                title: "Chiamaci",
-                value: "+39 0444 963891",
-                href: "tel:+390444963891"
-            },
-            {
-                title: "Scrivici",
-                value: "info@axatel.it",
-                href: "mailto:info@axatel.it"
-            },
-            ...socialContacts,
-            {
-                title: "Vieni a trovarci",
-                value: "Viale del Mercato Nuovo, 75, 36100, Vicenza (VI)",
-                href: "https://www.google.com/maps/place/Viale+Mercato+Nuovo,+75,+36100+Vicenza+VI",
-                external: true
-            }
-        ],
-        vatLabel: "Partita IVA:",
-        vatValue: "IT01234567890",
-        taxLabel: "Codice Fiscale:",
-        taxValue: "01234567890"
     }
+
 });
+
+// ── Hero phrases and quote ─────────────────────────────────────────
+// Default texts are in i18n/messages-interface.ts ("home"), in all three
+// languages. The CMS Home page (panel "Hero") overrides them: in Italian
+// always, in English/French only once Home has been translated there, so
+// an untranslated Home never puts Italian phrases on the English site.
+const { t, tm, rt, locale } = useI18n();
+const cmsHero = ref<{ frasi: string[]; quote: string }>({ frasi: [], quote: "" });
+
+const heroFrasi = computed<string[]>(() =>
+    cmsHero.value.frasi.length
+        ? cmsHero.value.frasi
+        : (tm("home.phrases") as unknown[]).map((phrase) => rt(phrase as never))
+);
+const heroQuote = computed(() => cmsHero.value.quote || t("home.quote"));
+
+// First screen (title, intro, buttons): loaded on the server so visitors and
+// Google get the CMS text straight away. English/French use it only once
+// Home has been translated, like the phrases below.
+const { getPage: getHomeForTop } = useCms();
+const { data: heroTop } = await useAsyncData(
+    () => `home-top-${locale.value}`,
+    async () => {
+        const res = await getHomeForTop<any>("home.HomePage", { limit: 1 }).catch(() => null);
+        const home = res?.items?.[0];
+        if (!home || home.__fallback || home.is_alias) return null;
+        return {
+            kicker: home.top_kicker || "",
+            titleBefore: home.top_title_before || "",
+            titleAccent: home.top_title_accent || "",
+            titleAfter: home.top_title_after || "",
+            intro: home.top_intro || "",
+            primaryLabel: home.top_cta_primary_label || "",
+            primaryUrl: home.top_cta_primary_url || "",
+            secondaryLabel: home.top_cta_secondary_label || "",
+            secondaryUrl: home.top_cta_secondary_url || "",
+            showStatus: home.top_show_status !== false,
+        };
+    },
+    { watch: [locale] }
+);
+
+async function loadHomeFromCms(): Promise<void> {
+    try {
+        const res = await getPage<any>("home.HomePage", { limit: 1 });
+        const home = res?.items?.[0];
+        // An English/French Home that only mirrors the Italian one (alias)
+        // is not a translation: keep the built-in translated phrases.
+        if (!home || home.__fallback || home.is_alias) return;
+        const frasi = (Array.isArray(home.hero_frasi) ? home.hero_frasi : [])
+            .map((block: any) => String(block?.value ?? "").replace(/\\n/g, "\n").trim())
+            .filter(Boolean);
+        cmsHero.value = {
+            frasi,
+            quote: typeof home.hero_quote_text === "string" ? home.hero_quote_text.trim() : "",
+        };
+    } catch (error) {
+        console.warn("[cms] home hero fetch failed, using built-in texts", error);
+    }
+}
 
 // ── CMS wiring ──────────────────────────────────────────────────────
 // dashboardConfig above ships as working, correct content on its own —
@@ -314,19 +344,10 @@ const dashboardConfig = reactive({
 // if it fails, the page quietly keeps the fallback above forever.
 const { getPage } = useCms();
 
-// site-settings has no dedicated useCms() method yet — this mirrors
-// useCms.ts's own server/client base-URL split exactly, so it behaves
-// identically to every other CMS call in this project rather than
-// introducing a second convention. If a getSiteSettings() method gets
-// added to useCms.ts later, swap this out for it.
-function apiBase(): string {
-    const config = useRuntimeConfig();
-    return import.meta.server ? config.apiInternalBase : config.public.apiBase;
-}
-
 async function loadCasiFromCms(): Promise<void> {
     try {
-        const res = await getPage<any>("casi.CasoSuccessoPage", { order: "-first_published_at" });
+        // Most recent project first ("Data del progetto"), as on /casi.
+        const res = await getPage<any>("casi.CasoSuccessoPage", { order: "-first_published_at" }, { all: true, sort: byEventDate });
         if (!res?.items?.length) return;
 
         dashboardConfig.successCases.items = res.items.map((page) => ({
@@ -347,32 +368,16 @@ async function loadCasiFromCms(): Promise<void> {
     }
 }
 
-async function loadFooterFromCms(): Promise<void> {
-    try {
-        const res = await $fetch<{ footer: any }>(`${apiBase()}/site-settings/`);
-        if (!res?.footer) return;
-
-        dashboardConfig.footer.contacts = res.footer.contacts ?? dashboardConfig.footer.contacts;
-        dashboardConfig.footer.vatLabel = res.footer.vat_label ?? dashboardConfig.footer.vatLabel;
-        dashboardConfig.footer.vatValue = res.footer.vat_value ?? dashboardConfig.footer.vatValue;
-        dashboardConfig.footer.taxLabel = res.footer.tax_label ?? dashboardConfig.footer.taxLabel;
-        dashboardConfig.footer.taxValue = res.footer.tax_value ?? dashboardConfig.footer.taxValue;
-    } catch (error) {
-        console.warn("[cms] site settings fetch failed, using fallback footer", error);
-    }
-}
 
 useSeoMeta({
 
-    title: "Axatel | Piattaforma IoT per monitoraggio, automazione e Smart City",
+    title: () => `Axatel | ${t("seo.homeTitle")}`,
 
-    description:
-        "Axatel sviluppa piattaforme software per il monitoraggio IoT in tempo reale. Soluzioni per infrastrutture, ponti, fiumi, geologia, traffico intelligente e automazione industriale.",
+    description: () => t("seo.homeDescription"),
 
-    ogTitle: "Axatel | Piattaforma IoT",
+    ogTitle: () => `Axatel | ${t("seo.homeOgTitle")}`,
 
-    ogDescription:
-        "Monitoraggio intelligente, dashboard in tempo reale, gestione allarmi e analisi dati per Smart City e Industria 4.0.",
+    ogDescription: () => t("seo.homeOgDescription"),
 
     ogType: "website",
 
@@ -406,6 +411,7 @@ useSeoMeta({
 .home-page :deep(.spiegazione-section),
 .home-page :deep(.demo-section),
 .home-page :deep(.casi-section),
+.home-page :deep(.trust-section),
 .home-page :deep(.hero) {
     scroll-snap-align: start;
     scroll-snap-stop: always;
@@ -426,6 +432,7 @@ useSeoMeta({
     .home-page :deep(.spiegazione-section),
     .home-page :deep(.demo-section),
     .home-page :deep(.casi-section),
+    .home-page :deep(.trust-section),
     .home-page :deep(.hero),
     .home-page :deep(.footer-section) {
         scroll-snap-align: none;

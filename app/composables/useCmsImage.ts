@@ -2,8 +2,11 @@ export type CmsImageReference = string | { url?: string | null } | null | undefi
 
 export function useCmsImage() {
     const config = useRuntimeConfig();
-    const apiBase = import.meta.server ? config.apiInternalBase : config.public.apiBase;
-    const origin = apiBase.replace(/\/api\/v\d+\/?$/, "");
+    // Image addresses end up in the visitor's browser, so always use the
+    // PUBLIC API address (never the internal one). When it is relative
+    // (NUXT_PUBLIC_API_BASE=/api/v2) the CMS URLs are already complete.
+    const publicBase = String(config.public.apiBase || "");
+    const origin = /^https?:\/\//.test(publicBase) ? publicBase.replace(/\/api\/v\d+\/?$/, "") : "";
 
     function imageUrl(image: CmsImageReference): string {
         const path = typeof image === "string" ? image : image?.url;
@@ -11,6 +14,7 @@ export function useCmsImage() {
         if (path.startsWith("data:")) return path;
 
         if (/^(https?:)?\/\//.test(path)) {
+            if (!origin) return path;
             const parsed = new URL(path, origin);
             if (parsed.pathname.startsWith("/media/") || parsed.pathname.startsWith("/documents/")) {
                 return `${origin}${parsed.pathname}${parsed.search}`;
@@ -19,7 +23,7 @@ export function useCmsImage() {
         }
 
         if (path.startsWith("/media/") || path.startsWith("media/")) {
-            return `${origin}/${path.replace(/^\//, "")}`;
+            return `${origin}/${path.replace(/^\//, "")}`;  // origin "" keeps it on the site's address
         }
         return path;
     }

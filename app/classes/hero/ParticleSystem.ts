@@ -327,7 +327,14 @@ export class ParticleSystem {
         this.material.dispose();
     }
 
+    // Each setStage call gets a number; a stage whose picture finishes
+    // loading after a newer stage was requested is dropped. Without this a
+    // slow picture (the AngelBPM logo of the default sequence) could replace
+    // the page title that was asked for after it.
+    private stageRequest = 0;
+
     public async setStage(stage: SequenceStage): Promise<void> {
+        const request = this.stageRequest = (this.stageRequest || 0) + 1;
         const previousPhraseText = this.lastPhraseText;
         const previousPhraseFormation = this.lastPhraseFormation;
         const wasTextStage = this.currentStageType === "text";
@@ -422,6 +429,10 @@ export class ParticleSystem {
             }
 
             this.formationCache.set(cacheKey, formation);
+        }
+
+        if (request !== this.stageRequest) {
+            return; // a newer stage was requested while this one was loading
         }
 
         const rawFormation = formation;
@@ -547,11 +558,16 @@ export class ParticleSystem {
         const isTextStage = this.currentStageType === "text" || this.currentStageType === "composite";
         const isAnchoredFormationStage = isLogoStage || isTextStage || this.currentStageType === "scatter";
         const allowOutOfViewByScroll = isAnchoredFormationStage && this.anchorOffsetY > 0.0001;
+        // On portrait screens (phones) the hero headline fills the width,
+        // so the quote logo sits in the empty band above it instead of on
+        // the right, where it used to overlap the headline.
+        const isPortraitViewport = halfY > halfX * 1.1;
         const forcedLogoOffsetX = isQuoteLogoStage
-            ? halfX * 0.48
+            ? (isPortraitViewport ? 0 : halfX * 0.48)
             : isForcedLogoStage
                 ? halfX * 0.06
                 : 0;
+        const forcedLogoOffsetY = isQuoteLogoStage && isPortraitViewport ? halfY * 0.6 : 0;
         const suffixTransitionProgress = this.clamp01(
             this.suffixTransitionElapsed / this.SUFFIX_TRANSITION_DURATION
         );
@@ -631,6 +647,9 @@ export class ParticleSystem {
 
                     if (forcedLogoOffsetX !== 0) {
                         tx += forcedLogoOffsetX;
+                    }
+                    if (forcedLogoOffsetY !== 0) {
+                        ty += forcedLogoOffsetY;
                     }
 
                 }

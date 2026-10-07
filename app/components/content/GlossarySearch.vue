@@ -1,16 +1,16 @@
 <template>
     <section class="glossary" aria-labelledby="glossary-search-label">
         <div class="search-panel">
-            <label id="glossary-search-label" for="glossary-search">Cerca nel glossario</label>
+            <label id="glossary-search-label" for="glossary-search">{{ t("glossary.searchLabel") }}</label>
             <div class="search-row">
                 <input
                     id="glossary-search"
                     v-model="query"
                     type="search"
-                    placeholder="Scrivi un termine o un concetto"
+                    :placeholder="t('glossary.placeholder')"
                     autocomplete="off"
                 />
-                <button v-if="query" type="button" @click="query = ''">Azzera</button>
+                <button v-if="query" type="button" @click="query = ''">{{ t("glossary.clear") }}</button>
             </div>
             <p aria-live="polite">{{ resultLabel }}</p>
         </div>
@@ -23,9 +23,9 @@
         </dl>
 
         <div v-else class="empty-state">
-            <h2>Nessun termine trovato</h2>
-            <p>Prova con una parola piu breve o con un concetto collegato.</p>
-            <button type="button" @click="query = ''">Mostra tutti i termini</button>
+            <h2>{{ t("glossary.noResults") }}</h2>
+            <p>{{ t("glossary.noResultsHint") }}</p>
+            <button type="button" @click="query = ''">{{ t("glossary.showAll") }}</button>
         </div>
     </section>
 </template>
@@ -36,6 +36,7 @@ import type { GlossaryTerm } from "../../data/glossary";
 
 const props = defineProps<{ terms: GlossaryTerm[] }>();
 const query = ref("");
+const { t } = useI18n();
 
 const normalize = (value: string): string => value
     .normalize("NFD")
@@ -56,8 +57,8 @@ const filteredTerms = computed(() => {
 
 const resultLabel = computed(() => {
     const count = filteredTerms.value.length;
-    if (!query.value.trim()) return `${count} termini disponibili`;
-    return count === 1 ? "1 termine trovato" : `${count} termini trovati`;
+    if (!query.value.trim()) return t("glossary.available", { count });
+    return count === 1 ? t("glossary.foundOne") : t("glossary.found", { count });
 });
 </script>
 

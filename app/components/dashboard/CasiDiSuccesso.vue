@@ -2,7 +2,7 @@
     <section ref="sectionEl" class="casi-section">
         <div class="casi-overlay">
             <h2 class="kicker">{{ resolvedTitle }}</h2>
-            <a class="casi-cta ax-cta-outline" :href="resolvedCtaHref">{{ resolvedCtaLabel }}</a>
+            <NuxtLink class="casi-cta ax-cta-outline" :to="resolvedCtaHref">{{ resolvedCtaLabel }}</NuxtLink>
         </div>
 
         <section ref="container" class="casi-applications">
@@ -12,7 +12,7 @@
                     :key="`${item.title}-${index}`"
                     class="case-card"
                     :to="buildArticleRoute(item)"
-                    :aria-label="`Apri caso di successo: ${item.title}`"
+                    :aria-label="t('home.openCase', { title: item.title })"
                 >
                     <div class="case-media">
                         <img
@@ -28,7 +28,9 @@
                     </div>
 
                     <div class="case-body">
-                        <!-- <h3>{{ item.title }}</h3> -->
+                        <!-- Title hidden on the card (it is in the picture) but kept for
+                             screen readers and search engines. -->
+                        <h3 class="visually-hidden">{{ item.title }}</h3>
                         <p>{{ item.description }}</p>
                     </div>
                 </NuxtLink>
@@ -61,6 +63,8 @@ const props = defineProps<{
 }>();
 
 const { imageUrl } = useCmsImage();
+const { t } = useI18n();
+const localePath = useLocalePath();
 
 const sectionEl = ref<HTMLElement | null>(null);
 const container = ref<HTMLElement | null>(null);
@@ -94,7 +98,7 @@ const defaultCases: SuccessCase[] = [
 
 const resolvedTitle = computed(() => {
     const value = props.title?.trim();
-    return value && value.length > 0 ? value : "Casi di successo";
+    return value && value.length > 0 ? value : t("home.casesTitle");
 });
 
 const resolvedCases = computed(() => {
@@ -107,12 +111,12 @@ const resolvedCases = computed(() => {
 
 const resolvedCtaLabel = computed(() => {
     const value = props.ctaLabel?.trim();
-    return value && value.length > 0 ? value : "Scopri tutti i progetti";
+    return value && value.length > 0 ? value : t("home.casesCta");
 });
 
 const resolvedCtaHref = computed(() => {
     const value = props.ctaHref?.trim();
-    return value && value.length > 0 ? value : "#";
+    return localePath(value && value.length > 0 ? value : "/casi");
 });
 
 const duplicatedCases = computed(() => [...resolvedCases.value, ...resolvedCases.value]);
@@ -127,9 +131,12 @@ function slugify(value: string): string {
         .slice(0, 80);
 }
 
+// Case studies open their real page, /casi/<slug>, in the visitor's language.
+// (They used to go through /articoli/<slug>?payload=..., which redirects to
+// /casi and dropped the language.)
 function buildArticleRoute(item: SuccessCase): string {
     const slug = item.slug && item.slug.length > 0 ? item.slug : slugify(item.title);
-    return `/casi/${slug}`;
+    return localePath(`/casi/${slug}`);
 }
 
 function emitCaseVisibility(active: boolean): void {

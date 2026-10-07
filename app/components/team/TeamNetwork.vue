@@ -1,13 +1,18 @@
 <template>
-    <section ref="stageEl" class="team-stage" :class="{ 'has-selection': selectedMember }">
-        <TeamNeuralBackground :focused="Boolean(selectedMember)" />
+    <section
+        ref="stageEl"
+        class="team-stage"
+        :class="{ 'has-selection': selectedMember, 'is-tree': isTree, 'is-narrow-tree': isTree && isNarrow }"
+        :style="stageStyle"
+    >
+        <TeamNeuralBackground :focused="Boolean(selectedMember)" :edges="edges" />
 
         <header class="team-heading">
-            <h1>Team</h1>
-            <p>Nessuno risolve un problema da solo</p>
+            <h1>{{ t("team.title") }}</h1>
+            <p>{{ t("team.subtitle") }}</p>
         </header>
 
-        <div class="team-field" aria-label="Persone del team Axatel">
+        <div class="team-field" :aria-label="t('team.peopleAria')">
             <button
                 v-for="(member, index) in members"
                 :key="member.id"
@@ -15,45 +20,130 @@
                 :class="{ 'is-selected': selectedMember?.id === member.id }"
                 :style="memberStyle(member, index)"
                 type="button"
-                :aria-label="`Scopri ${member.name}`"
+                :aria-label="t('team.discover', { name: member.name })"
                 :aria-pressed="selectedMember?.id === member.id"
                 @click="selectMember(member)"
             >
                 <span class="portrait">
-                    <img :src="member.image" :alt="member.name" width="180" height="180" />
+                    <img v-if="member.image" :src="member.image" :alt="member.name" width="180" height="180" loading="lazy" decoding="async" />
+                    <span v-else class="initials" aria-hidden="true">{{ initials(member.name) }}</span>
                 </span>
                 <span class="member-name">{{ member.name }}</span>
+                <span v-if="showRole(member)" class="member-role">{{ member.role }}</span>
+                <span v-if="showDepartment(member)" class="member-dept">{{ t("team.department", { name: member.department }) }}</span>
             </button>
         </div>
 
         <Transition name="profile">
             <article v-if="selectedMember" class="member-profile" aria-live="polite">
-                <p class="profile-kicker">Il nostro team</p>
+                <p class="profile-kicker">{{ selectedMember.role || t("team.kicker") }}</p>
                 <h2>{{ selectedMember.name }}</h2>
+                <p v-if="selectedDepartment" class="profile-dept">{{ t("team.department", { name: selectedDepartment }) }}</p>
                 <p>{{ selectedMember.description }}</p>
-                <button type="button" class="back-button" @click="clearSelection">Torna al team</button>
+                <dl v-if="selectedManagers.length || selectedReports.length" class="profile-links">
+                    <div v-if="selectedManagers.length">
+                        <dt>{{ t("team.reportsTo") }}</dt>
+                        <dd>
+                            <button v-for="person in selectedManagers" :key="person.id" type="button" @click="selectMember(person)">{{ person.name }}</button>
+                        </dd>
+                    </div>
+                    <div v-if="selectedReports.length">
+                        <dt>{{ t("team.directReports") }}</dt>
+                        <dd>
+                            <button v-for="person in selectedReports" :key="person.id" type="button" @click="selectMember(person)">{{ person.name }}</button>
+                        </dd>
+                    </div>
+                </dl>
+                <button type="button" class="back-button" @click="clearSelection">{{ t("team.back") }}</button>
             </article>
         </Transition>
     </section>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import TeamNeuralBackground from "./TeamNeuralBackground.vue";
 import type { TeamMember } from "../../data/team";
+import { hasHierarchy, layoutTree } from "../../utils/teamTree";
 
-defineProps<{ members: TeamMember[] }>();
+// labelMode (Impostazioni → Team → Etichetta sotto il nome): what the org
+// chart shows under each name: "department" (under department heads),
+// "role" (under everyone), "both" or "none".
+const props = withDefaults(defineProps<{ members: TeamMember[]; labelMode?: string }>(), { labelMode: "department" });
 const stageEl = ref<HTMLElement | null>(null);
 const selectedMember = ref<TeamMember | null>(null);
+const { t } = useI18n();
+
+// Phones get an indented outline instead of a wide tree. Decided after
+// the page has loaded, so the server-rendered HTML always matches.
+const isNarrow = ref(false);
+let narrowQuery: MediaQueryList | null = null;
+const syncNarrow = () => { isNarrow.value = Boolean(narrowQuery?.matches); };
+onMounted(() => {
+    narrowQuery = window.matchMedia("(max-width: 760px)");
+    syncNarrow();
+    narrowQuery.addEventListener("change", syncNarrow);
+});
+onBeforeUnmount(() => narrowQuery?.removeEventListener("change", syncNarrow));
+
+// Org chart when people report to each other (Riporta a in the CMS);
+// otherwise the original free-floating network.
+const isTree = computed(() => hasHierarchy(props.members));
+const tree = computed(() => (isTree.value ? layoutTree(props.members, isNarrow.value ? "narrow" : "wide") : null));
+const byId = computed(() => new Map(props.members.map((m) => [m.id, m])));
+
+function positionOf(member: TeamMember): { x: number; y: number } {
+    return tree.value?.positions[member.id] ?? member.position;
+}
+
+// Lines for the background: only manager → person in tree mode. While a
+// profile is open the people are stacked, so no lines are drawn.
+const edges = computed(() => (tree.value ? (selectedMember.value ? [] : tree.value.edges) : null));
+
+const stageStyle = computed<Record<string, string>>(() => {
+    if (!tree.value) return {};
+    const { rows, columns } = tree.value;
+    // Each row holds the photo, the labels under it and room for the line.
+    const labelSpace = { both: 72, department: 50, role: 44 }[props.labelMode] ?? 24;
+    if (isNarrow.value) return { "--tree-height": `${rows * (72 + labelSpace + 40)}px`, "--member-size": "72px" };
+    const size = Math.max(70, Math.min(124, Math.floor(1040 / columns) - 26));
+    const rowHeight = size + labelSpace + 66;
+    return { "--tree-height": `${Math.max(rows * rowHeight, 380)}px`, "--member-size": `${size}px` };
+});
+
+const showDepartment = (member: TeamMember) =>
+    Boolean(isTree.value && ["department", "both"].includes(props.labelMode) && (member.department || "").trim());
+const showRole = (member: TeamMember) =>
+    Boolean(isTree.value && ["role", "both"].includes(props.labelMode) && (member.role || "").trim());
+
+const selectedDepartment = computed(() =>
+    selectedMember.value && tree.value ? tree.value.departmentOf[selectedMember.value.id] || "" : ""
+);
+// Main manager first, then the "also reports to" ones; the same for the team.
+const selectedManagers = computed(() => {
+    const id = selectedMember.value?.id;
+    if (!id || !tree.value) return [];
+    const ids = [tree.value.managerOf[id], ...(tree.value.alsoManagersOf[id] ?? [])].filter(Boolean) as string[];
+    return ids.map((x) => byId.value.get(x)!).filter(Boolean);
+});
+const selectedReports = computed(() => {
+    const id = selectedMember.value?.id;
+    if (!id || !tree.value) return [];
+    const ids = [...(tree.value.reportsOf[id] ?? []), ...(tree.value.alsoReportsOf[id] ?? [])];
+    return [...new Set(ids)].map((x) => byId.value.get(x)!).filter(Boolean);
+});
 
 function memberStyle(member: TeamMember, index: number): Record<string, string> {
-    const horizontal = 4 + (index * 3) % 9;
-    const vertical = 5 + (index * 5) % 10;
+    // In the org chart people drift less, so the branches stay readable.
+    const calm = isTree.value ? 0.35 : 1;
+    const horizontal = (4 + (index * 3) % 9) * calm;
+    const vertical = (5 + (index * 5) % 10) * calm;
     const direction = index % 2 === 0 ? 1 : -1;
+    const position = positionOf(member);
 
     return {
-        "--member-x": `${member.position.x}%`,
-        "--member-y": `${member.position.y}%`,
+        "--member-x": `${position.x}%`,
+        "--member-y": `${position.y}%`,
         "--float-delay": `${index * -0.73}s`,
         "--float-duration": `${6.2 + (index * 1.13) % 4.8}s`,
         "--drift-x-a": `${horizontal * direction}px`,
@@ -62,9 +152,19 @@ function memberStyle(member: TeamMember, index: number): Record<string, string> 
         "--drift-y-b": `${vertical * 0.62}px`,
         "--drift-x-c": `${horizontal * 0.38 * direction}px`,
         "--drift-y-c": `${vertical * 0.9}px`,
-        "--drift-rotate": `${direction * (0.6 + index % 3 * 0.35)}deg`,
+        "--drift-rotate": `${direction * (0.6 + index % 3 * 0.35) * calm}deg`,
         "--stack-order": `${index}`
     };
+}
+
+// Shown instead of a photo when none was uploaded: "Mario Rossi" → "MR".
+function initials(name: string): string {
+    return name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join("");
 }
 
 function selectMember(member: TeamMember): void {
@@ -101,7 +201,7 @@ function clearSelection(): void {
 .team-heading h1 {
     margin: 0;
     color: #f3fbff;
-    font-family: "forma-djr-micro", sans-serif;
+    font-family: Montserrat, system-ui, sans-serif;
     font-size: clamp(4.5rem, 10vw, 8rem);
     font-weight: 350;
     line-height: 0.95;
@@ -129,8 +229,11 @@ function clearSelection(): void {
     position: absolute;
     top: var(--member-y);
     left: var(--member-x);
-    width: clamp(94px, 9vw, 138px);
+    width: var(--member-size, clamp(94px, 9vw, 138px));
     display: grid;
+    /* One fixed column: a long name or department label overflows on both
+       sides instead of making the photo circle bigger. */
+    grid-template-columns: 100%;
     justify-items: center;
     gap: 10px;
     padding: 0;
@@ -164,6 +267,17 @@ function clearSelection(): void {
     object-fit: cover;
 }
 
+.initials {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    color: #e8f7ff;
+    font-size: clamp(1rem, 2.4vw, 1.6rem);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
 .member-name {
     width: max-content;
     max-width: 150px;
@@ -171,6 +285,109 @@ function clearSelection(): void {
     font-size: clamp(0.72rem, 1vw, 0.88rem);
     font-weight: 700;
     text-shadow: 0 2px 12px #020712;
+}
+
+/* Org chart: the stage grows with the number of rows. */
+.team-stage.is-tree:not(.has-selection) {
+    min-height: max(100svh, calc(clamp(290px, 34vh, 350px) + var(--tree-height, 0px) + 60px));
+}
+
+.team-stage.is-tree:not(.has-selection) .team-field {
+    bottom: auto;
+    height: var(--tree-height, 60%);
+}
+
+.member-dept {
+    margin-top: -4px;
+    padding: 3px 9px;
+    border: 1px solid rgba(255, 117, 104, 0.5);
+    border-radius: 999px;
+    background: rgba(2, 7, 18, 0.72);
+    color: #ffb1a8;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* In the org chart the lines run behind the labels: a soft backdrop keeps
+   names and roles readable where a line passes. */
+.team-stage.is-tree .member-name,
+.member-role {
+    padding: 1px 7px;
+    border-radius: 6px;
+    background: rgba(2, 7, 18, 0.66);
+}
+
+.member-role {
+    max-width: 170px;
+    margin-top: -6px;
+    color: #79cfff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+    text-align: center;
+    text-shadow: 0 2px 10px #020712;
+}
+
+.has-selection .member-dept,
+.has-selection .member-role {
+    opacity: 0;
+}
+
+.profile-dept {
+    margin: 6px 0 0;
+    color: #79cfff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.profile-links {
+    display: grid;
+    gap: 10px;
+    margin: 0 auto 24px;
+    max-width: 470px;
+}
+
+.profile-links div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: baseline;
+    gap: 6px 10px;
+}
+
+.profile-links dt {
+    color: var(--ax-color-text-secondary);
+    font-size: 0.8rem;
+}
+
+.profile-links dd {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.profile-links button {
+    padding: 5px 12px;
+    border: 1px solid rgba(121, 207, 255, 0.4);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ax-color-text-primary);
+    font: inherit;
+    font-size: 0.84rem;
+    cursor: pointer;
+}
+
+.profile-links button:hover,
+.profile-links button:focus-visible {
+    border-color: #ff7568;
 }
 
 .team-member:hover .portrait,
@@ -304,19 +521,23 @@ function clearSelection(): void {
     }
 
     .team-member {
-        width: 88px;
+        width: var(--member-size, 88px);
     }
 
-    .team-member:nth-child(1) { --member-x: 17% !important; --member-y: 29% !important; }
-    .team-member:nth-child(2) { --member-x: 49% !important; --member-y: 32% !important; }
-    .team-member:nth-child(3) { --member-x: 82% !important; --member-y: 29% !important; }
-    .team-member:nth-child(4) { --member-x: 27% !important; --member-y: 44% !important; }
-    .team-member:nth-child(5) { --member-x: 70% !important; --member-y: 45% !important; }
-    .team-member:nth-child(6) { --member-x: 15% !important; --member-y: 59% !important; }
-    .team-member:nth-child(7) { --member-x: 50% !important; --member-y: 61% !important; }
-    .team-member:nth-child(8) { --member-x: 84% !important; --member-y: 59% !important; }
-    .team-member:nth-child(9) { --member-x: 30% !important; --member-y: 76% !important; }
-    .team-member:nth-child(10) { --member-x: 70% !important; --member-y: 77% !important; }
+    .is-narrow-tree .member-name {
+        max-width: 120px;
+    }
+
+    .team-stage:not(.is-tree) .team-member:nth-child(1) { --member-x: 17% !important; --member-y: 29% !important; }
+    .team-stage:not(.is-tree) .team-member:nth-child(2) { --member-x: 49% !important; --member-y: 32% !important; }
+    .team-stage:not(.is-tree) .team-member:nth-child(3) { --member-x: 82% !important; --member-y: 29% !important; }
+    .team-stage:not(.is-tree) .team-member:nth-child(4) { --member-x: 27% !important; --member-y: 44% !important; }
+    .team-stage:not(.is-tree) .team-member:nth-child(5) { --member-x: 70% !important; --member-y: 45% !important; }
+    .team-stage:not(.is-tree) .team-member:nth-child(6) { --member-x: 15% !important; --member-y: 59% !important; }
+    .team-stage:not(.is-tree) .team-member:nth-child(7) { --member-x: 50% !important; --member-y: 61% !important; }
+    .team-stage:not(.is-tree) .team-member:nth-child(8) { --member-x: 84% !important; --member-y: 59% !important; }
+    .team-stage:not(.is-tree) .team-member:nth-child(9) { --member-x: 30% !important; --member-y: 76% !important; }
+    .team-stage:not(.is-tree) .team-member:nth-child(10) { --member-x: 70% !important; --member-y: 77% !important; }
 
     .has-selection {
         min-height: 100svh;

@@ -6,27 +6,39 @@
 
         <div class="content-light-stage">
             <section class="content-shell">
-                <NuxtLink to="/" class="back-link">Torna alla home</NuxtLink>
-                <div class="eyebrow">{{ breadcrumbLabel }} · {{ page.group }} · {{ page.eyebrow }}</div>
-                <p class="lead">{{ page.introduction }}</p>
+                <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
+                <!-- These pages are written in the code, in Italian only, until they
+                     move to the CMS. "Coming soon" pages have their few words
+                     translated (i18n comingSoon.pages), so no notice there. -->
+                <LayoutTranslationNotice v-if="locale !== 'it' && !soonTranslated" />
+                <div class="eyebrow">{{ label(breadcrumbLabel) }} · {{ label(page.group) }}</div>
 
                 <ContentComingSoon
                     v-if="page.status === 'coming-soon'"
-                    :group="page.group"
-                    :eyebrow="page.eyebrow"
+                    :kicker="soonTranslated ? t(`comingSoon.pages.${page.slug}.kicker`) : label(page.eyebrow)"
+                    :text="soonTranslated ? t(`comingSoon.pages.${page.slug}.text`) : page.introduction"
                 />
 
-                <GlossarySearch v-else-if="glossaryTerms.length" :terms="glossaryTerms" />
-
                 <template v-else>
+                    <p class="lead">{{ page.introduction }}</p>
+                </template>
+
+                <GlossarySearch v-if="page.status !== 'coming-soon' && glossaryTerms.length" :terms="glossaryTerms" />
+
+                <template v-else-if="page.status !== 'coming-soon'">
                     <ContentMedia :title="page.title" :src="page.image" :alt="page.imageAlt" />
 
                     <section v-if="page.feature" class="feature-band" :aria-labelledby="`feature-${page.slug}`">
                         <p class="feature-label">{{ page.feature.label }}</p>
                         <h2 :id="`feature-${page.slug}`">{{ page.feature.name }}</h2>
                         <p>{{ page.feature.description }}</p>
+                        <NuxtLink
+                            v-if="page.feature.href && page.feature.href.startsWith('/')"
+                            class="feature-link"
+                            :to="localePath(page.feature.href)"
+                        >{{ page.feature.hrefLabel || "Approfondisci" }}</NuxtLink>
                         <a
-                            v-if="page.feature.href"
+                            v-else-if="page.feature.href"
                             class="feature-link"
                             :href="page.feature.href"
                             target="_blank"
@@ -42,7 +54,7 @@
 
                     <footer class="content-cta">
                         <p>{{ page.cta?.text || "Vuoi capire quale soluzione e adatta al tuo progetto?" }}</p>
-                        <NuxtLink :to="page.cta?.href || '/contatti'" class="ax-cta-outline">
+                        <NuxtLink :to="localePath(page.cta?.href || '/contatti')" class="ax-cta-outline">
                             {{ page.cta?.label || "Contattaci" }}
                         </NuxtLink>
                     </footer>
@@ -52,10 +64,11 @@
                     <NuxtLink
                         v-for="item in relatedPages"
                         :key="item.slug"
-                        :to="`${basePath}/${item.slug}`"
+                        :to="localePath(`${basePath}/${item.slug}`)"
                     >
-                        <span>{{ item.group }}</span>
-                        <strong>{{ shortTitle(item.title) }}</strong>
+                        <span>{{ label(item.group) }}</span>
+                        <strong>{{ label(shortTitle(item.title)) }}</strong>
+                        <em aria-hidden="true">→</em>
                     </NuxtLink>
                 </nav>
             </section>
@@ -71,8 +84,13 @@ import ContentMedia from "./ContentMedia.vue";
 import ContentSection from "./ContentSection.vue";
 import GlossarySearch from "./GlossarySearch.vue";
 import ArticleParticleHero from "../articles/ArticleParticleHero.vue";
+import { computed } from "vue";
+import { NAV_LABELS } from "../../data/navLabels";
 
-withDefaults(defineProps<{
+const { t, te, locale } = useI18n();
+const localePath = useLocalePath();
+
+const props = withDefaults(defineProps<{
     page: ContentPageData;
     breadcrumbLabel: string;
     basePath: string;
@@ -84,6 +102,17 @@ withDefaults(defineProps<{
     relatedLabel: "Pagine correlate",
     glossaryTerms: () => []
 });
+
+// Built-in labels are Italian: translate the ones the menu also uses.
+function label(text: string): string {
+    if (!text || locale.value === "it") return text;
+    const entry = NAV_LABELS[text];
+    return (entry && (entry as any)[locale.value]) || text;
+}
+
+const soonTranslated = computed(
+    () => props.page.status === "coming-soon" && te(`comingSoon.pages.${props.page.slug}.text`)
+);
 
 function shortTitle(title: string): string {
     return title.replace(/^Monitoraggio\s+/i, "");
@@ -251,9 +280,21 @@ function shortTitle(title: string): string {
 }
 
 .topic-navigation span {
-    color: #667f97;
+    color: #c52317;
     font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.topic-navigation strong {
+    font-size: 1.05rem;
+}
+
+.topic-navigation em {
+    color: #c52317;
+    font-style: normal;
+    font-weight: 700;
 }
 
 @media (max-width: 820px) {

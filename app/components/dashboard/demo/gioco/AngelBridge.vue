@@ -20,7 +20,7 @@
         </div>
 
         <span class="label">
-            {{ isAlarm ? currentValue.toFixed(1) + ' mm' : 'Fessura monitorata' }}
+            {{ isAlarm ? currentValue.toFixed(1) + ' mm' : t('demo.sensors.crack') }}
         </span>
 
     </div>
@@ -97,6 +97,8 @@
 import { ref,onMounted,onUnmounted } from "vue"
 import { gsap } from "gsap"
 
+const { t } = useI18n()
+
 const emit=defineEmits<{
     (e:"alarm"):void
     (e:"normal"):void
@@ -129,7 +131,7 @@ function saveAlarm(){
 
     alarms.unshift({
 
-        id:crypto.randomUUID(),
+        id:makeId(),
 
         name:"Crepa aperta",
 

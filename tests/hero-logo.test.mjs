@@ -230,7 +230,7 @@ test("AngelBPM samples logo and title on one grid using the dynamic phrase typog
     assert.equal(textCalls[0].width, 120 * 0.92);
     assert.equal(textCalls[0].height, 68 * 0.84);
     assert.equal(textCalls.length, 1, "reference typography is measured without separately sampling the title");
-    assert.equal(context.font, '350 180px "forma-djr-micro", sans-serif');
+    assert.equal(context.font, '350 180px Montserrat, system-ui, sans-serif');
     assert.equal(drawing[0][5], 240, "logo height stays proportional to the title");
     assert.equal(drawing[1][1], "AngelBPM");
     assert.equal(sampling.width, 120 * 0.69);

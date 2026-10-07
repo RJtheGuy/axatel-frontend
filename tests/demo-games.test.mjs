@@ -24,12 +24,16 @@ function game(name, exports) {
     };
     const context = vm.createContext({
         ref, computed,
+        // The games are translated: keys stand in for the texts.
+        useI18n: () => ({ t: (key) => key, te: () => false, tm: () => [], rt: (value) => value, locale: { value: "it" } }),
+        useLocalePath: () => (path) => path,
         defineEmits: () => (event) => events.push(event),
         onMounted: (callback) => callback(),
         onUnmounted: (callback) => cleanup.push(callback),
         gsap: { ticker: { add: (fn) => ticks.add(fn), remove: (fn) => ticks.delete(fn), deltaRatio: () => 1 } },
         performance: { now: () => now },
         crypto: { randomUUID: () => String(++nextId) },
+        makeId: () => String(++nextId),
         localStorage: { getItem: () => stored, setItem: (key, value) => { stored = value; } },
         setTimeout: (fn, delay) => { const id = ++nextId; timers.set(id, { fn, at: now + delay }); return id; },
         clearTimeout: (id) => timers.delete(id),

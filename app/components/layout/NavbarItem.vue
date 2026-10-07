@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import type { NavigationItem } from "../../types/navigation";
-import { balanceNavigationGroups } from "../../utils/balanceNavigationGroups";
+import { isBlogHref, useBlogUpdates } from "../../composables/useBlogUpdates";
 
 const props = defineProps<{
     item: NavigationItem;
@@ -14,35 +14,53 @@ const emit = defineEmits<{
 }>();
 
 const dropdown = ref<HTMLDetailsElement | null>(null);
-const panel = ref<HTMLDivElement | null>(null);
-const groupPlacements = ref<ReturnType<typeof balanceNavigationGroups>>([]);
+
+// "New posts" badge next to the Blog link, and a small dot on the menu and
+// group that contain it, so the badge is findable without opening every menu.
+const { t } = useI18n();
+const { count: newPosts } = useBlogUpdates();
+const badgeText = computed(() => (newPosts.value > 9 ? "9+" : String(newPosts.value)));
+const badgeLabel = computed(() =>
+    newPosts.value === 1 ? t("blog.newPostsOne") : t("blog.newPosts", { count: newPosts.value })
+);
+const groupHasNew = (group: { links?: Array<{ href?: string }> }) =>
+    newPosts.value > 0 && Boolean(group.links?.some((l) => isBlogHref(l.href)));
+const itemHasNew = computed(() => (props.item.groups ?? []).some(groupHasNew));
 const activeMobileGroup = ref<number | null>(null);
-let groupObserver: ResizeObserver | null = null;
-let desktopMedia: MediaQueryList | null = null;
 
-const updateGroupLayout = () => {
-    if (!isDesktop()) {
-        groupPlacements.value = [];
-        return;
-    }
-    const groups = Array.from(panel.value?.querySelectorAll<HTMLElement>(".dropdown-group") ?? []);
-    if (!groups.length || !panel.value?.getClientRects().length) return;
-    groupPlacements.value = balanceNavigationGroups(groups.map((group) => group.getBoundingClientRect().height));
-};
-
-const observeGroups = async () => {
-    await nextTick();
-    groupObserver?.disconnect();
-    panel.value?.querySelectorAll(".dropdown-group").forEach((group) => groupObserver?.observe(group));
-    updateGroupLayout();
-};
+// Desktop dropdown columns. A group with "Colonna" set in the CMS goes in
+// that column; the others go under the column that is shortest so far, so
+// a long group and two short ones balance out. Inside a column groups keep
+// the CMS order. On phones the groups are a plain
+// list in CMS order (see the `order` style below).
+type NavGroup = NonNullable<NavigationItem["groups"]>[number];
+const groupWeight = (group: NavGroup) => 1.4 + (group.links?.length ?? 0);
+const dropdownColumns = computed(() => {
+    const groups = props.item.groups ?? [];
+    const wanted = Math.max(0, ...groups.map((group) => Number(group.column) || 0));
+    const count = Math.min(3, Math.max(groups.length > 1 ? 2 : 1, wanted));
+    const columns = Array.from({ length: count }, () => ({ entries: [] as Array<{ group: NavGroup; index: number }>, weight: 0 }));
+    const put = (column: (typeof columns)[number], group: NavGroup, index: number) => {
+        column.entries.push({ group, index });
+        column.weight += groupWeight(group);
+    };
+    // One pass in menu order, so setting a column on one group leaves the
+    // groups before it where they were.
+    groups.forEach((group, index) => {
+        const fixed = Number(group.column) || 0;
+        const target = fixed
+            ? columns[Math.min(fixed, count) - 1]!
+            : columns.reduce((best, column) => (column.weight < best.weight ? column : best));
+        put(target, group, index);
+    });
+    return columns.filter((column) => column.entries.length > 0);
+});
 
 const isDesktop = () => window.matchMedia("(min-width: 1101px)").matches;
 
 const openOnHover = () => {
     if (dropdown.value && isDesktop()) {
         dropdown.value.open = true;
-        void nextTick(updateGroupLayout);
     }
 };
 
@@ -77,20 +95,6 @@ watch(() => props.mobileExpanded, (expanded) => {
         activeMobileGroup.value = null;
     }
 });
-
-watch(() => props.item.groups, observeGroups, { deep: true });
-
-onMounted(() => {
-    groupObserver = new ResizeObserver(updateGroupLayout);
-    desktopMedia = window.matchMedia("(min-width: 1101px)");
-    desktopMedia.addEventListener("change", updateGroupLayout);
-    void observeGroups();
-});
-
-onUnmounted(() => {
-    groupObserver?.disconnect();
-    desktopMedia?.removeEventListener("change", updateGroupLayout);
-});
 </script>
 
 <template>
@@ -101,6 +105,7 @@ onUnmounted(() => {
         @click="emit('navigate')"
     >
         {{ item.label }}
+        <span v-if="isBlogHref(item.href) && newPosts > 0" class="new-badge" :aria-label="badgeLabel">{{ badgeText }}</span>
     </NuxtLink>
 
     <details
@@ -111,22 +116,23 @@ onUnmounted(() => {
         @mouseleave="closeOnLeave"
     >
         <summary class="nav-link" @click="handleSummaryClick">
-            <span>{{ item.label }}</span>
+            <span class="summary-label">
+                {{ item.label }}
+                <span v-if="itemHasNew" class="new-dot" aria-hidden="true" />
+            </span>
             <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m7 10 5 5 5-5" />
             </svg>
         </summary>
 
-        <div ref="panel" class="dropdown-panel" :class="{ 'is-balanced': groupPlacements.length > 0 }">
+        <div class="dropdown-panel" :style="{ '--dropdown-columns': String(Math.max(dropdownColumns.length, 1)) }">
+            <div v-for="(column, columnIndex) in dropdownColumns" :key="columnIndex" class="dropdown-column">
             <section
-                v-for="(group, groupIndex) in item.groups"
+                v-for="{ group, index: groupIndex } in column.entries"
                 :key="group.label"
                 class="dropdown-group"
                 :class="{ 'group-open': activeMobileGroup === groupIndex }"
-                :style="groupPlacements[groupIndex] ? {
-                    gridColumn: groupPlacements[groupIndex].column,
-                    gridRow: `${groupPlacements[groupIndex].row} / span ${groupPlacements[groupIndex].span}`
-                } : undefined"
+                :style="{ order: groupIndex }"
             >
                 <button
                     class="group-toggle"
@@ -134,7 +140,10 @@ onUnmounted(() => {
                     :aria-expanded="activeMobileGroup === groupIndex"
                     @click="toggleMobileGroup(groupIndex)"
                 >
-                    <span>{{ group.label }}</span>
+                    <span class="summary-label">
+                        {{ group.label }}
+                        <span v-if="groupHasNew(group)" class="new-dot group-dot" aria-hidden="true" />
+                    </span>
                     <svg class="group-chevron" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="m7 10 5 5 5-5" />
                     </svg>
@@ -145,12 +154,20 @@ onUnmounted(() => {
                         v-for="link in group.links"
                         :key="`${group.label}-${link.label}`"
                         :to="link.href"
+                        :target="link.open_in_new_tab ? '_blank' : undefined"
                         @click="emit('navigate')"
                     >
-                        {{ link.label }}
+                        <span>{{ link.label }}</span>
+                        <span
+                            v-if="isBlogHref(link.href) && newPosts > 0"
+                            class="new-badge"
+                            :aria-label="badgeLabel"
+                            :title="badgeLabel"
+                        >{{ badgeText }}</span>
                     </NuxtLink>
                 </div>
             </section>
+            </div>
         </div>
     </details>
 </template>
@@ -231,7 +248,7 @@ summary::-webkit-details-marker {
     top: calc(100% + 12px);
     left: 50%;
     display: grid;
-    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    grid-template-columns: repeat(var(--dropdown-columns, 2), minmax(180px, 1fr));
     width: max-content;
     min-width: 420px;
     max-width: min(680px, calc(100vw - 40px));
@@ -243,6 +260,13 @@ summary::-webkit-details-marker {
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
     backdrop-filter: blur(22px);
     transform: translateX(-50%);
+}
+
+.dropdown-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
 }
 
 .dropdown-panel::before {
@@ -315,16 +339,77 @@ summary::-webkit-details-marker {
     transform: translateX(3px);
 }
 
+.summary-label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Small red dot: "something new inside this menu". */
+.new-dot {
+    position: absolute;
+    top: -3px;
+    right: -8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ax-color-accent-red-soft, #e2493d);
+    box-shadow: 0 0 0 2px rgba(5, 15, 25, 0.9);
+    animation: new-dot-pulse 2.4s ease-out 2;
+}
+
+.group-dot {
+    position: static;
+    margin-left: 8px;
+    box-shadow: none;
+}
+
+/* Count pill next to the Blog link. */
+.new-badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--ax-color-accent-red-soft, #e2493d);
+    color: #fff;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Desktop: keep the pill next to the word, not at the far edge. */
 @media (min-width: 1101px) {
-    .dropdown-panel.is-balanced {
-        grid-auto-rows: 1px;
-        row-gap: 0;
+    .dropdown-group a .new-badge {
+        margin-right: auto;
+        margin-left: -10px;
     }
+}
 
-    .dropdown-group {
-        align-self: start;
+.dropdown-group a:hover .new-badge,
+.dropdown-group a:focus-visible .new-badge {
+    color: #fff;
+}
+
+@keyframes new-dot-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(226, 73, 61, 0.6);
     }
+    100% {
+        box-shadow: 0 0 0 8px rgba(226, 73, 61, 0);
+    }
+}
 
+@media (prefers-reduced-motion: reduce) {
+    .new-dot {
+        animation: none;
+    }
+}
+
+@media (min-width: 1101px) {
     .nav-dropdown > .dropdown-panel {
         display: none;
     }
@@ -374,6 +459,11 @@ summary::-webkit-details-marker {
         box-shadow: none;
         backdrop-filter: none;
         transform: none;
+    }
+
+    /* Phones: one list in CMS order, whatever the desktop columns. */
+    .dropdown-column {
+        display: contents;
     }
 
     .dropdown-group {

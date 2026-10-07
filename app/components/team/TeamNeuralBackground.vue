@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
     AdditiveBlending,
     BufferAttribute,
@@ -23,13 +23,19 @@ import renderFragmentShader from "../../shaders/render.frag?raw";
 import { FlowField } from "../../classes/hero/FlowField";
 
 type Point = { x: number; y: number };
-type NetworkNode = Point & { radius: number };
-type Edge = { a: number; b: number };
+// labelWidth/labelHeight: the name, role and department printed under the
+// circle, so a line can start below them instead of running through them.
+type NetworkNode = Point & { radius: number; labelWidth: number; labelHeight: number };
+type Edge = { a: number; b: number; weight?: number };
 type RoutePoint =
     | (Edge & { kind: "edge"; progress: number; lane: number })
     | { kind: "ring"; node: number; angle: number; layer: number };
 
-const props = defineProps<{ focused: boolean }>();
+// edges: the lines to draw, as [from, to] indices of the .team-member
+// buttons (org chart). Without it, lines link nearby people.
+// A third value per edge is its weight: 1 = a full line, 0.5 = a lighter
+// one ("also reports to").
+const props = defineProps<{ focused: boolean; edges?: Array<[number, number, number?]> | null }>();
 const hostEl = ref<HTMLElement | null>(null);
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 
@@ -48,6 +54,7 @@ let velocities = new Float32Array();
 let routeTargets = new Float32Array();
 let routePoints: RoutePoint[] = [];
 let topology: Edge[] = [];
+let topologyReady = false;
 let networkParticleCount = 0;
 let lastCenterSample = -1;
 const flowField = new FlowField();
@@ -79,6 +86,10 @@ function createParticles(): void {
 
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(positions, 3));
+    // The shared particle shader (also used by the homepage) multiplies each
+    // particle by its own "aOpacity"; without it every particle would be
+    // invisible, so here they all get full opacity.
+    geometry.setAttribute("aOpacity", new BufferAttribute(new Float32Array(positions.length / 3).fill(1), 1));
     const material = new ShaderMaterial({
         vertexShader: renderVertexShader,
         fragmentShader: renderFragmentShader,
@@ -131,12 +142,33 @@ function memberCenters(): NetworkNode[] {
         const rect = element.getBoundingClientRect();
         const x = rect.left - hostRect.left + rect.width / 2;
         const y = rect.top - hostRect.top + rect.width / 2;
+        const labels = [...element.querySelectorAll<HTMLElement>(".member-name, .member-role, .member-dept")]
+            .map((label) => label.getBoundingClientRect())
+            .filter((box) => box.width > 0);
+        const labelWidth = labels.length ? Math.max(...labels.map((box) => box.width)) : 0;
+        const labelBottom = labels.length ? Math.max(...labels.map((box) => box.bottom)) : rect.top + rect.width;
+        const toWorld = bounds.width / width;
         return {
             x: (x / width - 0.5) * bounds.width,
             y: (0.5 - y / height) * bounds.height,
-            radius: rect.width / width * bounds.width / 2
+            radius: (rect.width / 2) * toWorld,
+            labelWidth: labelWidth * toWorld,
+            labelHeight: Math.max(0, labelBottom - rect.top - rect.width) * toWorld
         };
     });
+}
+
+// How far from a person's centre a line in direction (dx, dy) must start so
+// it clears both the photo circle and the labels printed under it.
+function clearance(node: NetworkNode, dx: number, dy: number): number {
+    const circle = node.radius + 0.55;
+    if (dy >= -0.05 || node.labelHeight <= 0) return circle;
+    const down = -dy;
+    const enters = node.radius / down;
+    const leavesBottom = (node.radius + node.labelHeight) / down;
+    const leavesSide = Math.abs(dx) < 1e-6 ? Infinity : node.labelWidth / 2 / Math.abs(dx);
+    if (leavesSide <= enters) return circle; // passes beside the labels
+    return Math.max(circle, Math.min(leavesBottom, leavesSide) + 0.35);
 }
 
 function orientation(a: Point, b: Point, c: Point): number {
@@ -192,8 +224,21 @@ function buildTopology(points: Point[]): Edge[] {
     return result;
 }
 
+// The org chart changed (people loaded, phone/desktop layout): rebuild the lines.
+watch(
+    () => JSON.stringify(props.edges ?? null),
+    () => {
+        // Particles glide to the new lines (no snap): only the route changes.
+        topology = [];
+        topologyReady = false;
+    }
+);
+
 function createRoutePoints(points: NetworkNode[]): void {
-    topology = buildTopology(points);
+    topology = props.edges
+        ? props.edges.filter(([a, b]) => points[a] && points[b]).map(([a, b, weight]) => ({ a, b, weight: weight ?? 1 }))
+        : buildTopology(points);
+    topologyReady = true;
     const lengths = topology.map((edge) => Math.hypot(points[edge.a]!.x - points[edge.b]!.x, points[edge.a]!.y - points[edge.b]!.y));
     const totalLength = lengths.reduce((total, length) => total + length, 0) || 1;
     routePoints = [];
@@ -215,11 +260,16 @@ function createRoutePoints(points: NetworkNode[]): void {
 
     const edgeParticleBudget = Math.max(0, networkParticleCount - routePoints.length);
     const laneCount = width < 600 ? 5 : 7;
+    // Lighter edges ("also reports to") get a thin, sparse, dotted ribbon.
+    const share = topology.map((edge, i) => lengths[i]! * ((edge.weight ?? 1) < 1 ? 0.25 : 1));
+    const totalShare = share.reduce((total, value) => total + value, 0) || 1;
     topology.forEach((edge, edgeIndex) => {
-        const count = Math.max(laneCount * 8, Math.round(edgeParticleBudget * lengths[edgeIndex]! / totalLength));
-        const pointsPerLane = Math.max(8, Math.floor(count / laneCount));
-        for (let laneIndex = 0; laneIndex < laneCount; laneIndex += 1) {
-            const lane = laneIndex - (laneCount - 1) / 2;
+        const weak = (edge.weight ?? 1) < 1;
+        const lanes = weak ? 2 : laneCount;
+        const count = Math.max(lanes * 8, Math.round(edgeParticleBudget * share[edgeIndex]! / totalShare));
+        const pointsPerLane = Math.max(8, Math.floor(count / lanes));
+        for (let laneIndex = 0; laneIndex < lanes; laneIndex += 1) {
+            const lane = (laneIndex - (lanes - 1) / 2) * (weak ? 0.6 : 1);
             for (let index = 0; index < pointsPerLane && routePoints.length < networkParticleCount; index += 1) {
                 routePoints.push({
                     ...edge,
@@ -240,7 +290,7 @@ function sampleNetworkTargets(time: number): void {
     const centers = memberCenters();
     if (centers.length < 2) return;
     const isInitialFormation = lastCenterSample < 0;
-    if (topology.length === 0) createRoutePoints(centers);
+    if (!topologyReady) createRoutePoints(centers);
     for (let index = 0; index < routePoints.length; index += 1) {
         const route = routePoints[index]!;
         const offset = index * 3;
@@ -263,10 +313,12 @@ function sampleNetworkTargets(time: number): void {
         const distance = Math.max(0.001, Math.hypot(dx, dy));
         const directionX = dx / distance;
         const directionY = dy / distance;
-        const startX = start.x + directionX * (start.radius + 0.55);
-        const startY = start.y + directionY * (start.radius + 0.55);
-        const endX = end.x - directionX * (end.radius + 0.55);
-        const endY = end.y - directionY * (end.radius + 0.55);
+        const startGap = clearance(start, directionX, directionY);
+        const endGap = clearance(end, -directionX, -directionY);
+        const startX = start.x + directionX * startGap;
+        const startY = start.y + directionY * startGap;
+        const endX = end.x - directionX * endGap;
+        const endY = end.y - directionY * endGap;
         const endpointSpread = 0.18 + Math.abs(Math.cos(route.progress * Math.PI)) * 0.82;
         const ribbonWidth = (width < 600 ? 0.25 : 0.34) * route.lane * endpointSpread;
         routeTargets[offset] = startX + (endX - startX) * route.progress - directionY * ribbonWidth;

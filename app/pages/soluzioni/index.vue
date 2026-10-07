@@ -1,94 +1,108 @@
 <template>
     <main class="sol-page">
         <header class="sol-hero">
-            <ArticleParticleHero
-                title="Soluzioni"
-                :asset-url="imageUrl(indexPage?.title_particle_image) || undefined"
-            />
+            <ArticleParticleHero :title="t('solutions.title')" :asset-url="headerWing()" />
         </header>
 
         <div class="sol-light-stage">
             <section class="sol-shell">
-                <NuxtLink to="/" class="back-link">Torna alla home</NuxtLink>
+                <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
 
-                <div class="page-kicker">Come lo realizziamo</div>
+                <div class="page-kicker">{{ t("solutions.kicker") }}</div>
                 <p class="lead">{{ lead }}</p>
+                <LayoutTranslationNotice v-if="hasUntranslated" />
 
-                <p v-if="!items.length" class="empty">
-                    Nessuna soluzione pubblicata al momento.
-                </p>
+                <p v-if="!groups.length" class="empty">{{ t("solutions.empty") }}</p>
 
-                <div v-else class="sol-grid">
-                    <article v-for="item in items" :key="item.slug" class="sol-card">
-                        <NuxtLink :to="`/soluzioni/${item.slug}`" class="sol-link" :aria-label="`Leggi ${item.title}`">
-                            <div class="sol-icon" v-if="item.icon">{{ item.icon }}</div>
-                            <h2>{{ item.title }}</h2>
-                            <p>{{ item.description }}</p>
-                        </NuxtLink>
-                    </article>
-                </div>
+                <section v-for="group in groups" :key="group.key" class="sol-group" :aria-labelledby="`group-${group.key}`">
+                    <h2 :id="`group-${group.key}`" class="group-title">{{ group.label }}</h2>
+                    <div class="sol-grid">
+                        <article v-for="item in group.items" :key="item.slug" class="sol-card">
+                            <NuxtLink :to="localePath(`/soluzioni/${item.slug}`)" class="sol-link">
+                                <p v-if="item.eyebrow" class="sol-eyebrow">{{ item.eyebrow }}</p>
+                                <h3>{{ item.title }}</h3>
+                                <p>{{ item.description }}</p>
+                            </NuxtLink>
+                        </article>
+                    </div>
+                </section>
             </section>
         </div>
     </main>
 </template>
 
 <script setup lang="ts">
+/**
+ * Soluzioni listing, grouped like the menu (Piattaforme, Sensori,
+ * Tecnologie, Servizi). Shows the CMS pages (Pagine → Soluzioni); while
+ * none are published it shows the built-in list from data/contentPages.ts.
+ */
 import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
-import { solutionPages } from "../../data/contentPages";
+import { contentAreas } from "../../data/contentPages";
 
+const { t, te, locale } = useI18n();
+const localePath = useLocalePath();
 const { getPage, getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
 
-type SolutionItem = {
-    title: string;
-    icon: string;
-    description: string;
-    slug: string;
-};
+type SolutionItem = { title: string; eyebrow: string; description: string; slug: string; group: string; image: string };
 
-// NOTE: this listing shows real CMS SolutionPage entries as soon as
-// they're created, regardless of the contentAreas cutover — but
-// clicking into one still goes to /soluzioni/<slug>, which is served
-// by [area]/[slug].vue's LEGACY branch until "soluzioni" is removed
-// from contentAreas. Until that cutover, clicking a card here will
-// show the fallback message for any topic not in the old static list
-// (or the old static content for ones that happen to share a slug).
-// This is expected during the migration window, not a bug — finish
-// creating all 12 real pages, then do the cutover, and the links
-// this page already generates will start resolving to real CMS pages
-// with zero further changes needed here.
-const { data: solData } = await useAsyncData("soluzioni-list", () =>
-    getPage("solutions.SolutionPage", { order: "title" }).catch(() => null)
+const GROUP_ORDER = ["Piattaforme", "Sensori", "Tecnologie", "Servizi"];
+
+const { data: solData } = await useAsyncData(
+    () => `soluzioni-list-${locale.value}`,
+    () => getPage("solutions.SolutionPage", { limit: 20 }).catch(() => null),
+    { watch: [locale] }
 );
 
-const { data: indexPage } = await useAsyncData("soluzioni-index", () =>
-    getPageBySlug("solutions.SolutionsIndexPage", "soluzioni").catch(() => null)
+const { data: indexPage } = await useAsyncData(
+    () => `soluzioni-index-${locale.value}`,
+    () => getPageBySlug("solutions.SolutionsIndexPage", "soluzioni").catch(() => null),
+    { watch: [locale] }
 );
 
-const DEFAULT_LEAD = "Piattaforme, sensori, tecnologie e servizi per realizzare monitoraggio e automazione su misura.";
+const hasUntranslated = computed(() => ((solData.value?.items ?? []) as any[]).some((p) => p.__fallback));
 
 const lead = computed(() => {
     const intro = indexPage.value?.intro;
-    return typeof intro === "string" && intro.trim().length > 0 ? intro : DEFAULT_LEAD;
+    return typeof intro === "string" && intro.trim().length > 0 && !indexPage.value?.__fallback ? intro : t("solutions.lead");
 });
 
-const items = computed<SolutionItem[]>(() =>
-    solData.value ? solData.value.items.map((p: any) => ({
-        title: p.title,
-        icon: p.icon || "",
-        description: p.short_description || "",
-        slug: p.meta?.slug
-    })) : Object.values(solutionPages).map(page => ({
-        title: page.title, icon: "", description: page.introduction, slug: page.slug
-    }))
-);
+const items = computed<SolutionItem[]>(() => {
+    const cms = (solData.value?.items ?? []) as any[];
+    if (cms.length) {
+        return cms.map((p) => ({
+            title: p.title,
+            eyebrow: p.eyebrow || "",
+            description: p.short_description || "",
+            slug: p.meta?.slug,
+            group: p.group || "",
+            image: p.cover_image?.url || "",
+        }));
+    }
+    const area = contentAreas.soluzioni;
+    return area.order.map((slug) => area.pages[slug]!).map((p) => ({
+        title: p.title, eyebrow: p.eyebrow, description: p.introduction, slug: p.slug, group: p.group, image: p.image || "",
+    }));
+});
+
+const groups = computed(() => {
+    const keys = [...GROUP_ORDER, ...new Set(items.value.map((i) => i.group).filter((g) => !GROUP_ORDER.includes(g)))];
+    return keys
+        .map((key) => ({
+            key: key || "altro",
+            label: key && te(`solutions.groups.${key}`) ? t(`solutions.groups.${key}`) : key || t("solutions.title"),
+            items: items.value.filter((i) => i.group === key),
+        }))
+        .filter((g) => g.items.length);
+});
 
 useSeoMeta({
-    title: "Soluzioni | Axatel",
+    title: () => `${t("solutions.title")} | Axatel`,
     description: () => lead.value,
-    ogTitle: "Soluzioni | Axatel",
+    ogTitle: () => `${t("solutions.title")} | Axatel`,
     ogDescription: () => lead.value,
     ogType: "website",
     robots: "index,follow"
@@ -172,7 +186,7 @@ useSeoMeta({
 
 .sol-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 18px;
 }
 
@@ -199,7 +213,26 @@ useSeoMeta({
     line-height: 1;
 }
 
-.sol-link h2 {
+.sol-group {
+    margin-top: 36px;
+}
+
+.group-title {
+    margin: 0 0 14px;
+    color: #0b355b;
+    font-size: 1.35rem;
+    font-weight: 500;
+}
+
+.sol-eyebrow {
+    color: #c52317 !important;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.sol-link h3 {
     margin: 0;
     color: #0b355b;
     font-size: 1.14rem;
@@ -227,4 +260,4 @@ useSeoMeta({
         padding: 5vh 5vw 6vh;
     }
 }
-</style>
+</style>

@@ -3,7 +3,7 @@ import { DEFAULT_WING_IMAGE } from "@/utils/resolveImage";
 export class ShapeFactory {
     private static readonly DRAW_WIDTH = 1600;
     private static readonly DRAW_HEIGHT = 520;
-    private static readonly FONT_FAMILY = '"forma-djr-micro", sans-serif';
+    private static readonly FONT_FAMILY = 'Montserrat, system-ui, sans-serif';
     private static readonly DESKTOP_COMPOSITE_FONT_SIZE = 138;
     private static readonly MOBILE_COMPOSITE_FONT_SIZE = 126;
     // Dimensioni rese in pixel CSS: su desktop la composizione non scala con il viewport.

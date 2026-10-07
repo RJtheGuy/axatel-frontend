@@ -51,7 +51,16 @@ const componentMap: Record<string, any> = {
     feature_grid: resolveComponent("CmsFeatureGrid"),
     testimonial: resolveComponent("CmsTestimonial"),
     partner_logos: resolveComponent("CmsPartnerLogos"),
-    portfolio_grid: resolveComponent("CmsPortfolioGrid")
+    portfolio_grid: resolveComponent("CmsPortfolioGrid"),
+    // Structured solution / product blocks (core/blocks_solutions.py)
+    text_section: resolveComponent("CmsTextSection"),
+    product_feature: resolveComponent("CmsProductFeature"),
+    measures: resolveComponent("CmsMeasures"),
+    steps: resolveComponent("CmsSteps"),
+    device_cards: resolveComponent("CmsDeviceCards"),
+    case_cards: resolveComponent("CmsCaseCards"),
+    faq: resolveComponent("CmsFaq"),
+    contact_form: resolveComponent("CmsContactForm")
 };
 </script>
 

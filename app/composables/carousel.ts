@@ -68,6 +68,22 @@ export function useCarousel({
 
     }
 
+    // Visitors who ask their OS for reduced motion get a still row they
+    // can scroll themselves, instead of cards that keep sliding away.
+    const reducedMotion = typeof window !== "undefined"
+        && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+
+    if (reducedMotion) {
+        container.style.overflowX = "auto"
+        container.style.scrollSnapType = "x proximity"
+        return {
+            pause() {},
+            resume() {},
+            updateWidth() {},
+            destroy() {}
+        }
+    }
+
     requestAnimationFrame(computeWidth)
 
     window.addEventListener(

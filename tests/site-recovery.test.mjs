@@ -12,10 +12,19 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), "utf8"
 async function casePage(file, response, extra = {}) {
     const { descriptor } = parse(read(`app/pages/casi/${file}.vue`));
     const script = descriptor.scriptSetup.content.replace(/^import .*;\r?$/gm, "");
-    const code = stripTypeScriptTypes(script);
+    // The pages use app/utils/cmsError.ts (404 vs 503): run the real helper.
+    const helper = read("app/utils/cmsError.ts").replace(/^export /gm, "").replace("import.meta.client", "false")
+        // The list orders cases by "Data del progetto" (app/utils/caseOrder.ts): the real helper too.
+        + "\n" + read("app/utils/caseOrder.ts").replace(/^export /gm, "");
+    const code = stripTypeScriptTypes(helper + "\n" + script);
     return runInNewContext(`(async () => { ${code}; return ${file === "index" ? "cases.value" : "caso.value"}; })()`, {
         computed: fn => ({ get value() { return fn(); } }),
-        useRoute: () => ({ params: { slug: "known-case" } }),
+        useRoute: () => ({ params: { slug: "known-case" }, query: {} }),
+        useRouter: () => ({ replace() {} }),
+        // The pages are translated: keys stand in for the texts.
+        useI18n: () => ({ t: (key) => key, locale: { value: "it" } }),
+        useLocalePath: () => (path) => path,
+        useNuxtApp: () => ({ $i18n: { t: (key) => key } }),
         useCms: () => ({ getPage: response, getPageBySlug: response }),
         useCmsImage: () => ({ imageUrl: image => image }),
         useAsyncData: async (_key, handler) => {
@@ -85,4 +94,14 @@ test("bundled image resolver works without Nuxt context and rejects missing asse
     for (const file of ["team", "monitoring", "contentPages"]) {
         assert.match(read(`app/data/${file}.ts`), /resolveBundledImage as resolveImage/);
     }
+});
+
+test("cases: most recent project first, undated ones after in their original order", () => {
+    const code = stripTypeScriptTypes(read("app/utils/caseOrder.ts").replace(/^export /gm, ""));
+    const byEventDate = runInNewContext(`${code}; byEventDate`);
+    const order = byEventDate([
+        { slug: "a" }, { slug: "b", event_date: "2023-05-01" }, { slug: "c" },
+        { slug: "d", event_date: "2025-01-15" }, { slug: "e", event_date: null }
+    ]).map(c => c.slug);
+    assert.deepEqual(order, ["d", "b", "a", "c", "e"]);
 });

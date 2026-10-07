@@ -1,105 +1,132 @@
 <template>
     <main class="contact-page">
-        <DashboardTitoloParticelle class="page-title" title="Contatti" />
+        <DashboardTitoloParticelle class="page-title" :title="t('contact.title')" />
         <section class="contact-shell">
-            <NuxtLink to="/" class="back-link">Torna alla home</NuxtLink>
+            <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
 
-            <div class="page-kicker">Parla con un esperto</div>
+            <div class="page-kicker">{{ t("contact.kicker") }}</div>
             <div class="contact-layout">
                 <div class="contact-copy">
-                    <p class="lead">
-                        Indicaci il contesto, le priorita e le aree di interesse: ti aiuteremo a individuare la soluzione piu adatta.
-                    </p>
+                    <p class="lead">{{ t("contact.lead") }}</p>
 
                     <div class="contact-notes">
                         <div>
-                            <span>Risposta</span>
-                            <strong>Entro pochi giorni lavorativi</strong>
+                            <span>{{ t("contact.responseLabel") }}</span>
+                            <strong>{{ t("contact.responseValue") }}</strong>
                         </div>
                         <div>
-                            <span>Ambiti</span>
-                            <strong>IoT, automazione, smart infrastructure</strong>
+                            <span>{{ t("contact.areasLabel") }}</span>
+                            <strong>{{ t("contact.areasValue") }}</strong>
                         </div>
                     </div>
                 </div>
 
                 <form id="contact-form" class="contact-form" @submit.prevent="submitForm">
-                    <div class="form-mode" role="group" aria-label="Tipo di richiesta">
+                    <div class="form-mode" role="group" :aria-label="t('contact.requestType')">
                         <label class="form-mode-option">
                             <input v-model="form.submission_type" type="radio" value="contact" />
-                            <span>Richiesta di contatto</span>
+                            <span>{{ t("contact.typeContact") }}</span>
+                        </label>
+                        <label class="form-mode-option">
+                            <input v-model="form.submission_type" type="radio" value="quote" />
+                            <span>{{ t("quote.type") }}</span>
                         </label>
                         <label class="form-mode-option">
                             <input v-model="form.submission_type" type="radio" value="candidate" />
-                            <span>Candidatura</span>
+                            <span>{{ t("contact.typeCandidate") }}</span>
                         </label>
                     </div>
 
                     <div class="form-grid">
                         <label>
-                            Nome e cognome
+                            {{ t("contact.name") }}
                             <input v-model="form.name" type="text" name="name" autocomplete="name" required />
                         </label>
-                        <label v-if="form.submission_type === 'contact'">
-                            Azienda / ente
+                        <label v-if="!isCandidate">
+                            {{ t("contact.company") }}
                             <input v-model="form.company" type="text" name="company" autocomplete="organization" required />
                         </label>
                         <label>
-                            Email
+                            {{ t("contact.email") }}
                             <input
                                 v-model="form.email"
                                 type="email"
                                 name="email"
                                 autocomplete="email"
                                 :required="!form.phone.trim()"
+                                aria-describedby="contact-requirement"
                             />
                         </label>
                         <label>
-                            Telefono
+                            {{ t("contact.phone") }}
                             <input
                                 v-model="form.phone"
                                 type="tel"
                                 name="phone"
                                 autocomplete="tel"
                                 :required="!form.email.trim()"
+                                aria-describedby="contact-requirement"
                             />
                         </label>
                     </div>
                     <p id="contact-requirement" class="contact-requirement">
-                        {{ form.submission_type === 'candidate' ? "Il nome e obbligatorio." : "Nome e azienda sono obbligatori." }}
-                        Indica almeno un recapito: email o telefono.
+                        {{ isCandidate ? t("contact.requiredCandidate") : t("contact.requiredContact") }}
                     </p>
 
-                    <fieldset v-if="form.submission_type === 'contact'">
-                        <legend>Di cosa vorresti parlare?</legend>
-                        <div class="interest-grid">
-                            <label v-for="interest in interests" :key="interest" class="interest-option">
-                                <input v-model="form.interests" type="checkbox" :value="interest" />
-                                <span>{{ interest }}</span>
-                            </label>
-                        </div>
-                    </fieldset>
+                    <!-- Quote requests: a few short answers so the team can reply with a proposal. -->
+                    <div v-if="form.submission_type === 'quote'" class="form-grid quote-grid">
+                        <label class="span-2">
+                            {{ t("quote.subject") }}
+                            <input v-model="quote.subject" type="text" name="details_subject" maxlength="300" />
+                        </label>
+                        <label>
+                            {{ t("quote.sector") }}
+                            <input v-model="quote.sector" type="text" name="details_sector" maxlength="300" :placeholder="t('quote.sectorPlaceholder')" />
+                        </label>
+                        <label>
+                            {{ t("quote.sites") }}
+                            <input v-model="quote.sites" type="text" name="details_sites" maxlength="300" inputmode="numeric" />
+                        </label>
+                        <label class="span-2">
+                            {{ t("quote.timeline") }}
+                            <select v-model="quote.timeline" name="details_timeline">
+                                <option value="">—</option>
+                                <option v-for="key in TIMELINES" :key="key" :value="key">{{ t(`quote.timelineOptions.${key}`) }}</option>
+                            </select>
+                        </label>
+                    </div>
 
-                    <label v-else>
-                        CV o documento
+                    <!-- Each request type asks only what it needs: topics for a contact,
+                         project details for a quote, the CV for an application. -->
+                    <label v-if="isCandidate">
+                        {{ t("contact.cv") }}
                         <input
+                            ref="attachmentInput"
                             type="file"
                             name="attachment"
                             accept=".pdf,.doc,.docx,.odt,.rtf,.txt"
                             @change="selectAttachment"
                         />
-                        <small>PDF, DOC, DOCX, ODT, RTF o TXT. Massimo 10 MB.</small>
+                        <small>{{ t("contact.cvHint") }}</small>
                     </label>
 
+                    <fieldset v-if="form.submission_type === 'contact'">
+                        <legend>{{ t("contact.interestsLegend") }}</legend>
+                        <div class="interest-grid">
+                            <label v-for="(interest, index) in interests" :key="interest" class="interest-option">
+                                <input v-model="form.interests" type="checkbox" :value="interest" />
+                                <!-- The Italian value is what gets submitted, so requests read the same for staff. -->
+                                <span>{{ t(`contact.interests.i${index}`) }}</span>
+                            </label>
+                        </div>
+                    </fieldset>
+
                     <label>
-                        Messaggio
-                        <textarea
-                            v-model="form.message"
-                            name="message"
-                            rows="6"
-                            :placeholder="messagePlaceholder"
-                        ></textarea>
+                        {{ isCandidate ? t("contact.messageCandidate") : t("contact.message") }}
+                        <textarea v-model="form.message" name="message" rows="6" :placeholder="messagePlaceholder"></textarea>
                     </label>
+
+                    <FormsPrivacyConsent v-model="consent" />
 
                     <label class="honeypot" aria-hidden="true">
                         Sito web
@@ -107,10 +134,10 @@
                     </label>
 
                     <button class="submit-button" type="submit" :disabled="submitting">
-                        {{ submitting ? "Invio in corso…" : "Invia richiesta" }}
+                        {{ submitting ? t("contact.sending") : submitLabel }}
                     </button>
                     <p v-if="submitted" class="form-feedback" role="status">
-                        Richiesta inviata. Ti contatteremo usando i riferimenti indicati.
+                        {{ t("contact.sent") }}
                     </p>
                     <p v-if="submitError" class="form-feedback form-feedback--error" role="alert">
                         {{ submitError }}
@@ -125,6 +152,8 @@
 import { computed, reactive, ref, watch } from "vue";
 import DashboardTitoloParticelle from "../components/dashboard/TitoloParticelle.vue";
 
+const { t } = useI18n();
+const localePath = useLocalePath();
 const route = useRoute();
 
 // Contact submission has no dedicated useCms() method (that composable
@@ -146,6 +175,9 @@ const interests = [
     "Progetti IoT personalizzati"
 ];
 
+const consent = ref(false);
+const { text: consentText } = usePrivacyConsent();
+const { locale: siteLocale } = useI18n();
 const submitted = ref(false);
 const submitting = ref(false);
 const submitError = ref("");
@@ -157,65 +189,113 @@ const form = reactive({
     phone: "",
     interests: [] as string[],
     message: "",
-    submission_type: "contact" as "contact" | "candidate",
+    submission_type: "contact" as "contact" | "candidate" | "quote",
     website: "",
     attachment: null as File | null,
 });
 
-const messagePlaceholder = computed(() => form.submission_type === "candidate"
-    ? "Presentati e raccontaci perche vorresti lavorare con noi."
-    : "Descrivi il progetto, il territorio o l'infrastruttura da monitorare.");
+const isCandidate = computed(() => form.submission_type === "candidate");
+// Arrived from a "Diventa partner" link (?tipo=partner): a contact request
+// sent as a partnership proposal, so it reaches the partnership recipients.
+const isPartner = ref(false);
+const attachmentInput = ref<HTMLInputElement | null>(null);
+const messagePlaceholder = computed(() =>
+    isCandidate.value ? t("contact.messagePlaceholderCandidate")
+    : form.submission_type === "quote" ? t("contact.messagePlaceholderQuote")
+    : t("contact.messagePlaceholder"));
+const submitLabel = computed(() =>
+    isCandidate.value ? t("contact.submitCandidate")
+    : form.submission_type === "quote" ? t("contact.submitQuote")
+    : t("contact.submit"));
 
-watch(
-    () => route.query.tipo,
-    (queryType) => {
-        const type = Array.isArray(queryType) ? queryType[0] : queryType;
-        form.submission_type = type === "candidatura" ? "candidate" : "contact";
-        if (type === "partner" && !form.message.trim()) {
-            form.message = "Vorrei parlare con Axatel di una possibile partnership.";
-        }
-    },
-    { immediate: true }
-);
+// Switching type drops what the new type does not ask for, so nothing
+// hidden is sent (topics only for a contact, the CV only for an application).
+watch(() => form.submission_type, (type) => {
+    if (type !== "contact") {
+        form.interests = [];
+        isPartner.value = false;
+    }
+    submitError.value = "";
+    submitted.value = false;
+    if (type !== "candidate") {
+        form.attachment = null;
+        if (attachmentInput.value) attachmentInput.value.value = "";
+    }
+}, { flush: "sync" });
+
+// Quote mode: /contatti?tipo=preventivo&oggetto=Angel%20River
+// (used by the "Richiedi un preventivo" buttons on product and solution pages).
+const TIMELINES = ["soon", "mid", "later", "open"] as const;
+// Timelines are sent in Italian so requests read the same for staff.
+const TIMELINE_IT: Record<string, string> = { soon: "Entro 3 mesi", mid: "Tra 3 e 6 mesi", later: "Oltre 6 mesi", open: "Da definire" };
+const quote = reactive({ subject: "", sector: "", sites: "", timeline: "" });
+
+function applyQuery(): void {
+    const tipo = String(route.query.tipo ?? "");
+    const oggetto = String(route.query.oggetto ?? "").slice(0, 300);
+    if (tipo === "preventivo") form.submission_type = "quote";
+    else if (tipo === "candidatura") form.submission_type = "candidate";
+    else if (tipo === "partner") {
+        form.submission_type = "contact";
+        isPartner.value = true;
+        if (!form.message.trim()) form.message = t("contact.partnerMessage");
+    }
+    if (oggetto) quote.subject = oggetto;
+}
+applyQuery();
+watch(() => route.query, applyQuery);
+
+useSeoMeta({
+    title: () => `${form.submission_type === "quote" ? t("project.quote") : t("contact.title")} | Axatel`,
+    description: () => t("contact.lead"),
+    robots: "index,follow",
+});
 
 function selectAttachment(event: Event): void {
     const input = event.target as HTMLInputElement;
     form.attachment = input.files?.[0] ?? null;
 }
 
-watch(() => form.submission_type, () => {
-    form.attachment = null;
-    submitError.value = "";
-    submitted.value = false;
-}, { flush: "sync" });
-
 async function submitForm(): Promise<void> {
     submitError.value = "";
     submitted.value = false;
 
-    const isCandidate = form.submission_type === "candidate";
-    if (!form.name.trim() || (!isCandidate && !form.company.trim()) || (!form.email.trim() && !form.phone.trim())) {
-        submitError.value = isCandidate
-            ? "Inserisci nome e almeno un recapito: email o telefono."
-            : "Inserisci nome, azienda e almeno un recapito: email o telefono.";
+    // Name (and company, except for applications) plus at least one way to
+    // reply: e-mail or phone. The privacy box is checked by its own field.
+    if (!form.name.trim() || (!isCandidate.value && !form.company.trim()) || (!form.email.trim() && !form.phone.trim())) {
+        submitError.value = isCandidate.value ? t("contact.missingCandidate") : t("contact.missingContact");
         return;
     }
-
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        submitError.value = t("contact.invalidEmail");
+        return;
+    }
+    if (!consent.value) {
+        submitError.value = t("consent.required");
+        return;
+    }
     submitting.value = true;
 
     try {
         const body = new FormData();
         body.append("name", form.name);
-        body.append("company", isCandidate ? "" : form.company);
+        body.append("company", isCandidate.value ? "" : form.company);
         body.append("email", form.email);
         body.append("phone", form.phone);
         body.append("message", form.message);
-        body.append("submission_type", form.submission_type);
+        body.append("submission_type", isPartner.value && form.submission_type === "contact" ? "partner" : form.submission_type);
         body.append("website", form.website);
-        if (!isCandidate) {
-            form.interests.forEach((interest) => body.append("interests", interest));
+        body.append("privacy", consent.value ? "true" : "");
+        body.append("consent_text", consentText.value);
+        body.append("locale", siteLocale.value);
+        if (form.submission_type === "contact") form.interests.forEach((interest) => body.append("interests", interest));
+        if (form.attachment && form.submission_type === "candidate") body.append("attachment", form.attachment);
+        if (form.submission_type === "quote") {
+            if (quote.subject) body.append("details_subject", quote.subject);
+            if (quote.sector) body.append("details_sector", quote.sector);
+            if (quote.sites) body.append("details_sites", quote.sites);
+            if (quote.timeline) body.append("details_timeline", TIMELINE_IT[quote.timeline] ?? quote.timeline);
         }
-        if (isCandidate && form.attachment) body.append("attachment", form.attachment);
 
         await $fetch(`${apiBase()}/contact/`, {
             method: "POST",
@@ -231,13 +311,15 @@ async function submitForm(): Promise<void> {
         form.submission_type = "contact";
         form.website = "";
         form.attachment = null;
+        Object.assign(quote, { subject: "", sector: "", sites: "", timeline: "" });
+        isPartner.value = false;
         submitted.value = true;
     } catch (error) {
         // Backend validation error or the endpoint being unreachable —
         // either way, tell the visitor honestly rather than showing the
         // "Richiesta inviata" message the old handler always showed.
         submitError.value =
-            "Non siamo riusciti a inviare la richiesta. Riprova, oppure scrivici direttamente a info@axatel.it.";
+            t("contact.error");
         console.warn("[contact] submission failed", error);
     } finally {
         submitting.value = false;
@@ -338,6 +420,30 @@ async function submitForm(): Promise<void> {
     gap: 14px;
 }
 
+.quote-grid .span-2 {
+    grid-column: 1 / -1;
+}
+
+select {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--ax-color-border-soft);
+    border-radius: 12px;
+    padding: 0 12px;
+    background: rgba(2, 7, 18, 0.5);
+    color: var(--ax-color-text-primary);
+    font: inherit;
+}
+
+select:focus {
+    border-color: var(--ax-color-accent-red-border);
+    outline: none;
+}
+
+select option {
+    background: #07111d;
+}
+
 .form-mode {
     display: flex;
     flex-wrap: wrap;
@@ -405,6 +511,10 @@ textarea:focus {
     box-shadow: 0 0 0 3px rgba(234, 63, 48, 0.12);
 }
 
+textarea {
+    resize: vertical;
+}
+
 .contact-form {
     scroll-margin-top: calc(var(--ax-navbar-height, 74px) + 20px);
 }
@@ -414,10 +524,6 @@ textarea:focus {
     color: var(--ax-color-text-muted);
     font-size: 0.78rem;
     line-height: 1.5;
-}
-
-textarea {
-    resize: vertical;
 }
 
 fieldset {

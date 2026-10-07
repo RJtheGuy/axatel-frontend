@@ -1,17 +1,66 @@
 <template>
     <main class="team-page">
-        <TeamNetwork :members="teamMembers" />
+        <TeamNetwork :members="members" :label-mode="labelMode" />
     </main>
 </template>
 
 <script setup lang="ts">
+/**
+ * Team page. People come from the CMS (Impostazioni → Team: name, role,
+ * description, photo, "Visibile" switch, order, and the organisation
+ * chart: "Riporta a" and "Guida il reparto"). When someone reports to
+ * someone else, the page draws an org chart (see utils/teamTree.ts);
+ * otherwise an even network. Until at least one person is published
+ * there, the built-in example team is shown.
+ */
+import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import TeamNetwork from "../../components/team/TeamNetwork.vue";
-import { teamMembers } from "../../data/team";
+import { teamMembers, teamPosition, type TeamMember } from "../../data/team";
+
+const { t, locale } = useI18n();
+const { getTeam } = useCms();
+const { imageUrl } = useCmsImage();
+
+type CmsMember = {
+    id: number;
+    name: string;
+    role: string;
+    bio: string;
+    photo: { url: string } | null;
+    reportsTo: number | null;
+    alsoReportsTo?: number[];
+    department: string;
+};
+
+const { data: cmsTeam } = await useAsyncData(
+    () => `team-${locale.value}`,
+    () => getTeam<CmsMember>().catch(() => null) as Promise<{ members: CmsMember[]; labelMode?: string } | null>,
+    { watch: [locale] }
+);
+
+const members = computed<TeamMember[]>(() => {
+    const people = cmsTeam.value?.members ?? [];
+    if (!people.length) return teamMembers;
+    return people.map((person, index) => ({
+        id: `cms-${person.id}`,
+        name: person.name,
+        role: person.role,
+        image: person.photo ? imageUrl(person.photo.url) : "",
+        description: person.bio,
+        position: teamPosition(index, people.length),
+        parentId: person.reportsTo ? `cms-${person.reportsTo}` : null,
+        alsoParentIds: (person.alsoReportsTo ?? []).map((id) => `cms-${id}`),
+        department: person.department || "",
+    }));
+});
+
+// What the org chart shows under each name (Impostazioni → Team).
+const labelMode = computed(() => (cmsTeam.value?.members?.length ? cmsTeam.value?.labelMode : undefined) || "department");
 
 useSeoMeta({
-    title: "Team | Axatel",
-    description: "Le persone e le competenze che trasformano insieme problemi complessi in soluzioni Axatel."
+    title: () => `${t("team.title")} | Axatel`,
+    description: () => t("seo.teamDescription")
 });
 </script>
 

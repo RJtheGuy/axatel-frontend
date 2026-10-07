@@ -1,21 +1,23 @@
 <template>
     <section ref="sectionEl" class="citazione-section">
-        <video class="hero-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true">
+        <video class="hero-video" autoplay muted loop playsinline preload="metadata" :poster="heroPosterUrl" aria-hidden="true" ref="videoEl">
             <source :src="heroVideoUrl" type="video/mp4" />
         </video>
         <div class="hero-video-overlay" aria-hidden="true"></div>
 
         <div class="hero-copy">
-            <!-- <p class="hero-kicker">Tecnologia che protegge</p> -->
-            <h1>Sistemi di monitoraggio <span>real-time</span> per la riduzione del rischio</h1>
-            <p class="hero-intro">
-                Dati, automazione e controllo continuo per anticipare gli eventi e proteggere
-                infrastrutture, territori e persone.
-            </p>
+            <p v-if="text.kicker" class="hero-kicker">{{ text.kicker }}</p>
+            <h1>{{ text.titleBefore }} <span>{{ text.titleAccent }}</span> {{ text.titleAfter }}</h1>
+            <p v-if="text.intro" class="hero-intro">{{ text.intro }}</p>
 
-            <!-- <div class="hero-status" aria-label="Monitoraggio attivo">
+            <div class="hero-actions">
+                <NuxtLink :to="link(text.primaryUrl)" class="hero-btn hero-btn-primary">{{ text.primaryLabel }}</NuxtLink>
+                <NuxtLink v-if="text.secondaryLabel" :to="link(text.secondaryUrl)" class="hero-btn hero-btn-ghost">{{ text.secondaryLabel }} <span aria-hidden="true">→</span></NuxtLink>
+            </div>
+
+           <!-- <div v-if="text.showStatus" class="hero-status" :aria-label="t('hero.status')">
                 <span class="status-dot"></span>
-                <span>Monitoraggio attivo</span>
+                <span>{{ t("hero.status") }}</span>
                 <span class="status-separator"></span>
                 <span>24 / 7</span>
             </div> -->
@@ -25,10 +27,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount } from "vue";
 import heroVideoUrl from "@/assets/video/video_hero.mp4";
+// First frame of the video: shown until the video plays, so the hero is
+// never a dark empty box.
+import heroPosterUrl from "@/assets/video/hero-poster.webp";
+
+// Texts of the first screen: Pagine → Home → "Prima schermata" in the CMS;
+// anything left empty there uses the built-in text in the visitor's language.
+export type HeroTop = {
+    kicker?: string; titleBefore?: string; titleAccent?: string; titleAfter?: string; intro?: string;
+    primaryLabel?: string; primaryUrl?: string; secondaryLabel?: string; secondaryUrl?: string; showStatus?: boolean;
+};
+const props = defineProps<{ content?: HeroTop | null }>();
+
+const { t } = useI18n();
+const localePath = useLocalePath();
+
+const pick = (value: string | undefined, fallback: string) => (value && value.trim() ? value.trim() : fallback);
+const text = computed(() => {
+    const c = props.content ?? {};
+    const secondary = pick(c.secondaryLabel, t("hero.ctaSecondary"));
+    return {
+        // The kicker line shows only when one is written in the CMS
+        // (the new video hero has none by default).
+        kicker: c.kicker && c.kicker.trim() !== "-" ? c.kicker.trim() : "",
+        titleBefore: pick(c.titleBefore, t("hero.titleBefore")),
+        titleAccent: pick(c.titleAccent, t("hero.titleAccent")),
+        titleAfter: pick(c.titleAfter, t("hero.titleAfter")),
+        intro: pick(c.intro, t("hero.intro")),
+        primaryLabel: pick(c.primaryLabel, t("hero.ctaPrimary")),
+        primaryUrl: pick(c.primaryUrl, "/contatti"),
+        // A single "-" in the CMS hides the second button.
+        secondaryLabel: secondary === "-" ? "" : secondary,
+        secondaryUrl: pick(c.secondaryUrl, "/monitoraggio"),
+        showStatus: c.showStatus !== false,
+    };
+});
+const link = (url: string) => (url.startsWith("/") ? localePath(url) : url);
 
 const sectionEl = ref<HTMLElement | null>(null);
+const videoEl = ref<HTMLVideoElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
 function emitQuoteVisibility(active: boolean): void {
@@ -39,7 +78,49 @@ function emitQuoteVisibility(active: boolean): void {
     );
 }
 
+// The "autoplay" attribute alone only works reliably on a full page load.
+// When the visitor comes back to the homepage by clicking a link (the logo,
+// the menu), the video is created by JavaScript and browsers may leave it
+// stopped. So the page starts it itself: muted (required for autoplay), and
+// again on the first click, tap, key or scroll if the browser refused, or
+// when the tab becomes visible again.
+const UNLOCK_EVENTS = ["pointerdown", "keydown", "scroll", "touchstart"] as const;
+let reducedMotion = false;
+
+function startVideo(): void {
+    const video = videoEl.value;
+    if (!video || reducedMotion || !video.paused) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute("muted", "");
+    const attempt = video.play();
+    if (attempt && typeof attempt.catch === "function") {
+        attempt.then(removeUnlock).catch(addUnlock);
+    }
+}
+
+function addUnlock(): void {
+    for (const name of UNLOCK_EVENTS) window.addEventListener(name, startVideo, { passive: true, once: true });
+}
+
+function removeUnlock(): void {
+    for (const name of UNLOCK_EVENTS) window.removeEventListener(name, startVideo);
+}
+
+function onVisibility(): void {
+    if (document.visibilityState === "visible") startVideo();
+}
+
 onMounted(() => {
+    // Visitors who ask for less motion see the first frame, not a loop.
+    reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (videoEl.value && reducedMotion) {
+        videoEl.value.pause();
+    } else if (videoEl.value) {
+        videoEl.value.addEventListener("canplay", startVideo);
+        startVideo();
+        document.addEventListener("visibilitychange", onVisibility);
+    }
     if (!sectionEl.value) return;
 
     observer = new IntersectionObserver(
@@ -59,6 +140,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    removeUnlock();
+    document.removeEventListener("visibilitychange", onVisibility);
+    videoEl.value?.removeEventListener("canplay", startVideo);
     observer?.disconnect();
     emitQuoteVisibility(false);
 });
@@ -235,6 +319,72 @@ onBeforeUnmount(() => {
         font-size: 1.4rem;
     }
 
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 34px;
+}
+
+.hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 24px;
+    border-radius: 999px;
+    font-size: 0.86rem;
+    font-weight: 650;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.hero-btn-primary {
+    color: #fff;
+    background: var(--ax-color-accent-red);
+    box-shadow: 0 12px 28px rgba(197, 35, 23, 0.32);
+}
+
+.hero-btn-primary:hover {
+    background: var(--ax-color-accent-red-soft);
+    transform: translateY(-1px);
+}
+
+.hero-btn-ghost {
+    color: var(--ax-color-text-primary);
+    border: 1px solid rgba(198, 220, 239, 0.32);
+    background: rgba(2, 7, 18, 0.35);
+}
+
+.hero-btn-ghost:hover {
+    border-color: rgba(198, 220, 239, 0.7);
+}
+
+.hero-btn:focus-visible {
+    outline: 2px solid #8bd9ff;
+    outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+    .hero-actions {
+        margin-top: 26px;
+    }
+
+    .hero-btn {
+        min-height: 46px;
+        padding: 0 20px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-btn,
+    .hero-btn:hover {
+        transition: none;
+        transform: none;
+    }
 }
 
 </style>

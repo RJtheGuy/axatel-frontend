@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import fallbackNavigationItems from "../../data/navigation.json";
 import corporate from "../../data/corporate.json";
+// Logo uploaded in the CMS (Impostazioni → Logo e immagini del sito), else
+// the built-in one (public/immagini/Axatel.svg, updated by the design team).
+const branding = useState<{ logo?: string } | null>("branding")
+const brandLogo = computed(() => branding.value?.logo || "/immagini/Axatel.svg")
 
 // Same useSiteSettings() composable the layout already uses for the
 // chatbot config — one shared fetch of /api/v2/site-settings/, not a
@@ -13,36 +16,22 @@ const { settings } = useSiteSettings()
 // same "never break the live site over missing CMS content" pattern
 // used everywhere else. Once an editor adds items in Impostazioni →
 // Navigazione, this switches over automatically, no code change.
-const navigationItems = computed(() => {
-    const cmsItems = settings.value?.navigation?.items
-    const items = Array.isArray(cmsItems) && cmsItems.length > 0 ? cmsItems : fallbackNavigationItems
+// Menu in the visitor's language, links pointing to the same language
+// (see composables/useSiteNavigation.ts).
+const { items: navigationItems, localize } = useSiteNavigation()
+const { t } = useI18n()
+const localePath = useLocalePath()
 
-    return items.map((item) => ({
-        ...item,
-        groups: item.groups?.map((group) => {
-            if (group.label !== "Lavora con noi") return group
+// New blog posts since the visitor's last look (see useBlogUpdates.ts).
+const { count: newPosts, load: loadBlogUpdates } = useBlogUpdates()
 
-            return {
-                ...group,
-                links: group.links.map((link) => {
-                    const label = link.label.trim().toLocaleLowerCase("it")
-                    if (label.includes("partner")) {
-                        return { ...link, href: "/contatti?tipo=partner#contact-form" }
-                    }
-                    if (label.includes("cv") || label.includes("lavora con noi") || label.includes("candidatur")) {
-                        return { ...link, href: "/contatti?tipo=candidatura#contact-form" }
-                    }
-                    return link
-                })
-            }
-        })
-    }))
-})
-
-const headerCta = computed(() => settings.value?.navigation?.cta ?? {
-    visible: true,
-    label: "Parla con un esperto",
-    url: "/contatti",
+const headerCta = computed(() => {
+    const cta = settings.value?.navigation?.cta
+    return {
+        visible: cta?.visible ?? true,
+        label: (!cta?.label_is_fallback && cta?.label?.trim()) || t("nav.cta"),
+        url: localize(cta?.url?.trim() || "/contatti"),
+    }
 })
 
 const hidden = ref(false)
@@ -154,6 +143,7 @@ onMounted(() => {
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener("keydown", handleKeydown)
+    loadBlogUpdates()
 })
 
 onUnmounted(() => {
@@ -232,7 +222,7 @@ onUnmounted(() => {
                 </NuxtLink>
 
                 <span class="sr-only" aria-live="polite">
-                    {{ copiedContact ? 'Contatto copiato negli appunti' : '' }}
+                    {{ copiedContact ? t('ui.contactCopied') : '' }}
                 </span>
             </div>
         </div>
@@ -240,8 +230,8 @@ onUnmounted(() => {
 
     <div class="container">
 
-        <NuxtLink class="brand" to="/" aria-label="Axatel, torna alla home" @click="closeMenu">
-            <img src="/immagini/Axatel.svg" width="128" height="30" alt="Axatel Logo" fetchpriority="high" decoding="async">
+        <NuxtLink class="brand" :to="localePath('/')" :aria-label="t('nav.home')" @click="closeMenu">
+            <img :src="brandLogo" width="128" height="30" alt="Axatel Logo" class="brand-logo" fetchpriority="high" decoding="async">
         </NuxtLink>
 
         <button
@@ -249,15 +239,16 @@ onUnmounted(() => {
             type="button"
             :aria-expanded="menuOpen"
             aria-controls="main-navigation"
-            :aria-label="menuOpen ? 'Chiudi menu' : 'Apri menu'"
+            :aria-label="menuOpen ? t('nav.closeMenu') : t('nav.openMenu')"
             @click="menuOpen = !menuOpen"
         >
             <span></span>
             <span></span>
             <span></span>
+            <i v-if="newPosts > 0 && !menuOpen" class="toggle-dot" aria-hidden="true"></i>
         </button>
 
-        <nav id="main-navigation" class="menu" aria-label="Navigazione principale">
+        <nav id="main-navigation" class="menu" :aria-label="t('nav.main')">
             <LayoutNavbarItem
                 v-for="item in navigationItems"
                 :key="item.label"
@@ -274,6 +265,7 @@ onUnmounted(() => {
             >
                 {{ headerCta.label }}
             </NuxtLink>
+            <LayoutLanguageSwitcher @navigate="closeMenu" />
         </nav>
 
     </div>
@@ -428,6 +420,19 @@ onUnmounted(() => {
     gap:28px;
 }
 
+/* Laptop widths: the full menu still fits, with tighter spacing, instead
+   of running into the logo. */
+@media (min-width: 1101px) and (max-width: 1360px) {
+    .container{
+        gap:20px;
+        padding:6px 20px;
+    }
+
+    .menu{
+        gap:clamp(10px, 1.3vw, 18px);
+    }
+}
+
 .menu .nav-cta {
     flex:0 0 auto;
     color:#fff;
@@ -444,6 +449,7 @@ onUnmounted(() => {
 }
 
 .menu-toggle {
+    position:relative;
     display:none;
     width:44px;
     height:44px;
@@ -461,6 +467,17 @@ onUnmounted(() => {
     border-radius:2px;
     background:#fff;
     transition:transform 0.2s ease, opacity 0.2s ease;
+}
+
+.toggle-dot {
+    position:absolute;
+    top:9px;
+    right:7px;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--ax-color-accent-red-soft, #e2493d);
+    box-shadow:0 0 0 2px #020712;
 }
 
 @media (max-width: 1100px) {
@@ -589,4 +606,9 @@ onUnmounted(() => {
     }
 }
 
+
+/* A logo uploaded in the CMS may have another shape: keep its proportions. */
+.brand-logo {
+    object-fit: contain;
+}
 </style>

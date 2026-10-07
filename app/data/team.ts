@@ -3,10 +3,35 @@ import { resolveBundledImage as resolveImage } from "../utils/resolveImage";
 export type TeamMember = {
     id: string;
     name: string;
+    role?: string;
     image: string;
     description: string;
     position: { x: number; y: number };
+    /** Organisation chart (CMS): who this person reports to, and the department they lead. */
+    parentId?: string | null;
+    /** Extra managers ("Riporta anche a"): drawn with a lighter line. */
+    alsoParentIds?: string[];
+    department?: string;
 };
+
+/**
+ * Where people sit on the team "network" (percent of the stage) when the
+ * team comes from the CMS: spread evenly in one to three staggered rows,
+ * depending on how many people there are.
+ */
+export function teamPosition(index: number, total: number): { x: number; y: number } {
+    const rows = total <= 5 ? 1 : total <= 12 ? 2 : 3;
+    const perRow = Math.ceil(total / rows);
+    const row = Math.floor(index / perRow);
+    const col = index % perRow;
+    const inRow = Math.min(perRow, total - row * perRow);
+    const ys = rows === 1 ? [52] : rows === 2 ? [34, 74] : [30, 54, 78];
+    const x = ((col + 1) * 100) / (inRow + 1) + (row % 2 ? 3 : -3) * (inRow > 1 ? 1 : 0);
+    const y = ys[row]! + (col % 2 ? 4 : -4) * (rows === 1 ? 1 : 0.5);
+    return { x: Math.min(92, Math.max(8, x)), y };
+}
+
+/** Example team shown until real people are added in the CMS. */
 
 export const teamMembers: TeamMember[] = [
     { id: "prima", name: "Prima Persona", image: resolveImage("/immagini/casi-di-successo/ss51-alemagna.webp"), description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cura idee, relazioni e nuovi percorsi.", position: { x: 12, y: 34 } },

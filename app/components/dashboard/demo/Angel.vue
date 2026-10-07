@@ -38,11 +38,11 @@
             <aside class="timeline">
                 <div class="timeline-title-row">
                     <div class="timeline-title">
-                        Cronologia
+                        {{ t("demo.timeline") }}
                     </div>
 
                     <button class="reset-btn" @click="resetAlarms">
-                        Reset
+                        {{ t("demo.reset") }}
                     </button>
                 </div>
 
@@ -69,7 +69,7 @@
                             <div class="alarm-info">
                                 <div class="alarm-top">
                                     <span class="alarm-name">
-                                        {{ a.name }}
+                                        {{ alarmLabel(a.name) }}
                                     </span>
 
                                     <span class="alarm-value">
@@ -88,18 +88,18 @@
                         <aside v-if="activeProcedure" class="procedure-sidebar procedure-sidebar-mobile">
                             <div class="procedure-header">
                                 <div class="procedure-heading">
-                                    <h3 class="text-uppercase">Procedura</h3>
-                                    <p>{{ activeProcedure.name }}</p>
+                                    <h3 class="text-uppercase">{{ t("demo.procedure") }}</h3>
+                                    <p>{{ alarmLabel(activeProcedure.name) }}</p>
                                 </div>
 
                                 <button
                                     class="procedure-close"
                                     type="button"
-                                    aria-label="Chiudi procedure"
-                                    title="Chiudi"
+                                    :aria-label="t('demo.closeProcedure')"
+                                    :title="t('demo.close')"
                                     @click="activeProcedure = null"
                                 >
-                                    Chiudi
+                                    {{ t("demo.close") }}
                                 </button>
                             </div>
 
@@ -119,18 +119,18 @@
                     <aside v-if="activeProcedure" class="procedure-sidebar procedure-sidebar-desktop">
                         <div class="procedure-header">
                             <div class="procedure-heading">
-                                <h3 class="text-uppercase">Procedura</h3>
-                                <p>{{ activeProcedure.name }}</p>
+                                <h3 class="text-uppercase">{{ t("demo.procedure") }}</h3>
+                                <p>{{ alarmLabel(activeProcedure.name) }}</p>
                             </div>
 
                             <button
                                 class="procedure-close"
                                 type="button"
-                                aria-label="Chiudi procedure"
-                                title="Chiudi"
+                                :aria-label="t('demo.closeProcedure')"
+                                :title="t('demo.close')"
                                 @click="activeProcedure = null"
                             >
-                                Chiudi
+                                {{ t("demo.close") }}
                             </button>
                         </div>
 
@@ -145,18 +145,18 @@
 
                 <div class="empty" v-if="alarms.length === 0">
                     <h2 class="empty-title">
-                        Nessun evento rilevato
+                        {{ t("demo.noEvents") }}
                     </h2>
 
                     <p class="empty-subtitle">
-                        Interagisci con una delle demo per vedere gli allarmi in tempo reale
+                        {{ t("demo.noEventsHint") }}
                     </p>
                 </div>
 
                 <div class="chart" ref="chartEl" v-if="alarms.length > 0"></div>
 
                 <div class="pie-panel" v-if="alarms.length > 0">
-                    <div class="pie-title">Tipi di allarme</div>
+                    <div class="pie-title">{{ t("demo.alarmTypes") }}</div>
 
                     <div class="pie" ref="pieEl"></div>
 
@@ -171,7 +171,7 @@
                                 :style="{ background: colorFor(item.name) }"
                             ></span>
 
-                            <span class="pie-legend-name">{{ item.name }}</span>
+                            <span class="pie-legend-name">{{ alarmLabel(item.name) }}</span>
 
                             <span class="pie-legend-percent">{{ item.percent }}%</span>
                         </div>
@@ -185,7 +185,6 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue"
-import alarmProcedures from "~/data/alarmProcedures.json"
 import angelBpmLogo from "@/assets/immagini/Angel.png"
 type ECharts = import("echarts").ECharts
 type EChartsModule = typeof import("echarts")
@@ -251,6 +250,28 @@ const alarmNameByApplication: Record<string, string> = {
     "Angel Bridge": "Crepa aperta"
 }
 
+// Alarm names are stored in Italian (they are also the keys saved in the
+// browser), and translated only when shown.
+const { t, tm, rt, locale } = useI18n()
+const ALARM_KEYS: Record<string, string> = {
+    Frana: "landslide",
+    Traffico: "traffic",
+    Esondazione: "flood",
+    "Lavori in corso": "roadworks",
+    "Crepa aperta": "crack"
+}
+
+function procedureSteps(name: string): string[] {
+    const key = ALARM_KEYS[name]
+    if (!key) return []
+    return (tm(`demo.procedures.${key}`) as unknown[]).map((step) => rt(step as never))
+}
+
+function alarmLabel(name: string) {
+    const key = ALARM_KEYS[name]
+    return key ? t(`demo.alarms.${key}`) : name
+}
+
 function colorFor(name: string) {
     return colors[name] ?? "#6b7280"
 }
@@ -258,7 +279,7 @@ function colorFor(name: string) {
 function formatTime(ts: string) {
     const d = new Date(ts)
 
-    return d.toLocaleString("it-IT", {
+    return d.toLocaleString(locale.value, {
         day: "2-digit",
         month: "2-digit",
         hour: "2-digit",
@@ -274,7 +295,7 @@ function buildOption() {
     }
 
     const series = Object.entries(byName).map(([name, items]) => ({
-        name,
+        name: alarmLabel(name),
         type: "line",
         smooth: true,
         showSymbol: true,
@@ -321,7 +342,7 @@ function buildOption() {
                         const alarm = alarms.value.find(
                             (a) =>
                                 a.timestamp === p.data[0] &&
-                                a.name === p.seriesName
+                                alarmLabel(a.name) === p.seriesName
                         )
 
                         return `${p.seriesName}: ${p.data[1]}${alarm?.unit ?? ""}`
@@ -395,7 +416,7 @@ function buildPieOption() {
     }
 
     const data = Object.entries(counts).map(([name, value]) => ({
-        name,
+        name: alarmLabel(name),
         value,
         itemStyle: {
             color: colorFor(name)
@@ -501,7 +522,10 @@ async function refresh() {
 }
 
 async function waitForNewAlarm(expectedName: string, sequence: number) {
-    const timeoutAt = performance.now() + 10000
+    // The demos record an event when it ends (traffic flowing again, water
+    // back below the threshold...), which can be long after it started if
+    // the visitor keeps the mouse on the card: wait up to 90 s.
+    const timeoutAt = performance.now() + 90000
 
     while (sequence === flightSequence && performance.now() < timeoutAt) {
         const storedAlarms: Alarm[] = JSON.parse(localStorage.getItem("alarms") ?? "[]")
@@ -566,6 +590,8 @@ async function animateAlarm(event: AlarmEvent) {
     if (!newAlarmId || sequence !== flightSequence) {
         stopFollowingCard()
         flyingDot.value = null
+        // Show whatever was recorded meanwhile instead of an empty list.
+        if (sequence === flightSequence) await refresh()
         return
     }
 
@@ -630,7 +656,7 @@ async function animateAlarm(event: AlarmEvent) {
     landingAlarmId.value = alarm.id
     activeProcedure.value = {
         name: alarm.name,
-        steps: alarmProcedures[alarm.name as keyof typeof alarmProcedures] ?? []
+        steps: procedureSteps(alarm.name)
     }
 
     window.setTimeout(() => {
@@ -658,7 +684,7 @@ async function processAlarmQueue() {
 function showProcedure(alarm: Alarm) {
     activeProcedure.value = {
         name: alarm.name,
-        steps: alarmProcedures[alarm.name as keyof typeof alarmProcedures] ?? []
+        steps: procedureSteps(alarm.name)
     }
 }
 

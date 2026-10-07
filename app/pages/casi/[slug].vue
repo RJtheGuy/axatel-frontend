@@ -1,10 +1,10 @@
 <template>
     <main class="caso-page">
         <article class="caso-container">
-            <nav class="breadcrumb" aria-label="Breadcrumb">
+            <nav class="breadcrumb" :aria-label="t('caseDetail.breadcrumb')">
                 <ol role="list">
-                    <li><NuxtLink to="/">Home</NuxtLink></li>
-                    <li><NuxtLink to="/casi">Casi di successo</NuxtLink></li>
+                    <li><NuxtLink :to="localePath('/')">{{ t("caseDetail.home") }}</NuxtLink></li>
+                    <li><NuxtLink :to="localePath('/casi')">{{ t("cases.kicker") }}</NuxtLink></li>
                     <li aria-current="page">{{ caso?.title }}</li>
                 </ol>
             </nav>
@@ -18,6 +18,8 @@
                 :height="caso.cover_image.height"
                 decoding="async"
             />
+
+            <LayoutTranslationNotice v-if="caso?.__fallback" />
 
             <header class="caso-header">
                 <p v-if="caso?.category" class="caso-category">{{ caso.category }}</p>
@@ -37,8 +39,8 @@
             <div v-if="caso?.body" class="caso-body" v-html="caso.body"></div>
             <p v-else-if="caso?.description" class="caso-body">{{ caso.description }}</p>
 
-            <NuxtLink class="caso-back ax-cta-outline" to="/casi">
-                Tutti i casi di successo
+            <NuxtLink class="caso-back ax-cta-outline" :to="localePath('/casi')">
+                {{ t("caseDetail.all") }}
             </NuxtLink>
         </article>
     </main>
@@ -52,18 +54,22 @@ import { homepageCases } from "../../data/homepageCases";
 const route = useRoute();
 const { getPageBySlug } = useCms();
 const { imageUrl } = useCmsImage();
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
 
 const slug = computed(() => String(route.params.slug));
 
+// With the CMS unreachable, a built-in case with the same address is
+// shown instead (data/successCases.ts + data/homepageCases.ts).
 const { data: caso, error: caseError } = await useAsyncData(
-    () => `caso-${slug.value}`,
+    () => `caso-${locale.value}-${slug.value}`,
     async () => {
         try {
-            return await getPageBySlug("casi.CasoSuccessoPage", slug.value);
+            return await getPageBySlug<any>("casi.CasoSuccessoPage", slug.value);
         } catch (error) {
-            const fallback = successCases.find(item => item.slug === slug.value);
+            const fallback = successCases.find((item) => item.slug === slug.value);
             if (!fallback) throw error;
-            const content = homepageCases.find(item => item.slug === slug.value)?.content;
+            const content = homepageCases.find((item) => item.slug === slug.value)?.content;
             return {
                 ...fallback,
                 body: typeof content === "string" ? content : (content ?? []).join(""),
@@ -76,15 +82,11 @@ const { data: caso, error: caseError } = await useAsyncData(
 );
 
 if (!caso.value) {
-    throw createError({
-        statusCode: caseError.value ? 503 : 404,
-        statusMessage: caseError.value ? "CMS temporaneamente non disponibile" : "Caso di successo non trovato",
-        fatal: true
-    });
+    throw cmsPageError(caseError.value, t("caseDetail.notFound"));
 }
 
 useSeoMeta({
-    title: () => `${caso.value?.title} | Casi di successo Axatel`,
+    title: () => `${caso.value?.title} | ${t("cases.kicker")} Axatel`,
     description: () => caso.value?.meta?.search_description || caso.value?.description,
     ogTitle: () => caso.value?.title,
     ogDescription: () => caso.value?.description,
