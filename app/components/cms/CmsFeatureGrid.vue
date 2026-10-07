@@ -1,6 +1,6 @@
 <template>
     <section
-        class="cms-features text-center"
+        class="cms-features"
         :class="{ 'center-heading': value.center_heading, 'center-items': value.center_items }"
     >
         <h2 v-if="value.heading" v-html="unwrapParagraph(value.heading)"></h2>
@@ -10,7 +10,7 @@
             <div
                 v-for="(f, i) in features"
                 :key="i"
-                class="feature text-center"
+                class="feature"
                 :class="`w-${f.width || 'normal'}`"
             >
                 <img v-if="f.icon?.url" class="icon" :src="imageUrl(f.icon.url)" alt="" width="100" height="100" loading="lazy" />
@@ -56,7 +56,7 @@ function hasText(html?: string | null): boolean {
 
 <style scoped>
 .cms-features {
-    padding: 0px;
+    padding: 64px 8vw;
 }
 
 h2 {
@@ -166,7 +166,7 @@ h3 {
 
 @media (max-width: 640px) {
     .cms-features {
-        padding: 0px;
+        padding: 48px 5vw;
     }
 
     .cols-2,
@@ -179,8 +179,5 @@ h3 {
     .w-wide {
         grid-column: auto;
     }
-}
-.text-center {
-    text-align: center;
 }
 </style>
