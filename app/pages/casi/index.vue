@@ -312,7 +312,7 @@ useSeoMeta({
 
 .cases-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(max(260px, calc((100% - 36px) / 3)), 1fr));
     gap: 18px;
 }
 
@@ -387,7 +387,7 @@ useSeoMeta({
 }
 
 .case-content .case-client {
-    color: #667f97;
+    color: rgb(197, 35, 23);
     font-size: 0.9rem;
     font-weight: 700;
 }
