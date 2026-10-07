@@ -54,11 +54,12 @@
                                 <!-- Title is visible only when the editor ticks "Mostra titolo nella card"
                                      (cover image without the title baked in). Otherwise it stays
                                      for screen readers and search engines. -->
-                                <h2 class="case-title" :class="{ 'visually-hidden': !item.showTitle }">{{ item.title }}</h2>
 
                                 <p v-if="item.client" class="case-client">
                                     <template v-if="item.clientLabel">{{ item.clientLabel }}: </template>{{ item.client }}
                                 </p>
+
+                                <h2 class="case-title" :class="{ 'visually-hidden': !item.showTitle }">{{ item.title }}</h2>
 
                                 <p v-if="item.date" class="case-date">{{ formatDate(item.date) }}</p>
 

@@ -6,8 +6,8 @@
                 <img v-if="item.image" :src="item.image.url" :alt="item.image.alt || item.title" width="400" height="220" loading="lazy" decoding="async" />
                 <span class="body">
                     <small v-if="item.category">{{ item.category }}</small>
-                    <span v-if="item.client_title" class="client">{{ item.client_title }}</span>
                     <strong>{{ item.title }}</strong>
+                    <span v-if="item.client_title" class="client">{{ item.client_title }}</span>
                 </span>
             </NuxtLink>
         </div>
