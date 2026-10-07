@@ -13,7 +13,7 @@
                 class="feature"
                 :class="`w-${f.width || 'normal'}`"
             >
-                <img v-if="f.icon?.url" class="icon" :src="imageUrl(f.icon.url)" alt="" width="100" height="100" loading="lazy" />
+                <img v-if="f.icon?.url" class="icon" :src="imageUrl(f.icon.url)" alt="" width="80" height="80" loading="lazy" />
                 <h3 v-html="unwrapParagraph(f.title)"></h3>
                 <!-- The description is optional: no element at all when it is empty. -->
                 <div v-if="hasText(f.description)" class="description" v-html="f.description"></div>
@@ -56,7 +56,7 @@ function hasText(html?: string | null): boolean {
 
 <style scoped>
 .cms-features {
-    padding: 64px 8vw;
+    padding: 0px !important;
 }
 
 h2 {
@@ -107,8 +107,8 @@ h2 {
 
 .icon {
     display: block;
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     object-fit: contain;
     margin-bottom: 14px;
 }
@@ -166,7 +166,7 @@ h3 {
 
 @media (max-width: 640px) {
     .cms-features {
-        padding: 48px 5vw;
+        padding: 0 !important;
     }
 
     .cols-2,
