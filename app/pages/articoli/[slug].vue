@@ -42,7 +42,7 @@
                 class="related-cases"
                 title="Altri casi di successo"
                 :cases="relatedCases"
-                cta-label="Tutti i casi"
+                cta-label="Casi di successo"
                 cta-href="/casi"
             />
         </div>
