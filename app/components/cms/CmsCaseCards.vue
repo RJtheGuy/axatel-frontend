@@ -7,7 +7,7 @@
                 <span class="body">
                     <small v-if="item.category">{{ item.category }}</small>
                     <strong>{{ item.title }}</strong>
-                    <span v-if="item.client" class="client">{{ item.client }}</span>
+                    <span v-if="item.client_title" class="client">{{ item.client_title }}</span>
                 </span>
             </NuxtLink>
         </div>
