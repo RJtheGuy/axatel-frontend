@@ -52,17 +52,18 @@
                             </div>
 
                             <div class="case-content">
-                                <!-- Category and title are in the picture: the title stays
+                                <!-- Title is visible only when the editor ticks "Mostra titolo nella card"
+                                     (cover image without the title baked in). Otherwise it stays
                                      for screen readers and search engines. -->
-                                <h2 class="visually-hidden">{{ item.title }}</h2>
-                                <p>{{ item.description }}</p>
+                                <h2 class="case-title" :class="{ 'visually-hidden': !item.showTitle }">{{ item.title }}</h2>
 
-                                <!-- <div class="case-meta">
-                                    <span>{{ item.client }}</span>
-                                    <div class="case-tags">
-                                        <small v-for="tag in item.tags" :key="tag">{{ tag }}</small>
-                                    </div>
-                                </div> -->
+                                <p v-if="item.client" class="case-client">
+                                    <template v-if="item.clientLabel">{{ item.clientLabel }}: </template>{{ item.client }}
+                                </p>
+
+                                <p v-if="item.date" class="case-date">{{ formatDate(item.date) }}</p>
+
+                                <p class="case-excerpt">{{ item.excerpt || item.description }}</p>
                             </div>
                         </NuxtLink>
                     </article>
@@ -88,9 +89,13 @@ const router = useRouter();
 type CaseItem = {
     title: string;
     client: string;
+    clientLabel?: string;
     category: string;
     image: string;
     description: string;
+    excerpt?: string;
+    date?: string;
+    showTitle?: boolean;
     tags: string[];
     slug: string;
 };
@@ -116,13 +121,23 @@ const cases = computed<CaseItem[]>(() =>
     casiData.value ? casiData.value.items.map((c: any) => ({
         title: c.title,
         client: c.client || "",
+        clientLabel: c.client_label ?? "",
         category: c.category || "",
         image: c.cover_image?.url || "",
         description: c.description || "",
+        excerpt: c.card_excerpt || c.description || "",
+        date: c.event_date || "",
+        showTitle: !!c.show_card_title,
         tags: c.tags || [],
         slug: c.meta?.slug
     })) : casesError.value ? successCases : []
 );
+
+// "Data del progetto" shown as month + year (e.g. "novembre 2024").
+function formatDate(iso?: string): string {
+    if (!iso) return "";
+    return new Date(iso).toLocaleDateString(locale.value, { month: "long", year: "numeric" });
+}
 
 // Sectors = the "Categoria" field of each case, most used first.
 const sectors = computed(() => {
@@ -369,6 +384,18 @@ useSeoMeta({
     margin: 0;
     color: #274e72;
     line-height: 1.5;
+}
+
+.case-content .case-client {
+    color: #667f97;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.case-content .case-date {
+    color: #667f97;
+    font-size: 0.8rem;
+    text-transform: capitalize;
 }
 
 .case-meta {
