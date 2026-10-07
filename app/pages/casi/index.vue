@@ -3,7 +3,6 @@
         <header class="cases-hero">
             <ArticleParticleHero :title="t('cases.title')" :asset-url="headerWing()" />
         </header>
-
         <div class="cases-light-stage">
             <section class="cases-shell">
                 <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
