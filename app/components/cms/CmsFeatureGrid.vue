@@ -1,13 +1,22 @@
 <template>
-    <section class="cms-features">
+    <section
+        class="cms-features"
+        :class="{ 'center-heading': value.center_heading, 'center-items': value.center_items }"
+    >
         <h2 v-if="value.heading" v-html="unwrapParagraph(value.heading)"></h2>
         <div v-if="value.subheading" class="sub" v-html="value.subheading"></div>
 
-        <div class="grid">
-            <div v-for="(f, i) in features" :key="i" class="feature">
+        <div class="grid" :class="`cols-${value.columns || 'auto'}`">
+            <div
+                v-for="(f, i) in features"
+                :key="i"
+                class="feature"
+                :class="`w-${f.width || 'normal'}`"
+            >
                 <img v-if="f.icon?.url" class="icon" :src="imageUrl(f.icon.url)" alt="" width="40" height="40" loading="lazy" />
                 <h3 v-html="unwrapParagraph(f.title)"></h3>
-                <div class="description" v-html="f.description"></div>
+                <!-- The description is optional: no element at all when it is empty. -->
+                <div v-if="hasText(f.description)" class="description" v-html="f.description"></div>
             </div>
         </div>
     </section>
@@ -19,13 +28,30 @@ import { unwrapParagraph } from "~/composables/richtext";
 
 const { imageUrl } = useCmsImage();
 
-type Feature = { icon?: { url: string }; title: string; description: string };
+type Feature = {
+    icon?: { url: string } | null;
+    title: string;
+    description?: string | null;
+    width?: "normal" | "wide" | "full";
+};
 
 const props = defineProps<{
-    value: { heading?: string; subheading?: string; features?: Feature[] };
+    value: {
+        heading?: string;
+        subheading?: string;
+        center_heading?: boolean;
+        center_items?: boolean;
+        columns?: "auto" | "2" | "3" | "4" | "6";
+        features?: Feature[];
+    };
 }>();
 
 const features = computed<Feature[]>(() => props.value.features ?? []);
+
+// An "empty" rich text can still come back as <p></p>, so check the visible text.
+function hasText(html?: string | null): boolean {
+    return !!html && html.replace(/<[^>]*>/g, "").trim().length > 0;
+}
 </script>
 
 <style scoped>
@@ -35,6 +61,7 @@ const features = computed<Feature[]>(() => props.value.features ?? []);
 
 h2 {
     margin: 0 0 12px;
+    color: var(--cms-heading, var(--ax-color-text-primary));
     font-size: clamp(1.4rem, 2.8vw, 2rem);
     font-weight: 300;
 }
@@ -42,7 +69,7 @@ h2 {
 .sub :deep(p) {
     max-width: 680px;
     margin: 0 0 38px;
-    color: var(--ax-color-text-secondary);
+    color: var(--cms-text, var(--ax-color-text-primary));
     line-height: 1.6;
 }
 
@@ -52,7 +79,34 @@ h2 {
     gap: 30px;
 }
 
+/* Cards per row chosen by the editor ("auto" keeps the original behaviour). */
+.cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.cols-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+/* Width chosen by the editor for each item. */
+.w-wide {
+    grid-column: span 2;
+}
+
+.w-full {
+    grid-column: 1 / -1;
+}
+
 .icon {
+    display: block;
     width: 40px;
     height: 40px;
     object-fit: contain;
@@ -61,14 +115,69 @@ h2 {
 
 h3 {
     margin: 0 0 8px;
+    color: var(--cms-heading, var(--ax-color-text-primary));
     font-size: 1.04rem;
     font-weight: 600;
 }
 
 .feature .description :deep(p) {
     margin: 0;
-    color: var(--ax-color-text-secondary);
+    color: var(--cms-text, var(--ax-color-text-primary));
     font-size: 0.94rem;
     line-height: 1.55;
+}
+
+/* Optional centering, controlled from the CMS. */
+.center-heading h2,
+.center-heading .sub {
+    text-align: center;
+}
+
+.center-heading .sub :deep(p) {
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.center-items .feature {
+    text-align: center;
+}
+
+.center-items .icon {
+    margin-right: auto;
+    margin-left: auto;
+}
+
+/* Fewer columns on smaller screens so the text stays readable. */
+@media (max-width: 1024px) {
+    .cols-6 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cols-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .cols-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .cms-features {
+        padding: 48px 5vw;
+    }
+
+    .cols-2,
+    .cols-3,
+    .cols-4,
+    .cols-6 {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .w-wide {
+        grid-column: auto;
+    }
 }
 </style>
