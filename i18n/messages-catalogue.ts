@@ -55,7 +55,7 @@ export const catalogueMessages = {
             timelineOptions: { soon: "Entro 3 mesi", mid: "Tra 3 e 6 mesi", later: "Oltre 6 mesi", open: "Da definire" },
         },
         cases: {
-            title: "Tutti i casi",
+            title: "Casi di successo",
             kicker: "Casi di successo",
             lead: "Progetti, tecnologie e applicazioni sul campo per infrastrutture più sicure, monitorate e connesse.",
             empty: "Nessun caso di successo pubblicato al momento.",
