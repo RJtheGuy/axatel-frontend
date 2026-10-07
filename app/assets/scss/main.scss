@@ -145,4 +145,31 @@ h1{
 
 
 
+.u-primary {
+    color: #c52317;
+}
+
+.u-muted {
+    color: var(--ax-color-text-muted, #667f97);
+}
+
+.u-dark {
+    color: #0b355b;
+}
+
+/* Uses the theme's heading font when the variable exists, otherwise the current font. */
+.u-heading-font {
+    font-family: var(--ax-font-heading, inherit);
+    font-weight: 300;
+}
+
+.u-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.95em;
+}
+
+.u-large {
+    font-size: 1.25em;
+    line-height: 1.3;
+}
 
