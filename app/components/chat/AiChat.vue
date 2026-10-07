@@ -166,7 +166,7 @@ let nextId = 0;
 
 /* Accented characters use \u escapes to keep this file ASCII.
    \u00e8 = e-grave   \u2026 = ellipsis */
-const title = computed(() => props.config?.title || "Chiedi ad Axatel");
+const title = computed(() => props.config?.title || "Chiedi ad AxelAI");
 
 const welcome = computed(
     () => props.config?.welcome_message
