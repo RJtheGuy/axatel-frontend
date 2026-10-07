@@ -107,8 +107,8 @@ h2 {
 
 .icon {
     display: block;
-    width: 40px;
-    height: 40px;
+    width: 100px;
+    height: 100px;
     object-fit: contain;
     margin-bottom: 14px;
 }
@@ -166,7 +166,7 @@ h3 {
 
 @media (max-width: 640px) {
     .cms-features {
-        padding: 48px 5vw;
+        padding: 0px;
     }
 
     .cols-2,
@@ -179,5 +179,8 @@ h3 {
     .w-wide {
         grid-column: auto;
     }
+}
+.text-center {
+    text-align: center;
 }
 </style>
