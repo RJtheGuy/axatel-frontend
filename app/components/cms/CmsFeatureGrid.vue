@@ -1,6 +1,6 @@
 <template>
     <section
-        class="cms-features"
+        class="cms-features text-center"
         :class="{ 'center-heading': value.center_heading, 'center-items': value.center_items }"
     >
         <h2 v-if="value.heading" v-html="unwrapParagraph(value.heading)"></h2>
