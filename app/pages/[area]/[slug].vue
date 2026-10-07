@@ -5,34 +5,13 @@
          data/contentPages.ts while the CMS has none. -->
     <InfoPageView v-if="isInfoPage" :page="cmsPage" :area="area" />
 
+    <!-- A Servizio: laid out like a success story, with its Meta panel. -->
+    <ServicePageView v-else-if="isServicePage" :page="cmsPage" />
+
     <main v-else-if="cmsPage" class="flex-page">
-        <!-- Meta panel of a Servizio (Categoria, Immagine di copertina,
-             Immagine nella pagina, Tags). Empty fields show nothing. -->
-        <div v-if="cover && position === 'top'" class="page-cover">
-            <ContentMetaCover
-                dark
-                :src="imageUrl(cover.url)"
-                :alt="cover.alt || cmsPage.title"
-                :width="cover.width"
-                :height="cover.height"
-            />
-        </div>
-        <header v-if="cmsPage?.title" class="page-head" :class="{ 'has-media': sideImage }">
-            <div>
-                <p v-if="cmsPage.category" class="page-kicker">{{ cmsPage.category }}</p>
-                <h1>{{ cmsPage.title }}</h1>
-                <ContentMetaTags dark :tags="tags" />
-                <LayoutTranslationNotice v-if="cmsPage?.__fallback" />
-            </div>
-            <figure v-if="sideImage" class="page-media">
-                <img
-                    :src="imageUrl(cover.url)"
-                    :alt="cover.alt || cmsPage.title"
-                    :width="cover.width"
-                    :height="cover.height"
-                    decoding="async"
-                />
-            </figure>
+        <header v-if="cmsPage?.title" class="page-head">
+            <h1>{{ cmsPage.title }}</h1>
+            <LayoutTranslationNotice v-if="cmsPage?.__fallback" />
         </header>
         <CmsBlockRenderer :blocks="cmsPage?.body ?? []" />
     </main>
@@ -53,10 +32,10 @@ import { computed } from "vue";
 import { createError, useAsyncData, useRoute, useSeoMeta } from "#app";
 import ContentPage from "../../components/content/ContentPage.vue";
 import InfoPageView from "../../components/content/InfoPageView.vue";
+import ServicePageView from "../../components/content/ServicePageView.vue";
 import { contentAreas, type ContentAreaKey } from "../../data/contentPages";
 import { glossaryTerms } from "../../data/glossary";
 import type { ContentPageData } from "../../types/contentPage";
-import { coverPosition, pageTags } from "../../utils/pageMeta";
 
 const route = useRoute();
 const { locale } = useI18n();
@@ -74,7 +53,6 @@ const builtInPage = computed<ContentPageData | undefined>(() =>
 );
 
 const { findByPath } = useCms();
-const { imageUrl } = useCmsImage();
 
 // The CMS page at this address, if one is published. A 404 is "no such
 // page"; any other failure means the CMS could not answer (kept in cmsError).
@@ -87,10 +65,7 @@ const { data: cmsPage, error: cmsError } = await useAsyncData(
     { watch: [area, slug] }
 );
 
-const cover = computed(() => (cmsPage.value?.cover_image?.url ? cmsPage.value.cover_image : null));
-const position = computed(() => coverPosition(cmsPage.value));
-const sideImage = computed(() => Boolean(cover.value) && position.value === "side");
-const tags = computed(() => pageTags(cmsPage.value));
+const isServicePage = computed(() => cmsPage.value?.meta?.type === "services.ServicePage");
 
 const isInfoPage = computed(() =>
     ["home.InfoPage", "home.GlossaryPage"].includes(cmsPage.value?.meta?.type)
@@ -121,7 +96,7 @@ useSeoMeta({
     title: () => `${cmsPage.value?.title ?? page.value?.title ?? ""} | Axatel`,
     description: () =>
         cmsPage.value
-            ? cmsPage.value.meta?.search_description || cmsPage.value.introduction || ""
+            ? cmsPage.value.meta?.search_description || cmsPage.value.introduction || cmsPage.value.short_description || ""
             : page.value?.introduction,
     ogTitle: () => cmsPage.value?.title ?? page.value?.title,
     ogImage: () => cmsPage.value?.cover_image?.url,
@@ -136,45 +111,6 @@ useSeoMeta({
 }
 .page-head {
     padding: 0 8vw 20px;
-}
-.page-head.has-media {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 260px;
-    gap: 40px;
-    align-items: center;
-    max-width: calc(1000px + 16vw);
-}
-.page-kicker {
-    margin: 0 0 12px;
-    color: var(--ax-color-accent-red-soft);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-}
-.page-media {
-    margin: 0;
-}
-.page-media img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border: 1px solid var(--ax-color-border-soft);
-    border-radius: var(--ax-card-radius);
-}
-.page-cover {
-    max-width: calc(1000px + 16vw);
-    padding: 0 8vw;
-}
-@media (max-width: 768px) {
-    .page-head.has-media {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    .page-media {
-        width: 200px;
-        order: -1;
-    }
 }
 .page-head h1 {
     margin: 0;

@@ -195,6 +195,7 @@ export const interfaceMessages = {
             title: "Servizi",
             lead: "Piattaforme, sensori, tecnologie e servizi per realizzare monitoraggio e automazione su misura.",
             empty: "Nessun servizio pubblicato al momento.",
+            all: "Tutti i servizi",
         },
         ui: {
             contactCopied: "Contatto copiato negli appunti",
@@ -429,6 +430,7 @@ export const interfaceMessages = {
             title: "Services",
             lead: "Platforms, sensors, technologies and services for tailored monitoring and automation.",
             empty: "No services published yet.",
+            all: "All services",
         },
         ui: {
             contactCopied: "Contact copied to the clipboard",
@@ -663,6 +665,7 @@ export const interfaceMessages = {
             title: "Services",
             lead: "Plateformes, capteurs, technologies et services pour une surveillance et une automatisation sur mesure.",
             empty: "Aucun service publié pour le moment.",
+            all: "Tous les services",
         },
         ui: {
             contactCopied: "Contact copié dans le presse-papiers",
