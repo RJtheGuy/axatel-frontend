@@ -61,7 +61,7 @@
 
                                 <h2 class="case-title" :class="{ 'visually-hidden': !item.showTitle }">{{ item.title }}</h2>
 
-                                <p v-if="item.date" class="case-date">{{ formatDate(item.date) }}</p>
+                                <!-- <p v-if="item.date" class="case-date">{{ formatDate(item.date) }}</p> -->
 
                                 <p class="case-excerpt">{{ item.excerpt || item.description }}</p>
                             </div>
