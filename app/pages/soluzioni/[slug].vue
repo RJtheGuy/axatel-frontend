@@ -29,12 +29,14 @@
                         <ContentMetaTags :tags="tags" />
                     </div>
                     <figure v-if="sideImage" class="sol-badge">
-                        <img
-                            :src="imageUrl(cms.cover_image.url)"
+                        <ContentResponsiveImage
+                            :src="cms.cover_image.url"
                             :alt="cms.cover_image.alt || cms.title"
                             :width="cms.cover_image.width"
                             :height="cms.cover_image.height"
-                            decoding="async"
+                            sizes="100vw md:50vw lg:520px"
+                            loading="eager"
+                            fetchpriority="high"
                         />
                     </figure>
                 </div>

@@ -25,7 +25,7 @@ export class ShapeFactory {
         canvas.width = ShapeFactory.DRAW_WIDTH;
         canvas.height = ShapeFactory.DRAW_HEIGHT;
 
-        const context = canvas.getContext("2d");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
         if (!context) {
             return new Float32Array(particleCount * 3);
         }
@@ -82,7 +82,7 @@ export class ShapeFactory {
         canvas.width = ShapeFactory.DRAW_WIDTH;
         canvas.height = ShapeFactory.DRAW_HEIGHT;
 
-        const context = canvas.getContext("2d");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
         if (!context) {
             return new Float32Array(particleCount * 3);
         }
@@ -287,7 +287,7 @@ export class ShapeFactory {
             { onMetrics: (size, scale) => { fontSize = size; textScale = scale; } }
         );
         const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
         if (!context) throw new Error("Could not create the AngelBPM particle canvas.");
         const image = new Image();
         image.crossOrigin = "anonymous";
@@ -397,7 +397,7 @@ export class ShapeFactory {
         canvas.width = ShapeFactory.DRAW_WIDTH;
         canvas.height = ShapeFactory.DRAW_HEIGHT;
 
-        const context = canvas.getContext("2d");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
         if (!context) {
             return null;
         }
@@ -497,7 +497,7 @@ export class ShapeFactory {
             jitter?: boolean;
         }
     ): Float32Array {
-        const context = canvas.getContext("2d");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
         if (!context) {
             return new Float32Array(particleCount * 3);
         }
@@ -509,27 +509,39 @@ export class ShapeFactory {
             canvas.height
         ).data;
 
-        const points: number[] = [];
         const step = options?.sampleStep ?? 3;
         const threshold = 10;
+        const ignoreLight = options?.ignoreLightPixels === true;
+        const ignoreDark = options?.ignoreDarkPixels === true;
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const samplesPerRow = Math.ceil(canvasWidth / step);
+        const sampleRows = Math.ceil(canvasHeight / step);
+        const pointBuffer = new Uint16Array(samplesPerRow * sampleRows * 2);
+        let pointLength = 0;
 
-        for (let y = 0; y < canvas.height; y += step) {
-            for (let x = 0; x < canvas.width; x += step) {
-                const offset = (y * canvas.width + x) * 4;
-                const alpha = imageData[offset + 3]!;
-                const isLightPixel = options?.ignoreLightPixels === true &&
-                    imageData[offset]! > 242 &&
-                    imageData[offset + 1]! > 242 &&
-                    imageData[offset + 2]! > 242;
-                const isDarkPixel = options?.ignoreDarkPixels === true &&
-                    imageData[offset]! < 16 &&
-                    imageData[offset + 1]! < 16 &&
-                    imageData[offset + 2]! < 16;
-                if (alpha > threshold && !isLightPixel && !isDarkPixel) {
-                    points.push(x, y);
+        for (let y = 0; y < canvasHeight; y += step) {
+            const rowOffset = y * canvasWidth;
+            for (let x = 0; x < canvasWidth; x += step) {
+                const offset = (rowOffset + x) * 4;
+                if (imageData[offset + 3]! <= threshold) {
+                    continue;
                 }
+                const r = imageData[offset]!;
+                const g = imageData[offset + 1]!;
+                const b = imageData[offset + 2]!;
+                if (ignoreLight && r > 242 && g > 242 && b > 242) {
+                    continue;
+                }
+                if (ignoreDark && r < 16 && g < 16 && b < 16) {
+                    continue;
+                }
+                pointBuffer[pointLength++] = x;
+                pointBuffer[pointLength++] = y;
             }
         }
+
+        const points = pointBuffer.subarray(0, pointLength);
 
         if (points.length === 0) {
             return new Float32Array(particleCount * 3);
@@ -631,14 +643,34 @@ export class ShapeFactory {
         const maxLines = options.maxLines ?? 4;
         const lineHeightRatio = options.lineHeightRatio ?? 1.12;
         const fontWeight = options.fontWeight ?? 350;
-        let fontSize = options.fixedFontSize ?? Math.floor(height * 0.62);
+        const initialFontSize = options.fixedFontSize ?? Math.floor(height * 0.62);
+        const widthCache = new Map<string, number>();
+        let cachedFont = "";
+
+        const setFont = (size: number): void => {
+            const font = `${fontWeight} ${size}px ${ShapeFactory.FONT_FAMILY}`;
+            if (font !== cachedFont) {
+                cachedFont = font;
+                widthCache.clear();
+            }
+            context.font = font;
+        };
+
+        const measure = (value: string): number => {
+            let measured = widthCache.get(value);
+            if (measured === undefined) {
+                measured = context.measureText(value).width;
+                widthCache.set(value, measured);
+            }
+            return measured;
+        };
 
         const buildLines = (size: number): string[] => {
-            context.font = `${fontWeight} ${size}px ${ShapeFactory.FONT_FAMILY}`;
+            setFont(size);
             const lines: string[] = [];
 
             const splitLongWord = (word: string): string[] => {
-                if (context.measureText(word).width <= maxWidth) {
+                if (measure(word) <= maxWidth) {
                     return [word];
                 }
 
@@ -647,7 +679,7 @@ export class ShapeFactory {
 
                 for (const char of word) {
                     const candidate = chunk + char;
-                    if (chunk.length > 0 && context.measureText(candidate).width > maxWidth) {
+                    if (chunk.length > 0 && measure(candidate) > maxWidth) {
                         chunks.push(chunk);
                         chunk = char;
                     } else {
@@ -679,7 +711,7 @@ export class ShapeFactory {
                         ? `${current} ${word}`
                         : word;
 
-                    if (context.measureText(candidate).width <= maxWidth) {
+                    if (measure(candidate) <= maxWidth) {
                         current = candidate;
                     } else {
                         if (current.length > 0) {
@@ -701,20 +733,48 @@ export class ShapeFactory {
             return lineCount * size * lineHeightRatio;
         };
 
-        let lines = buildLines(fontSize);
-        while (
-            options.fixedFontSize === undefined &&
-            (
-                lines.length > maxLines ||
-                lines.some((line) => context.measureText(line).width > maxWidth) ||
-                getBlockHeight(fontSize, lines.length) > maxHeight
-            ) &&
-            fontSize > 22
-        ) {
-            fontSize -= 2;
-            lines = buildLines(fontSize);
+        if (options.fixedFontSize !== undefined) {
+            return { lines: buildLines(initialFontSize), fontSize: initialFontSize };
         }
 
+        // Same result as shrinking the font 2px at a time until the block
+        // fits (or reaches 22px), but found by binary search over that grid:
+        // greedy wrapping only gets easier as the font gets smaller.
+        const layouts = new Map<number, string[]>();
+        const layoutAt = (step: number): string[] => {
+            let lines = layouts.get(step);
+            if (!lines) {
+                lines = buildLines(initialFontSize - step * 2);
+                layouts.set(step, lines);
+            }
+            return lines;
+        };
+        const fits = (step: number): boolean => {
+            const size = initialFontSize - step * 2;
+            if (size <= 22) {
+                return true;
+            }
+            const lines = layoutAt(step);
+            setFont(size);
+            return lines.length <= maxLines &&
+                !lines.some((line) => measure(line) > maxWidth) &&
+                getBlockHeight(size, lines.length) <= maxHeight;
+        };
+
+        let low = 0;
+        let high = Math.max(0, Math.ceil((initialFontSize - 22) / 2));
+        while (low < high) {
+            const middle = (low + high) >> 1;
+            if (fits(middle)) {
+                high = middle;
+            } else {
+                low = middle + 1;
+            }
+        }
+
+        const fontSize = initialFontSize - low * 2;
+        const lines = layoutAt(low);
+        setFont(fontSize);
         return { lines, fontSize };
     }
 }

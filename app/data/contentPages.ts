@@ -19,7 +19,7 @@ export const solutionPages: Record<string, ContentPageData> = {
         eyebrow: "Supervisione e controllo",
         introduction: "Una piattaforma centrale raccoglie eventi, dati e procedure per trasformare sistemi diversi in un unico ambiente operativo.",
         status: "published",
-        image: resolveImage("/immagini/Angel.png"),
+        image: resolveImage("/immagini/Angel.webp"),
         imageAlt: "Piattaforma di supervisione Angel",
         feature: {
             label: "La piattaforma",
@@ -76,7 +76,7 @@ export const solutionPages: Record<string, ContentPageData> = {
         eyebrow: "Misure dal campo",
         introduction: "Scegliamo e integriamo sensori adatti al fenomeno da osservare, al luogo di installazione e alla continuita richiesta.",
         status: "published",
-        image: resolveImage("/immagini/AngelBridge.png"),
+        image: resolveImage("/immagini/AngelBridge.webp"),
         imageAlt: "Sensori per il monitoraggio strutturale",
         sections: [
             {
@@ -103,7 +103,7 @@ export const solutionPages: Record<string, ContentPageData> = {
         eyebrow: "Videoanalisi",
         introduction: "La telecamera diventa un sensore capace di riconoscere eventi e inviare informazioni operative in tempo reale.",
         status: "published",
-        image: resolveImage("/immagini/TrafficAlert.png"),
+        image: resolveImage("/immagini/TrafficAlert.webp"),
         imageAlt: "Sistema Traffic Alert per la videoanalisi stradale",
         feature: {
             label: "Applicazione",
@@ -135,7 +135,7 @@ export const solutionPages: Record<string, ContentPageData> = {
         eyebrow: "Internet of Things",
         introduction: "Connettiamo sensori distribuiti con una rete radio a lungo raggio, bassi consumi e senza una SIM per ogni dispositivo.",
         status: "published",
-        image: resolveImage("/immagini/AngelRiver.png"),
+        image: resolveImage("/immagini/AngelRiver.webp"),
         imageAlt: "Dispositivi connessi tramite rete LoRaWAN",
         sections: [
             {
@@ -360,7 +360,7 @@ export const companyPages: Record<string, ContentPageData> = {
         eyebrow: "Tecnologia e infrastrutture",
         introduction: "Dal 2012 progettiamo a Vicenza sistemi di automazione, monitoraggio e IoT per rendere infrastrutture e territori piu osservabili e sicuri.",
         status: "published",
-        image: resolveImage("/immagini/angelo.png"),
+        image: resolveImage("/immagini/angelo.webp"),
         imageAlt: "Identita visiva Axatel",
         sections: [
             {

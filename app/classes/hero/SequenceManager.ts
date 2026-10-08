@@ -1,4 +1,4 @@
-import angelBpmLogo from "../../assets/immagini/angel_bpm.png";
+import angelBpmLogo from "../../assets/immagini/angel_bpm.webp";
 
 export type SequenceStageType = "flow" | "text" | "logo" | "composite" | "scatter";
 

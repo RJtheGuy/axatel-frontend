@@ -18,11 +18,12 @@
     <div class="window">
         <div class="window-header">
             <div class="window-title">
-                <img
+                <ContentResponsiveImage
                     :src="angelBpmLogo"
                     alt=""
                     width="38"
                     height="38"
+                    sizes="38px"
                 />
                 <span>Angel BPM</span>
             </div>
@@ -185,9 +186,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue"
-import angelBpmLogo from "@/assets/immagini/Angel.png"
-type ECharts = import("echarts").ECharts
-type EChartsModule = typeof import("echarts")
+const angelBpmLogo = "/immagini/Angel.webp"
+type ECharts = import("echarts/core").ECharts
+type EChartsModule = typeof import("./charts")
 
 type Alarm = {
     id: string
@@ -462,7 +463,7 @@ function buildPieOption() {
 
 async function loadECharts(): Promise<EChartsModule> {
     if (!echartsModule) {
-        echartsModule = await import("echarts")
+        echartsModule = await import("./charts")
     }
 
     return echartsModule

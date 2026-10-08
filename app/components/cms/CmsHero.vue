@@ -1,11 +1,12 @@
 <template>
     <section class="cms-hero" :class="{ 'has-bg': value.background_image?.url }" :data-variant="value.variant || 'default'">
-        <img
+        <ContentResponsiveImage
             v-if="value.background_image?.url"
             class="hero-bg"
             :src="value.background_image.url"
             :alt="value.background_image.alt || ''"
-            decoding="async"
+            sizes="100vw"
+            densities="1x"
         />
         <div class="hero-inner">
             <h2 v-html="unwrapParagraph(value.heading)"></h2>

@@ -9,14 +9,16 @@
                 </ol>
             </nav>
 
-            <img
+            <ContentResponsiveImage
                 v-if="caso?.cover_image?.url"
                 class="caso-cover"
-                :src="imageUrl(caso.cover_image.url)"
+                :src="caso.cover_image.url"
                 :alt="caso.cover_image.alt || caso.title"
                 :width="caso.cover_image.width"
                 :height="caso.cover_image.height"
-                decoding="async"
+                sizes="100vw lg:960px"
+                loading="eager"
+                fetchpriority="high"
             />
 
             <LayoutTranslationNotice v-if="caso?.__fallback" />
@@ -53,7 +55,6 @@ import { homepageCases } from "../../data/homepageCases";
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
-const { imageUrl } = useCmsImage();
 const { t, locale } = useI18n();
 const localePath = useLocalePath();
 

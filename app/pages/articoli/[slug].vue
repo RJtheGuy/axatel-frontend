@@ -22,13 +22,14 @@
                 </div>
 
                 <figure v-if="article.image" class="article-media">
-                    <img
-                        :src="imageUrl(article.image)"
+                    <ContentResponsiveImage
+                        :src="article.image"
                         :alt="article.title"
-                        width="900"
-                        height="506"
+                        :width="900"
+                        :height="506"
+                        sizes="100vw lg:900px"
+                        loading="eager"
                         fetchpriority="high"
-                        decoding="async"
                     />
                 </figure>
 
@@ -83,7 +84,6 @@ type ArticlePayload = Partial<Omit<ArticleData, "content" | "contentHtml">> & {
 };
 
 const route = useRoute();
-const { imageUrl } = useCmsImage();
 const relatedCases = computed(() => successCases.filter((item) => item.slug !== route.params.slug));
 const articleSettings = articleSettingsData as ArticleVisualSettings;
 const titleParticleAsset = computed(() => {

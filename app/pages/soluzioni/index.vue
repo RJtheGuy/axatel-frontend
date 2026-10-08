@@ -20,7 +20,7 @@
                         <article v-for="item in group.items" :key="item.slug" class="sol-card">
                             <NuxtLink :to="localePath(`/soluzioni/${item.slug}`)" class="sol-link">
                                 <div v-if="item.image" class="card-media" aria-hidden="true">
-                                    <img :src="imageUrl(item.image)" alt="" width="320" height="180" loading="lazy" decoding="async" />
+                                    <ContentResponsiveImage :src="item.image" :width="400" :height="225" sizes="100vw sm:50vw lg:400px" />
                                 </div>
                                 <p v-if="item.kicker" class="sol-eyebrow">{{ item.kicker }}</p>
                                 <!-- Hidden (still read by screen readers) when "Mostra titolo
@@ -51,7 +51,6 @@ import { showCardTitle } from "../../utils/pageMeta";
 const { t, te, locale } = useI18n();
 const localePath = useLocalePath();
 const { getPage, getPageBySlug } = useCms();
-const { imageUrl } = useCmsImage();
 
 type SolutionItem = {
     title: string; eyebrow: string; kicker: string; description: string; slug: string; group: string; image: string; showTitle: boolean;

@@ -13,14 +13,13 @@
                 :target="partner.website ? '_blank' : undefined"
                 :rel="partner.website ? 'noopener noreferrer' : undefined"
             >
-                <img
+                <ContentResponsiveImage
                     v-if="partner.logo"
                     :src="partner.logo"
                     :alt="partner.name"
-                    width="160"
-                    height="56"
-                    loading="lazy"
-                    decoding="async"
+                    :width="160"
+                    :height="56"
+                    sizes="160px"
                 />
                 <span v-else>{{ partner.name }}</span>
             </a>
@@ -43,7 +42,7 @@ const props = defineProps<{
 }>();
 
 const defaultPartners: PartnerItem[] = [
-    { name: "Angel", logo: "/immagini/Angel.png", website: "https://www.axatel.it" },
+    { name: "Angel", logo: "/immagini/Angel.webp", website: "https://www.axatel.it" },
     // { name: "Smart River Guard", logo: "", website: "" },
     // { name: "Bridge Sentinel", logo: "", website: "" },
     // { name: "Traffic Pulse", logo: "", website: "" }

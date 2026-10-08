@@ -25,7 +25,7 @@
                 @click="selectMember(member)"
             >
                 <span class="portrait">
-                    <img v-if="member.image" :src="member.image" :alt="member.name" width="180" height="180" loading="lazy" decoding="async" />
+                    <ContentResponsiveImage v-if="member.image" :src="member.image" :alt="member.name" :width="180" :height="180" sizes="180px" />
                     <span v-else class="initials" aria-hidden="true">{{ initials(member.name) }}</span>
                 </span>
                 <span class="member-name">{{ member.name }}</span>

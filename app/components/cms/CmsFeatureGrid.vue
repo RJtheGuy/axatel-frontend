@@ -13,7 +13,7 @@
                 class="feature"
                 :class="`w-${f.width || 'normal'}`"
             >
-                <img v-if="f.icon?.url" class="icon" :src="imageUrl(f.icon.url)" alt="" width="80" height="80" loading="lazy" />
+                <ContentResponsiveImage v-if="f.icon?.url" class="icon" :src="f.icon.url" alt="" width="80" height="80" sizes="80px" />
                 <h3 v-html="unwrapParagraph(f.title)"></h3>
                 <!-- The description is optional: no element at all when it is empty. -->
                 <div v-if="hasText(f.description)" class="description" v-html="f.description"></div>
@@ -26,7 +26,6 @@
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
 
-const { imageUrl } = useCmsImage();
 
 type Feature = {
     icon?: { url: string } | null;

@@ -30,7 +30,7 @@
             >
                 <span class="demo-intro-copy">
                     <span class="demo-intro-brand">
-                        <img :src="angelBpmLogo" alt="" width="240" height="185" />
+                        <ContentResponsiveImage :src="angelBpmLogo" alt="" width="280" height="212" sizes="100px sm:20vw lg:280px" />
                         <span class="demo-intro-title">AngelBPM</span>
                     </span>
                     <span class="demo-intro-invitation">
@@ -47,7 +47,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue"
-import angelBpmLogo from "@/assets/immagini/angel_bpm.png"
+const angelBpmLogo = "/immagini/angel_bpm.webp"
 
 const sectionEl = ref<HTMLElement | null>(null)
 const introEl = ref<HTMLButtonElement | null>(null)

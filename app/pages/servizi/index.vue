@@ -18,7 +18,7 @@
                     <article v-for="item in items" :key="item.slug" class="svc-card">
                         <NuxtLink :to="localePath(`/servizi/${item.slug}`)" class="svc-link" :aria-label="t('blog.read', { title: item.title })">
                             <div v-if="item.image" class="card-media" aria-hidden="true">
-                                <img :src="imageUrl(item.image)" alt="" width="320" height="180" loading="lazy" decoding="async" />
+                                <ContentResponsiveImage :src="item.image" :width="400" :height="225" sizes="100vw sm:50vw lg:400px" />
                             </div>
                             <div class="svc-icon" v-else-if="item.icon">{{ item.icon }}</div>
                             <p v-if="item.category" class="svc-kicker">{{ item.category }}</p>
@@ -43,7 +43,6 @@ import { showCardTitle } from "../../utils/pageMeta";
 const { getPage, getPageBySlug } = useCms();
 const { t, locale } = useI18n();
 const localePath = useLocalePath();
-const { imageUrl } = useCmsImage();
 
 type ServiceItem = {
     title: string;

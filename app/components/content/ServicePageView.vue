@@ -12,15 +12,16 @@
             </nav>
 
             <!-- "Immagine nella pagina" = "Grande, in apertura": across the page. -->
-            <img
+            <ContentResponsiveImage
                 v-if="cover && position === 'top'"
                 class="svc-cover"
-                :src="imageUrl(cover.url)"
+                :src="cover.url"
                 :alt="cover.alt || page.title"
                 :width="cover.width"
                 :height="cover.height"
+                sizes="100vw lg:1200px"
+                loading="eager"
                 fetchpriority="high"
-                decoding="async"
             />
 
             <LayoutTranslationNotice v-if="page.__fallback" />
@@ -34,12 +35,14 @@
                 </div>
                 <!-- "Accanto all'introduzione": next to title and description. -->
                 <figure v-if="sideImage" class="svc-media">
-                    <img
-                        :src="imageUrl(cover.url)"
+                    <ContentResponsiveImage
+                        :src="cover.url"
                         :alt="cover.alt || page.title"
                         :width="cover.width"
                         :height="cover.height"
-                        decoding="async"
+                        sizes="100vw md:50vw lg:520px"
+                        loading="eager"
+                        fetchpriority="high"
                     />
                 </figure>
             </header>
@@ -63,7 +66,6 @@ const props = defineProps<{ page: any }>();
 
 const { t } = useI18n();
 const localePath = useLocalePath();
-const { imageUrl } = useCmsImage();
 
 const cover = computed(() => (props.page?.cover_image?.url ? props.page.cover_image : null));
 const position = computed(() => coverPosition(props.page));

@@ -3,14 +3,14 @@
         <blockquote v-html="value.quote"></blockquote>
 
         <div class="attribution">
-            <img
+            <ContentResponsiveImage
                 v-if="value.avatar?.url"
                 class="avatar"
-                :src="imageUrl(value.avatar.url)"
+                :src="value.avatar.url"
                 :alt="plainName"
-                width="56"
-                height="56"
-                loading="lazy"
+                :width="56"
+                :height="56"
+                sizes="56px"
             />
             <div>
                 <div v-if="value.name" class="name" v-html="value.name"></div>
@@ -24,7 +24,6 @@
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
 
-const { imageUrl } = useCmsImage();
 
 const props = defineProps<{
     value: {

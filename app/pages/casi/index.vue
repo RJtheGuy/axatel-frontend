@@ -35,17 +35,18 @@
                 <p v-if="cases.length && !visibleCases.length" class="empty">{{ t("cases.noMatch") }}</p>
 
                 <div v-if="visibleCases.length" class="cases-grid">
-                    <article v-for="item in visibleCases" :key="item.slug" class="case-card">
+                    <article v-for="(item, index) in visibleCases" :key="item.slug" class="case-card">
                         <NuxtLink :to="localePath(`/casi/${item.slug}`)" class="case-link" :aria-label="t('cases.read', { title: item.title })">
                             <div class="case-media">
-                                <img
+                                <ContentResponsiveImage
                                     v-if="item.image"
                                     :src="item.image"
                                     :alt="item.title"
-                                    width="360"
-                                    height="220"
-                                    loading="lazy"
-                                    decoding="async"
+                                    :width="400"
+                                    :height="225"
+                                    sizes="100vw sm:50vw lg:400px"
+                                    :loading="index < 3 ? 'eager' : 'lazy'"
+                                    :fetchpriority="index === 0 ? 'high' : 'auto'"
                                 />
                                 <div v-else class="case-placeholder">{{ item.category }}</div>
                             </div>

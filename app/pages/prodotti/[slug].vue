@@ -27,12 +27,14 @@
                         </div>
                     </div>
                     <figure v-if="product.cover_image" class="prod-media">
-                        <img
+                        <ContentResponsiveImage
                             :src="product.cover_image.url"
                             :alt="product.cover_image.alt || product.title"
                             :width="product.cover_image.width"
                             :height="product.cover_image.height"
-                            decoding="async"
+                            sizes="100vw md:50vw lg:520px"
+                            loading="eager"
+                            fetchpriority="high"
                         />
                     </figure>
                 </div>

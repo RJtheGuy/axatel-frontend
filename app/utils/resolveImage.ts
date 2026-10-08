@@ -10,8 +10,8 @@
 // and every component can resolve images the same way successCases.ts
 // already did for its own narrower case.
 
-import titleWingImage from "../assets/immagini/ala-axatel.png";
-import dashboardWingImage from "../assets/immagini/ala.png";
+import titleWingImage from "../assets/immagini/ala-axatel.webp";
+import dashboardWingImage from "../assets/immagini/ala.webp";
 
 const images = import.meta.glob<string>(
     "../assets/immagini/**/*.{png,jpg,jpeg,webp,svg,gif}",

@@ -5,13 +5,12 @@
         <div class="pc-grid" :class="`pc-cols-${value.columns || 'auto'}`">
             <NuxtLink v-for="item in value.items" :key="item.url" :to="localePath(item.url)" class="pc-card">
                 <span v-if="value.show_image && item.image" class="pc-media" :class="{ 'is-logo': item.kind === 'productpage' }">
-                    <img
+                    <ContentResponsiveImage
                         :src="item.image.url"
                         :alt="item.image.alt || item.title"
-                        width="400"
-                        height="220"
-                        loading="lazy"
-                        decoding="async"
+                        :width="400"
+                        :height="220"
+                        sizes="100vw sm:50vw lg:400px"
                     />
                 </span>
                 <span class="pc-body">

@@ -9,12 +9,13 @@
                  with image + name + url instead of a bare
                  ListBlock(ImageChooserBlock()). -->
             <div v-for="(logo, i) in logos" :key="i" class="logo">
-                <img
+                <ContentResponsiveImage
                     v-if="logo?.url"
-                    :src="imageUrl(logo.url)"
+                    :src="logo.url"
                     :alt="logo.alt || logo.title || ''"
                     width="160"
                     height="56"
+                    sizes="160px"
                     loading="lazy"
                     decoding="async"
                 />
@@ -27,7 +28,6 @@
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
 
-const { imageUrl } = useCmsImage();
 
 const props = defineProps<{
     value: { heading?: string; logos?: Array<{ url: string; alt?: string; title?: string }> };

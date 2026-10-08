@@ -4,7 +4,7 @@
         <div class="grid">
             <NuxtLink v-for="item in value.items" :key="item.url" :to="localePath(item.url)" class="card">
                 <span class="media" aria-hidden="true">
-                    <img v-if="item.image" :src="item.image.url" alt="" width="72" height="72" loading="lazy" decoding="async" />
+                    <ContentResponsiveImage v-if="item.image" :src="item.image.url" :width="72" :height="72" sizes="72px" />
                 </span>
                 <span class="body">
                     <strong>{{ item.title }}</strong>

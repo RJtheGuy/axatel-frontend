@@ -3,7 +3,7 @@
         <h2>{{ value.heading }}</h2>
         <div class="grid">
             <NuxtLink v-for="item in value.items" :key="item.url" :to="localePath(item.url)" class="card">
-                <img v-if="item.image" :src="item.image.url" :alt="item.image.alt || item.title" width="400" height="220" loading="lazy" decoding="async" />
+                <ContentResponsiveImage v-if="item.image" :src="item.image.url" :alt="item.image.alt || item.title" :width="400" :height="220" sizes="100vw sm:50vw lg:400px" />
                 <span class="body">
                     <small v-if="item.category">{{ item.category }}</small>
                     <strong>{{ item.title }}</strong>

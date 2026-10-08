@@ -28,17 +28,18 @@
                 </section>
 
                 <div v-else class="blog-grid">
-                    <article v-for="item in posts" :key="item.slug" class="post-card">
+                    <article v-for="(item, index) in posts" :key="item.slug" class="post-card">
                         <NuxtLink :to="localePath(`/news/${item.slug}`)" class="post-link" :aria-label="t('blog.read', { title: item.title })">
                             <div class="post-media">
-                                <img
+                                <ContentResponsiveImage
                                     v-if="item.image"
                                     :src="item.image"
                                     :alt="item.title"
-                                    width="360"
-                                    height="220"
-                                    loading="lazy"
-                                    decoding="async"
+                                    :width="400"
+                                    :height="225"
+                                    sizes="100vw sm:50vw lg:400px"
+                                    :loading="index < 3 ? 'eager' : 'lazy'"
+                                    :fetchpriority="index === 0 ? 'high' : 'auto'"
                                 />
                                 <div v-else class="post-placeholder">{{ item.title }}</div>
                             </div>

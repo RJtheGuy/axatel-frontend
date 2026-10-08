@@ -11,7 +11,7 @@
                         :rel="item.url ? 'noopener noreferrer' : undefined"
                         class="logo"
                     >
-                        <img v-if="item.logo" :src="item.logo.url" :alt="item.logo.alt || item.name" loading="lazy" decoding="async" />
+                        <ContentResponsiveImage v-if="item.logo" :src="item.logo.url" :alt="item.logo.alt || item.name" :width="150" :height="44" sizes="150px" />
                         <span v-else>{{ item.name }}</span>
                     </component>
                 </li>
@@ -29,7 +29,7 @@
                         :rel="item.url ? 'noopener noreferrer' : undefined"
                         class="logo cert"
                     >
-                        <img v-if="item.logo" :src="item.logo.url" :alt="item.logo.alt || item.name" loading="lazy" decoding="async" />
+                        <ContentResponsiveImage v-if="item.logo" :src="item.logo.url" :alt="item.logo.alt || item.name" :width="90" :height="52" sizes="90px" />
                         <span>{{ item.name }}</span>
                     </component>
                 </li>
@@ -111,6 +111,7 @@ ul {
 
 .logo img {
     display: block;
+    width: auto;
     max-width: 150px;
     height: 44px;
     object-fit: contain;

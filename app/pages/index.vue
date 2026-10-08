@@ -7,7 +7,7 @@
         <DashboardCasiDiSuccessoSection
             id="settori"
             :title="t('home.casesTitle')"
-            :cases="dashboardConfig.successCases.items"
+            :cases="homeCases"
             :button-label="dashboardConfig.successCases.buttonLabel"
             :cta-label="t('home.casesCta')"
             :cta-href="dashboardConfig.successCases.cta.href"
@@ -140,9 +140,6 @@ async function revealAndScrollToDemo(): Promise<void> {
 }
 
 onMounted(() => {
-    void loadCasiFromCms();
-    void loadHomeFromCms();
-
     if (window.matchMedia("(min-width: 901px)").matches) {
         document.documentElement.classList.add("home-scroll-snap");
         window.addEventListener("wheel", handleSectionWheel, { passive: false });
@@ -172,8 +169,7 @@ onBeforeUnmount(() => {
 
 // Static fallback content. Everything in here is what the site shows
 // immediately and what it falls back to if the CMS is unreachable —
-// nothing in the template below changed, only how this object gets
-// populated (see loadCasiFromCms / loadFooterFromCms further down).
+// Server-side CMS data overrides it where available.
 const dashboardConfig = reactive({
     hero: {
         frasi: [
@@ -253,7 +249,7 @@ const dashboardConfig = reactive({
         items: [
             {
                 name: "Angel",
-                logo: "/immagini/Angel.png",
+                logo: "/immagini/Angel.webp",
                 website: "https://www.axatel.it"
             },
             // {
@@ -282,7 +278,54 @@ const dashboardConfig = reactive({
 // always, in English/French only once Home has been translated there, so
 // an untranslated Home never puts Italian phrases on the English site.
 const { t, tm, rt, locale } = useI18n();
-const cmsHero = ref<{ frasi: string[]; quote: string }>({ frasi: [], quote: "" });
+type CmsHome = {
+    __fallback?: boolean; is_alias?: boolean;
+    hero_frasi?: Array<{ value?: string }>; hero_quote_text?: string;
+    top_kicker?: string; top_title_before?: string; top_title_accent?: string;
+    top_title_after?: string; top_intro?: string; top_cta_primary_label?: string;
+    top_cta_primary_url?: string; top_cta_secondary_label?: string;
+    top_cta_secondary_url?: string; top_show_status?: boolean;
+};
+type CmsCase = {
+    title: string; client?: string; category?: string; description?: string;
+    cover_image?: { url?: string }; tags?: string[]; meta?: { slug?: string };
+    event_date?: string;
+};
+
+const { getPage } = useCms();
+const [homeResult, casesResult] = await Promise.all([
+    useAsyncData(() => `home-top-${locale.value}`, async () => {
+        try {
+            const res = await getPage<CmsHome>("home.HomePage", { limit: 1 });
+            const home = res?.items?.[0];
+            return home && !home.__fallback && !home.is_alias ? home : null;
+        } catch (error) {
+            console.warn("[cms] home fetch failed, using built-in texts", error);
+            return null;
+        }
+    }),
+    useAsyncData(() => `home-cases-${locale.value}`, async () => {
+        try {
+            const res = await getPage<CmsCase>("casi.CasoSuccessoPage",
+                { order: "-first_published_at" }, { all: true, sort: byEventDate });
+            if (!res?.items?.length) return null;
+            return res.items.map(page => ({
+                title: page.title, client: page.client ?? "", category: page.category ?? "",
+                image: page.cover_image?.url ?? "", description: page.description ?? "",
+                tags: page.tags ?? [], slug: page.meta?.slug ?? ""
+            }));
+        } catch (error) {
+            console.warn("[cms] casi di successo fetch failed, using fallback content", error);
+            return null;
+        }
+    })
+]);
+const homeCases = computed(() => casesResult.data.value ?? dashboardConfig.successCases.items);
+const cmsHero = computed(() => ({
+    frasi: (homeResult.data.value?.hero_frasi ?? [])
+        .map(block => String(block.value ?? "").replace(/\\n/g, "\n").trim()).filter(Boolean),
+    quote: homeResult.data.value?.hero_quote_text?.trim() ?? ""
+}));
 
 const heroFrasi = computed<string[]>(() =>
     cmsHero.value.frasi.length
@@ -294,13 +337,9 @@ const heroQuote = computed(() => cmsHero.value.quote || t("home.quote"));
 // First screen (title, intro, buttons): loaded on the server so visitors and
 // Google get the CMS text straight away. English/French use it only once
 // Home has been translated, like the phrases below.
-const { getPage: getHomeForTop } = useCms();
-const { data: heroTop } = await useAsyncData(
-    () => `home-top-${locale.value}`,
-    async () => {
-        const res = await getHomeForTop<any>("home.HomePage", { limit: 1 }).catch(() => null);
-        const home = res?.items?.[0];
-        if (!home || home.__fallback || home.is_alias) return null;
+const heroTop = computed(() => {
+        const home = homeResult.data.value;
+        if (!home) return null;
         return {
             kicker: home.top_kicker || "",
             titleBefore: home.top_title_before || "",
@@ -313,60 +352,7 @@ const { data: heroTop } = await useAsyncData(
             secondaryUrl: home.top_cta_secondary_url || "",
             showStatus: home.top_show_status !== false,
         };
-    },
-    { watch: [locale] }
-);
-
-async function loadHomeFromCms(): Promise<void> {
-    try {
-        const res = await getPage<any>("home.HomePage", { limit: 1 });
-        const home = res?.items?.[0];
-        // An English/French Home that only mirrors the Italian one (alias)
-        // is not a translation: keep the built-in translated phrases.
-        if (!home || home.__fallback || home.is_alias) return;
-        const frasi = (Array.isArray(home.hero_frasi) ? home.hero_frasi : [])
-            .map((block: any) => String(block?.value ?? "").replace(/\\n/g, "\n").trim())
-            .filter(Boolean);
-        cmsHero.value = {
-            frasi,
-            quote: typeof home.hero_quote_text === "string" ? home.hero_quote_text.trim() : "",
-        };
-    } catch (error) {
-        console.warn("[cms] home hero fetch failed, using built-in texts", error);
-    }
-}
-
-// ── CMS wiring ──────────────────────────────────────────────────────
-// dashboardConfig above ships as working, correct content on its own —
-// these two calls just overwrite pieces of it in place once (and if)
-// the CMS answers, so an editor's changes in Wagtail show up here
-// without a deploy. Nothing renders differently while this is pending;
-// if it fails, the page quietly keeps the fallback above forever.
-const { getPage } = useCms();
-
-async function loadCasiFromCms(): Promise<void> {
-    try {
-        // Most recent project first ("Data del progetto"), as on /casi.
-        const res = await getPage<any>("casi.CasoSuccessoPage", { order: "-first_published_at" }, { all: true, sort: byEventDate });
-        if (!res?.items?.length) return;
-
-        dashboardConfig.successCases.items = res.items.map((page) => ({
-            title: page.title,
-            client: page.client ?? "",
-            category: page.category ?? "",
-            image: page.cover_image?.url ?? "",
-            description: page.description ?? "",
-            tags: page.tags ?? [],
-            slug: page.meta?.slug ?? "",
-            content: page.body ?? ""
-        }));
-    } catch (error) {
-        // CMS down or unreachable — dashboardConfig.successCases.items
-        // keeps the fallback nine cases defined above. Fail silent to
-        // the visitor, loud to the console for whoever's debugging.
-        console.warn("[cms] casi di successo fetch failed, using fallback content", error);
-    }
-}
+});
 
 
 useSeoMeta({

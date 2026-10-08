@@ -21,6 +21,19 @@ export function useCarousel({
     let paused = false
     let loopWidth = 0
     let animationFrameId: number | null = null
+    let resizeFrameId: number | null = null
+    let visible = false
+
+    function stop() {
+        if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
+        animationFrameId = null
+    }
+
+    function start() {
+        if (!paused && visible && !document.hidden && animationFrameId === null) {
+            animationFrameId = requestAnimationFrame(tick)
+        }
+    }
 
     function computeWidth() {
 
@@ -32,19 +45,18 @@ export function useCarousel({
 
     function onResize() {
 
-        requestAnimationFrame(computeWidth)
+        if (resizeFrameId !== null) return
+        resizeFrameId = requestAnimationFrame(() => {
+            resizeFrameId = null
+            computeWidth()
+        })
 
     }
 
     function tick() {
 
-        if (paused) {
-
-            animationFrameId = requestAnimationFrame(tick)
-
-            return
-
-        }
+        animationFrameId = null
+        if (paused || !visible || document.hidden) return
 
         if (!loopWidth) {
 
@@ -63,8 +75,7 @@ export function useCarousel({
         track.style.transform =
             `translate3d(${position}px,0,0)`
 
-        animationFrameId =
-            requestAnimationFrame(tick)
+        start()
 
     }
 
@@ -84,27 +95,45 @@ export function useCarousel({
         }
     }
 
-    requestAnimationFrame(computeWidth)
+    const observer = new IntersectionObserver(entries => {
+        visible = entries.some(entry => entry.isIntersecting)
+        if (visible) {
+            computeWidth()
+            start()
+        } else {
+            stop()
+        }
+    })
+    observer.observe(container)
+
+    const resizeObserver = new ResizeObserver(onResize)
+    resizeObserver.observe(track)
+
+    function onVisibilityChange() {
+        if (document.hidden) stop()
+        else start()
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange)
 
     window.addEventListener(
         "resize",
         onResize
     )
 
-    animationFrameId =
-        requestAnimationFrame(tick)
-
     return {
 
         pause() {
 
             paused = true
+            stop()
 
         },
 
         resume() {
 
             paused = false
+            start()
 
         },
 
@@ -116,13 +145,11 @@ export function useCarousel({
 
         destroy() {
 
-            if (animationFrameId !== null) {
-
-                cancelAnimationFrame(
-                    animationFrameId
-                )
-
-            }
+            stop()
+            if (resizeFrameId !== null) cancelAnimationFrame(resizeFrameId)
+            observer.disconnect()
+            resizeObserver.disconnect()
+            document.removeEventListener("visibilitychange", onVisibilityChange)
 
             window.removeEventListener(
                 "resize",

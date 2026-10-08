@@ -1,6 +1,6 @@
 <template>
     <section ref="sectionEl" class="citazione-section">
-        <video class="hero-video" autoplay muted loop playsinline preload="metadata" :poster="heroPosterUrl" aria-hidden="true" ref="videoEl">
+        <video class="hero-video" autoplay muted loop playsinline preload="auto" :poster="heroPosterUrl" aria-hidden="true" ref="videoEl">
             <source :src="heroVideoUrl" type="video/mp4" />
         </video>
         <div class="hero-video-overlay" aria-hidden="true"></div>
@@ -69,6 +69,9 @@ const link = (url: string) => (url.startsWith("/") ? localePath(url) : url);
 const sectionEl = ref<HTMLElement | null>(null);
 const videoEl = ref<HTMLVideoElement | null>(null);
 let observer: IntersectionObserver | null = null;
+let sectionVisible = true;
+
+useHead({ link: [{ rel: "preload", as: "image", href: heroPosterUrl, fetchpriority: "high" }] });
 
 function emitQuoteVisibility(active: boolean): void {
     window.dispatchEvent(
@@ -89,7 +92,7 @@ let reducedMotion = false;
 
 function startVideo(): void {
     const video = videoEl.value;
-    if (!video || reducedMotion || !video.paused) return;
+    if (!video || !sectionVisible || document.hidden || reducedMotion || !video.paused) return;
     video.muted = true;
     video.defaultMuted = true;
     video.setAttribute("muted", "");
@@ -109,6 +112,7 @@ function removeUnlock(): void {
 
 function onVisibility(): void {
     if (document.visibilityState === "visible") startVideo();
+    else videoEl.value?.pause();
 }
 
 onMounted(() => {
@@ -129,6 +133,9 @@ onMounted(() => {
             if (!entry) return;
 
             const active = entry.isIntersecting && entry.intersectionRatio > 0.55;
+            sectionVisible = entry.isIntersecting;
+            if (sectionVisible) startVideo();
+            else videoEl.value?.pause();
             emitQuoteVisibility(active);
         },
         {

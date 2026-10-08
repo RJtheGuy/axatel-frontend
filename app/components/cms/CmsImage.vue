@@ -1,10 +1,11 @@
 <template>
     <figure v-if="value.image?.url" class="cms-image">
-        <img
-            :src="imageUrl(value.image.url)"
+        <ContentResponsiveImage
+            :src="value.image.url"
             :alt="value.alt_text || value.image.alt || ''"
             :width="value.image.width"
             :height="value.image.height"
+            sizes="100vw sm:84vw lg:840px"
             loading="lazy"
             decoding="async"
         />
@@ -13,8 +14,6 @@
 </template>
 
 <script setup lang="ts">
-const { imageUrl } = useCmsImage();
-
 defineProps<{
     value: {
         image?: { url: string; alt?: string; width?: number; height?: number };

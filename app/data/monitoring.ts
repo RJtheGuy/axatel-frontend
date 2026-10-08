@@ -52,7 +52,7 @@ export const monitoringPages: Record<string, MonitoringPage> = {
         eyebrow: "Rischio idraulico",
         introduction: "Il controllo continuo del livello fluviale porta sul territorio informazioni utili per la prevenzione e la gestione tempestiva delle criticita.",
         status: "published",
-        image: resolveImage("/immagini/AngelRiver.png"),
+        image: resolveImage("/immagini/AngelRiver.webp"),
         imageAlt: "Sistema Angel River per il monitoraggio dei corsi d'acqua",
         feature: {
             label: "La soluzione Axatel",
@@ -86,7 +86,7 @@ export const monitoringPages: Record<string, MonitoringPage> = {
         eyebrow: "Dissesto idrogeologico",
         introduction: "Il monitoraggio dei versanti instabili rende osservabili nel tempo i fenomeni di dissesto e supporta la sicurezza delle infrastrutture esposte.",
         status: "published",
-        image: resolveImage("/immagini/GeoAngel.png"),
+        image: resolveImage("/immagini/GeoAngel.webp"),
         imageAlt: "Sistema Geo Angel per il monitoraggio dei dissesti",
         feature: {
             label: "La soluzione Axatel",
@@ -120,7 +120,7 @@ export const monitoringPages: Record<string, MonitoringPage> = {
         eyebrow: "Smart mobility",
         introduction: "Conteggio dei veicoli, dati di mobilita e sistemi di controllo concorrono a una gestione piu sicura ed efficiente della rete stradale.",
         status: "published",
-        image: resolveImage("/immagini/TrafficAlert.png"),
+        image: resolveImage("/immagini/TrafficAlert.webp"),
         imageAlt: "Sistema Traffic Alert per la videoanalisi stradale",
         feature: {
             label: "La soluzione Axatel",
@@ -154,7 +154,7 @@ export const monitoringPages: Record<string, MonitoringPage> = {
         eyebrow: "Sicurezza stradale",
         introduction: "Tecnologie connesse supportano il tracciamento e la sicurezza dei cantieri stradali, anche in contesti distribuiti lungo la rete.",
         status: "published",
-        image: resolveImage("/immagini/AngelRoadsite.png"),
+        image: resolveImage("/immagini/AngelRoadsite.webp"),
         imageAlt: "Sistema Angel Road Site per i cantieri stradali",
         feature: {
             label: "La soluzione Axatel",
@@ -197,7 +197,7 @@ export const monitoringPages: Record<string, MonitoringPage> = {
         eyebrow: "Monitoraggio strutturale",
         introduction: "La conoscenza continua del comportamento di ponti e viadotti aiuta i gestori a seguire nel tempo lo stato delle opere.",
         status: "published",
-        image: resolveImage("/immagini/AngelBridge.png"),
+        image: resolveImage("/immagini/AngelBridge.webp"),
         imageAlt: "Sistema Angel Bridge per il monitoraggio strutturale",
         feature: {
             label: "La soluzione Axatel",
@@ -231,7 +231,7 @@ export const monitoringPages: Record<string, MonitoringPage> = {
         eyebrow: "Monitoraggio strutturale",
         introduction: "Il monitoraggio connesso estende agli edifici una lettura continua e centralizzata dei parametri strutturali.",
         status: "published",
-        image: resolveImage("/immagini/AngelBridge.png"),
+        image: resolveImage("/immagini/AngelBridge.webp"),
         imageAlt: "Sistema Angel Bridge applicato agli edifici",
         feature: {
             label: "La soluzione Axatel",

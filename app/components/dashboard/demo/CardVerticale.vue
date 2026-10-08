@@ -11,12 +11,13 @@
 
         <div class="logo">
 
-            <img
+            <ContentResponsiveImage
                 v-if="logo"
                 :src="logo"
                 :alt="application.name"
                 width="46"
                 height="46"
+                sizes="46px"
                 loading="lazy"
                 decoding="async"
             />
@@ -172,11 +173,11 @@ const demoComponents:Record<string,Component>={
 }
 
 const demoLogos: Record<string, string> = {
-    GeoAngel: "/immagini/GeoAngel.png",
-    TrafficAlert: "/immagini/TrafficAlert.png",
-    AngelRiver: "/immagini/AngelRiver.png",
-    AngelRoadSite: "/immagini/AngelRoadsite.png",
-    AngelBridge: "/immagini/AngelBridge.png"
+    GeoAngel: "/immagini/GeoAngel.webp",
+    TrafficAlert: "/immagini/TrafficAlert.webp",
+    AngelRiver: "/immagini/AngelRiver.webp",
+    AngelRoadSite: "/immagini/AngelRoadsite.webp",
+    AngelBridge: "/immagini/AngelBridge.webp"
 }
 
 const hasDemo = computed(() => Boolean(props.application.demo && demoComponents[props.application.demo]))

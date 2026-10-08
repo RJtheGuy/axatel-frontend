@@ -29,12 +29,14 @@
                         <ContentMetaTags :tags="tags" />
                     </div>
                     <figure v-if="sideImage" class="info-media">
-                        <img
-                            :src="imageUrl(page.cover_image.url)"
+                        <ContentResponsiveImage
+                            :src="page.cover_image.url"
                             :alt="page.cover_image.alt || page.title"
                             :width="page.cover_image.width"
                             :height="page.cover_image.height"
-                            decoding="async"
+                            sizes="100vw md:50vw lg:520px"
+                            loading="eager"
+                            fetchpriority="high"
                         />
                     </figure>
                 </div>

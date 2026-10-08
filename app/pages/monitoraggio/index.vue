@@ -39,7 +39,7 @@
                     >
                         <NuxtLink :to="localePath(`/monitoraggio/${item.slug}`)" class="topic-link">
                             <div class="topic-media" aria-hidden="true">
-                                <img v-if="item.image" :src="item.image" alt="" width="150" height="150" loading="lazy" decoding="async" />
+                                <ContentResponsiveImage v-if="item.image" :src="item.image" :width="150" :height="150" sizes="150px" />
                                 <span v-else class="topic-icon">{{ item.icon || item.shortTitle.charAt(0) }}</span>
                                 <span v-if="item.comingSoon" class="topic-soon">{{ t("monitoring.soon") }}</span>
                             </div>

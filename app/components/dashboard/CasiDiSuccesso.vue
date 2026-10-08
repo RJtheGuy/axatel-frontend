@@ -15,12 +15,13 @@
                     :aria-label="t('home.openCase', { title: item.title })"
                 >
                     <div class="case-media">
-                        <img
+                        <ContentResponsiveImage
                             v-if="item.image"
-                            :src="imageUrl(item.image)"
+                            :src="item.image"
                             :alt="item.title"
                             width="420"
                             height="236"
+                            sizes="85vw sm:420px lg:560px"
                             loading="lazy"
                             decoding="async"
                         />
@@ -62,7 +63,6 @@ const props = defineProps<{
     ctaHref?: string;
 }>();
 
-const { imageUrl } = useCmsImage();
 const { t } = useI18n();
 const localePath = useLocalePath();
 

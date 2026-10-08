@@ -15,12 +15,13 @@
                 :href="item.url || undefined"
             >
                 <div class="media">
-                    <img
+                    <ContentResponsiveImage
                         v-if="item.image?.url"
-                        :src="imageUrl(item.image.url)"
+                        :src="item.image.url"
                         :alt="unwrapParagraph(item.title).replace(/<[^>]+>/g, '') || item.image.alt"
                         width="360"
                         height="220"
+                        sizes="100vw sm:84vw md:42vw lg:360px"
                         loading="lazy"
                         decoding="async"
                     />
@@ -39,7 +40,6 @@
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
 
-const { imageUrl } = useCmsImage();
 
 type Item = {
     image?: { url: string; alt?: string };

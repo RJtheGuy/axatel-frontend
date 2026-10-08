@@ -32,12 +32,14 @@
                         <ContentMetaTags :tags="topic.tags" />
                     </div>
                     <figure v-if="sideImage" class="topic-badge" :class="{ 'is-plain': !topic.frame }">
-                        <img
-                            :src="imageUrl(topic.image)"
+                        <ContentResponsiveImage
+                            :src="topic.image"
                             :alt="topic.image_alt || topic.title"
                             :width="topic.image_width"
                             :height="topic.image_height"
-                            decoding="async"
+                            sizes="100vw md:50vw lg:520px"
+                            loading="eager"
+                            fetchpriority="high"
                         />
                     </figure>
                 </div>

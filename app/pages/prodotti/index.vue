@@ -24,7 +24,14 @@
                             class="prod-card"
                         >
                             <span class="media">
-                                <img v-if="item.image" :src="item.image.url" :alt="item.image.alt || item.title" loading="lazy" decoding="async" />
+                                <ContentResponsiveImage
+                                    v-if="item.image"
+                                    :src="item.image.url"
+                                    :alt="item.image.alt || item.title"
+                                    :width="400"
+                                    :height="250"
+                                    sizes="100vw sm:50vw lg:400px"
+                                />
                                 <span v-else class="placeholder" aria-hidden="true">{{ item.title }}</span>
                             </span>
                             <span class="body">

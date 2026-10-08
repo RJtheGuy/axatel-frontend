@@ -1,6 +1,10 @@
 <template>
     <section ref="heroEl" class="hero" :class="{ 'is-engine-ready': engineReady }">
-        <canvas ref="canvas"></canvas>
+        <div class="hero-fallback">
+            <h2>{{ resolveFrasi(frasi)[0] }}</h2>
+            <blockquote>{{ resolveQuoteText(quoteText) }}</blockquote>
+        </div>
+        <canvas ref="canvas" aria-hidden="true"></canvas>
     </section>
 </template>
 
@@ -36,7 +40,7 @@ const resolveQuoteText = (quoteText?: string): string => {
     return normalized.length > 0 ? normalized : DEFAULT_QUOTE_TEXT;
 };
 
-// Always goes through resolveImage: a bare "/immagini/angelo.png" was
+// Always goes through resolveImage: a bare "/immagini/angelo.webp" was
 // requested from the frontend itself, where it doesn't exist (404 + a
 // wasted CMS lookup via the catch-all route).
 // Empty = the homepage wing (the CMS one if uploaded).
@@ -76,6 +80,8 @@ let engineStartTimeout: ReturnType<typeof setTimeout> | null = null;
 let engineStartRaf = 0;
 let engineReadyRaf = 0;
 let engineStartQueued = false;
+const startAfterLoad = (): void => queueEngineStart(300);
+let engineStarting = false;
 
 function visibleRatio(el: Element | null): number {
     if (!el) return 0;
@@ -199,7 +205,8 @@ function requestSectionSync(): void {
 }
 
 async function startEngine(): Promise<void> {
-    if (!canvas.value || engine) return;
+    if (!canvas.value || engine || engineStarting) return;
+    engineStarting = true;
 
     removeEngineStartIntentListeners();
 
@@ -267,7 +274,7 @@ function queueEngineStart(delay = 0): void {
 
     const run = () => {
         engineStartTimeout = null;
-        void startEngine();
+        void startEngine().catch(error => console.error("[hero] Particle engine failed to start", error));
     };
 
     if (delay > 0) {
@@ -291,21 +298,25 @@ function queueEngineStartFromIntent(): void {
 }
 
 function addEngineStartIntentListeners(): void {
-    window.addEventListener("pointermove", queueEngineStartFromIntent, { passive: true, once: true });
+    window.addEventListener("scroll", queueEngineStartFromIntent, { passive: true, once: true });
     window.addEventListener("touchstart", queueEngineStartFromIntent, { passive: true, once: true });
     window.addEventListener("keydown", queueEngineStartFromIntent, { once: true });
 }
 
 function removeEngineStartIntentListeners(): void {
-    window.removeEventListener("pointermove", queueEngineStartFromIntent);
+    window.removeEventListener("scroll", queueEngineStartFromIntent);
     window.removeEventListener("touchstart", queueEngineStartFromIntent);
     window.removeEventListener("keydown", queueEngineStartFromIntent);
 }
 
 onMounted(() => {
     isMounted = true;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     addEngineStartIntentListeners();
-    queueEngineStart();
+    // Prepare the particles right after the page has loaded, so they are
+    // already running when the visitor scrolls to them.
+    if (document.readyState === "complete") startAfterLoad();
+    else window.addEventListener("load", startAfterLoad, { once: true });
 });
 
 watch(
@@ -340,6 +351,7 @@ onBeforeUnmount(() => {
         })
     );
     removeEngineStartIntentListeners();
+    window.removeEventListener("load", startAfterLoad);
     window.removeEventListener("scroll", requestSectionSync);
     window.removeEventListener("resize", requestSectionSync);
     domObserver?.disconnect();
@@ -402,6 +414,38 @@ onBeforeUnmount(() => {
 
 .hero.is-engine-ready::before{
     opacity:0;
+}
+
+.hero-fallback {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-height: 100vh;
+    padding: 120px 8vw 60px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 32px;
+    white-space: pre-line;
+}
+
+.hero-fallback h2 {
+    max-width: 900px;
+    font-size: clamp(2rem, 5vw, 4rem);
+}
+
+.hero-fallback blockquote {
+    max-width: 800px;
+    line-height: 1.7;
+}
+
+.hero.is-engine-ready .hero-fallback {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
 }
 
 canvas{

@@ -375,6 +375,15 @@ export class ParticleSystem {
         const cacheKey = `${this.worldCacheKey}:${stage.type}:${text}:${stage.asset || ""}:${stage.fontSizeReference || ""}`;
         let formation = this.formationCache.get(cacheKey);
 
+        if (!formation && stage.type === "text") {
+            // Keeps text rasterisation in its own task instead of extending the caller's long task.
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
+            if (request !== this.stageRequest) {
+                return;
+            }
+            formation = this.formationCache.get(cacheKey);
+        }
+
         if (!formation) {
             if (stage.type === "composite") {
                 formation = await ShapeFactory.createCompositeFormation(

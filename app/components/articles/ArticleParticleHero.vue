@@ -50,9 +50,23 @@ async function startEngine(): Promise<void> {
     });
 }
 
+let idleHandle = 0;
+
+function scheduleStart(): void {
+    const run = () => {
+        if (mounted) void startEngine();
+    };
+    idleHandle = "requestIdleCallback" in window
+        ? window.requestIdleCallback(run, { timeout: 1500 })
+        : window.setTimeout(run, 200);
+}
+
+// The engine (three.js + particle sampling) is heavy main-thread work; start it
+// only after the page has loaded so the article content stays interactive.
 onMounted(() => {
     mounted = true;
-    void startEngine();
+    if (document.readyState === "complete") scheduleStart();
+    else window.addEventListener("load", scheduleStart, { once: true });
 });
 
 watch(
@@ -62,6 +76,11 @@ watch(
 
 onBeforeUnmount(() => {
     mounted = false;
+    window.removeEventListener("load", scheduleStart);
+    if (idleHandle) {
+        if ("cancelIdleCallback" in window) window.cancelIdleCallback(idleHandle);
+        else window.clearTimeout(idleHandle);
+    }
     if (readyFrame) cancelAnimationFrame(readyFrame);
     engine?.destroy();
 });

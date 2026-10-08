@@ -2,7 +2,15 @@
     <!-- "Immagine nella pagina" → "Grande, in apertura": the cover across the
          whole column, as on a success story. -->
     <figure class="meta-cover" :class="{ 'is-dark': dark }">
-        <img :src="src" :alt="alt" :width="width" :height="height" decoding="async" fetchpriority="high" />
+        <ContentResponsiveImage
+            :src="src"
+            :alt="alt"
+            :width="width"
+            :height="height"
+            sizes="100vw lg:1200px"
+            loading="eager"
+            fetchpriority="high"
+        />
     </figure>
 </template>
 

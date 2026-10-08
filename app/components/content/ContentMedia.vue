@@ -2,11 +2,12 @@
     <!-- No image → render nothing. The old placeholder told visitors
          "Spazio predisposto per il contenuto fotografico". -->
     <figure v-if="src" class="content-media">
-        <img
-            :src="imageUrl(src)"
+        <ContentResponsiveImage
+            :src="src"
             :alt="alt || title"
             width="720"
             height="440"
+            sizes="84vw md:40vw lg:720px"
             loading="lazy"
             decoding="async"
         />
@@ -14,8 +15,6 @@
 </template>
 
 <script setup lang="ts">
-const { imageUrl } = useCmsImage();
-
 defineProps<{
     title: string;
     src?: string;

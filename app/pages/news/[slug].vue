@@ -24,13 +24,14 @@
                 </div>
 
                 <figure v-if="post.image" class="post-media">
-                    <img
-                        :src="imageUrl(post.image)"
+                    <ContentResponsiveImage
+                        :src="post.image"
                         :alt="post.title"
-                        width="900"
-                        height="506"
+                        :width="900"
+                        :height="506"
+                        sizes="100vw lg:900px"
+                        loading="eager"
                         fetchpriority="high"
-                        decoding="async"
                     />
                 </figure>
 
@@ -54,7 +55,6 @@ import ArticleParticleHero from "../../components/articles/ArticleParticleHero.v
 
 const route = useRoute();
 const { getPageBySlug } = useCms();
-const { imageUrl } = useCmsImage();
 const { t, locale } = useI18n();
 const localePath = useLocalePath();
 

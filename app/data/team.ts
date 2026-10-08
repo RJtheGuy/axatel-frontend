@@ -43,5 +43,5 @@ export const teamMembers: TeamMember[] = [
     { id: "settima", name: "Settima Persona", image: resolveImage("/immagini/casi-di-successo/ss640.webp"), description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Tiene insieme tecnologia e operativita quotidiana.", position: { x: 37, y: 76 } },
     { id: "ottava", name: "Ottava Persona", image: resolveImage("/immagini/casi-di-successo/geo-angel-3anni.webp"), description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cerca connessioni nuove tra competenze diverse.", position: { x: 58, y: 68 } },
     { id: "nona", name: "Nona Persona", image: resolveImage("/immagini/casi-di-successo/esg.webp"), description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Misura l'impatto e rende visibili i risultati.", position: { x: 79, y: 74 } },
-    { id: "decima", name: "Decima Persona", image: resolveImage("/immagini/TrafficAlert.png"), description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Porta energia, metodo e curiosita nel gruppo.", position: { x: 91, y: 59 } }
+    { id: "decima", name: "Decima Persona", image: resolveImage("/immagini/TrafficAlert.webp"), description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Porta energia, metodo e curiosita nel gruppo.", position: { x: 91, y: 59 } }
 ];
