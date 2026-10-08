@@ -5,6 +5,9 @@
          data/contentPages.ts while the CMS has none. -->
     <InfoPageView v-if="isInfoPage" :page="cmsPage" :area="area" />
 
+    <!-- A Servizio: laid out like a success story, with its Meta panel. -->
+    <ServicePageView v-else-if="isServicePage" :page="cmsPage" />
+
     <main v-else-if="cmsPage" class="flex-page">
         <header v-if="cmsPage?.title" class="page-head">
             <h1>{{ cmsPage.title }}</h1>
@@ -29,6 +32,7 @@ import { computed } from "vue";
 import { createError, useAsyncData, useRoute, useSeoMeta } from "#app";
 import ContentPage from "../../components/content/ContentPage.vue";
 import InfoPageView from "../../components/content/InfoPageView.vue";
+import ServicePageView from "../../components/content/ServicePageView.vue";
 import { contentAreas, type ContentAreaKey } from "../../data/contentPages";
 import { glossaryTerms } from "../../data/glossary";
 import type { ContentPageData } from "../../types/contentPage";
@@ -61,6 +65,8 @@ const { data: cmsPage, error: cmsError } = await useAsyncData(
     { watch: [area, slug] }
 );
 
+const isServicePage = computed(() => cmsPage.value?.meta?.type === "services.ServicePage");
+
 const isInfoPage = computed(() =>
     ["home.InfoPage", "home.GlossaryPage"].includes(cmsPage.value?.meta?.type)
 );
@@ -90,7 +96,7 @@ useSeoMeta({
     title: () => `${cmsPage.value?.title ?? page.value?.title ?? ""} | Axatel`,
     description: () =>
         cmsPage.value
-            ? cmsPage.value.meta?.search_description || cmsPage.value.introduction || ""
+            ? cmsPage.value.meta?.search_description || cmsPage.value.introduction || cmsPage.value.short_description || ""
             : page.value?.introduction,
     ogTitle: () => cmsPage.value?.title ?? page.value?.title,
     ogImage: () => cmsPage.value?.cover_image?.url,

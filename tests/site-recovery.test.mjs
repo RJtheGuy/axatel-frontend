@@ -105,3 +105,18 @@ test("cases: most recent project first, undated ones after in their original ord
     ]).map(c => c.slug);
     assert.deepEqual(order, ["d", "b", "a", "c", "e"]);
 });
+
+test("page meta: picture position, card title and tags read safely", () => {
+    const code = stripTypeScriptTypes(read("app/utils/pageMeta.ts").replace(/^export /gm, ""));
+    const meta = runInNewContext(`${code}; ({ coverPosition, showCardTitle, pageTags })`);
+    assert.equal(meta.coverPosition({ cover_position: "top" }), "top");
+    assert.equal(meta.coverPosition({ cover_position: "hidden" }), "hidden");
+    assert.equal(meta.coverPosition({}), "side");
+    assert.equal(meta.coverPosition(null), "side");
+    // The title is hidden only when the card really has a picture.
+    assert.equal(meta.showCardTitle({ show_card_title: false }, true), false);
+    assert.equal(meta.showCardTitle({ show_card_title: false }, false), true);
+    assert.equal(meta.showCardTitle({}, true), true);
+    assert.deepEqual([...meta.pageTags({ tags: ["IoT", "", 3, "LoRaWAN"] })], ["IoT", "LoRaWAN"]);
+    assert.deepEqual([...meta.pageTags({})], []);
+});

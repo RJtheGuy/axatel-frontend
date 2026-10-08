@@ -45,7 +45,9 @@
                             </div>
                             <div class="topic-content">
                                 <div class="topic-kicker">{{ item.groupLabel }}</div>
-                                <h2>{{ item.shortTitle }}</h2>
+                                <!-- Hidden (still read by screen readers) when "Mostra titolo
+                                     nella card" is off because the picture contains it. -->
+                                <h2 :class="{ 'visually-hidden': !item.showTitle }">{{ item.shortTitle }}</h2>
                                 <p>{{ item.description }}</p>
                                 <div v-if="item.tags.length" class="topic-tags">
                                     <small v-for="tag in item.tags" :key="tag">{{ tag }}</small>
@@ -65,6 +67,7 @@ import { computed } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 import { monitoringOrder, monitoringPages } from "../../data/monitoring";
+import { showCardTitle } from "../../utils/pageMeta";
 
 const { getPage, getPageBySlug } = useCms();
 const { t, locale } = useI18n();
@@ -83,6 +86,7 @@ type TopicItem = {
     tags: string[];
     slug: string;
     shortTitle: string;
+    showTitle: boolean;
     comingSoon: boolean;
 };
 
@@ -142,6 +146,7 @@ const topics = computed<TopicItem[]>(() => {
             tags: p.tags || [],
             slug,
             shortTitle: shorten(p.title),
+            showTitle: showCardTitle(p, Boolean(p.cover_image?.url || builtIn?.image)),
             comingSoon: !hasBody && (!builtIn || builtIn.status === "coming-soon"),
         };
     });
@@ -164,6 +169,7 @@ const topics = computed<TopicItem[]>(() => {
                 tags: [],
                 slug: p.slug,
                 shortTitle: shorten(p.title),
+                showTitle: true,
                 comingSoon: p.status === "coming-soon",
             };
         });

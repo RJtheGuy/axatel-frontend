@@ -15,12 +15,23 @@
 
                 <LayoutTranslationNotice v-if="raw?.__fallback" />
 
-                <div class="topic-intro" :class="{ 'has-media': topic.image }">
+                <!-- "Immagine nella pagina" (Meta panel in the CMS): next to the
+                     introduction, large at the top, or only on the card. -->
+                <ContentMetaCover
+                    v-if="topic.image && topic.position === 'top'"
+                    :src="imageUrl(topic.image)"
+                    :alt="topic.image_alt || topic.title"
+                    :width="topic.image_width"
+                    :height="topic.image_height"
+                />
+
+                <div class="topic-intro" :class="{ 'has-media': sideImage }">
                     <div>
                         <p v-if="topic.category" class="topic-kicker">{{ topic.category }}</p>
                         <p v-if="topic.description" class="lead">{{ topic.description }}</p>
+                        <ContentMetaTags :tags="topic.tags" />
                     </div>
-                    <figure v-if="topic.image" class="topic-badge" :class="{ 'is-plain': !topic.frame }">
+                    <figure v-if="sideImage" class="topic-badge" :class="{ 'is-plain': !topic.frame }">
                         <img
                             :src="imageUrl(topic.image)"
                             :alt="topic.image_alt || topic.title"
@@ -60,6 +71,7 @@ import { createError, useRoute, useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 import ContentPage from "../../components/content/ContentPage.vue";
 import { monitoringOrder, monitoringPages } from "../../data/monitoring";
+import { coverPosition, pageTags, type CoverPosition } from "../../utils/pageMeta";
 
 const route = useRoute();
 const { getPage, getPageBySlug } = useCms();
@@ -75,6 +87,8 @@ type TopicData = {
     image_width?: number;
     image_height?: number;
     frame?: boolean;
+    position: CoverPosition;
+    tags: string[];
     body: Array<{ type: string; value: any; id: string }>;
     meta?: { search_description?: string };
 };
@@ -135,6 +149,8 @@ const topic = computed<TopicData>(() => raw.value ? ({
     image_width: raw.value.cover_image?.width,
     image_height: raw.value.cover_image?.height,
     frame: raw.value.image_frame === true,
+    position: coverPosition(raw.value),
+    tags: pageTags(raw.value),
     body: raw.value.body || [],
     meta: raw.value.meta
 }) : ({
@@ -144,8 +160,12 @@ const topic = computed<TopicData>(() => raw.value ? ({
     description: legacy.value!.introduction,
     image: legacy.value!.image || "",
     image_alt: legacy.value!.imageAlt || "",
+    position: "side",
+    tags: [],
     body: [],
 }));
+
+const sideImage = computed(() => Boolean(topic.value.image) && topic.value.position === "side");
 
 useSeoMeta({
     title: () => `${topic.value.title} | Axatel`,
