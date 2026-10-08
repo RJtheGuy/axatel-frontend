@@ -4,15 +4,16 @@
 
         <div class="pc-grid" :class="`pc-cols-${value.columns || 'auto'}`">
             <NuxtLink v-for="item in value.items" :key="item.url" :to="localePath(item.url)" class="pc-card">
-                <img
-                    v-if="value.show_image && item.image"
-                    :src="item.image.url"
-                    :alt="item.image.alt || item.title"
-                    width="400"
-                    height="220"
-                    loading="lazy"
-                    decoding="async"
-                />
+                <span v-if="value.show_image && item.image" class="pc-media" :class="{ 'is-logo': item.kind === 'productpage' }">
+                    <img
+                        :src="item.image.url"
+                        :alt="item.image.alt || item.title"
+                        width="400"
+                        height="220"
+                        loading="lazy"
+                        decoding="async"
+                    />
+                </span>
                 <span class="pc-body">
                     <small v-if="item.category">{{ item.category }}</small>
                     <strong>{{ item.title }}</strong>
@@ -30,12 +31,17 @@
 // "Card di pagine": cards for any pages of the site (products, services,
 // solutions, case studies), picked in the CMS.
 //
+// The cards use FIXED light colours (like the cards on the Prodotti page)
+// instead of the page's theme colours, so they look the same on a dark page
+// and on a light one.
+//
 // All class names are prefixed "pc-" on purpose: the site's global
 // stylesheet already defines a fixed-size ".card" (190x254 px with a glow),
 // which used to leak into these cards.
 type Item = {
     title: string;
     url: string;
+    kind?: string;
     category?: string;
     client?: string;
     model_code?: string;
@@ -64,6 +70,7 @@ const localePath = useLocalePath();
     padding: 28px 0;
 }
 
+/* The heading sits on the page itself, so it follows the page's colours. */
 h2 {
     margin: 0 0 18px;
     color: var(--cms-heading, var(--ax-color-text-primary));
@@ -74,7 +81,7 @@ h2 {
 .pc-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 16px;
+    gap: 18px;
 }
 
 .pc-cols-2 {
@@ -95,29 +102,47 @@ h2 {
     width: auto;
     height: auto;
     overflow: hidden;
-    border: 1px solid var(--cms-border, rgba(147, 183, 218, 0.22));
-    border-radius: 14px;
-    background: var(--cms-surface, rgba(12, 29, 45, 0.5));
-    box-shadow: none;
+    border: 1px solid rgba(11, 53, 91, 0.14);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 14px 32px rgba(17, 48, 78, 0.1);
     text-decoration: none;
-    transition: border-color 0.2s ease, transform 0.2s ease;
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
 }
 
 .pc-card:hover {
-    border-color: rgba(197, 35, 23, 0.45);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    border-color: rgba(197, 35, 23, 0.48);
+    box-shadow: 0 22px 44px rgba(17, 48, 78, 0.18);
 }
 
 .pc-card:focus-visible {
-    outline: 2px solid var(--ax-color-accent-red-soft, #ea3f30);
+    outline: 2px solid #c52317;
     outline-offset: 3px;
 }
 
-img {
+.pc-media {
+    display: block;
+    height: 170px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #eef3f9 0%, #e4ecf5 100%);
+}
+
+.pc-media img {
     display: block;
     width: 100%;
-    height: 160px;
+    height: 100%;
     object-fit: cover;
+}
+
+/* Product pictures are logos on a transparent background: show them whole. */
+.pc-media.is-logo {
+    height: 200px;
+}
+
+.pc-media.is-logo img {
+    padding: 16px;
+    object-fit: contain;
 }
 
 .pc-body {
@@ -129,29 +154,30 @@ img {
 }
 
 small {
-    color: var(--ax-color-accent-red-soft, #c52317);
+    color: #c52317;
     font-size: 0.7rem;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
 
 strong {
-    color: var(--cms-heading, var(--ax-color-text-primary));
-    font-size: 1rem;
-    line-height: 1.35;
+    color: #0b355b;
+    font-size: 1.05rem;
+    line-height: 1.3;
 }
 
 .pc-meta {
-    color: var(--cms-text, var(--ax-color-text-primary));
+    color: #667f97;
     font-size: 0.84rem;
+    font-weight: 600;
 }
 
 /* At most 3 lines, so a long text never cuts the card off. */
 .pc-desc {
     display: -webkit-box;
     overflow: hidden;
-    color: var(--cms-text, var(--ax-color-text-primary));
+    color: #274e72;
     font-size: 0.9rem;
     line-height: 1.5;
     -webkit-box-orient: vertical;
@@ -162,7 +188,7 @@ strong {
 .pc-cta {
     margin-top: auto;
     padding-top: 6px;
-    color: var(--ax-color-accent-red-soft, #c52317);
+    color: #c52317;
     font-size: 0.86rem;
     font-weight: 700;
 }
