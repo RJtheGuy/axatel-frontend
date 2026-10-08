@@ -8,6 +8,8 @@
         <!-- Impostazioni → Chatbot: title, welcome message, placeholder,
              suggestions and the "Chatbot attivo" switch. -->
         <ChatAiChat v-if="chatbot?.enabled !== false" :config="chatbot" />
+        <!-- Impostazioni → Footer → Avviso sui cookie (information only). -->
+        <LayoutCookieNotice />
     </div>
 </template>
 
