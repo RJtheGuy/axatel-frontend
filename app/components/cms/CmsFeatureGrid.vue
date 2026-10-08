@@ -56,7 +56,7 @@ function hasText(html?: string | null): boolean {
 
 <style scoped>
 .cms-features {
-    padding: 0px !important;
+    padding: 64px 0px !important;
 }
 
 h2 {
@@ -166,7 +166,7 @@ h3 {
 
 @media (max-width: 640px) {
     .cms-features {
-        padding: 0 !important;
+        padding: 64px 0px !important;
     }
 
     .cols-2,
