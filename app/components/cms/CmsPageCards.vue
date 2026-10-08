@@ -2,8 +2,8 @@
     <section v-if="value.items?.length" class="cms-page-cards">
         <h2 v-if="value.heading">{{ value.heading }}</h2>
 
-        <div class="grid" :class="`cols-${value.columns || 'auto'}`">
-            <NuxtLink v-for="item in value.items" :key="item.url" :to="localePath(item.url)" class="card">
+        <div class="pc-grid" :class="`pc-cols-${value.columns || 'auto'}`">
+            <NuxtLink v-for="item in value.items" :key="item.url" :to="localePath(item.url)" class="pc-card">
                 <img
                     v-if="value.show_image && item.image"
                     :src="item.image.url"
@@ -13,13 +13,13 @@
                     loading="lazy"
                     decoding="async"
                 />
-                <span class="body">
+                <span class="pc-body">
                     <small v-if="item.category">{{ item.category }}</small>
                     <strong>{{ item.title }}</strong>
-                    <span v-if="item.model_code" class="meta">{{ item.model_code }}</span>
-                    <span v-if="item.client" class="meta">{{ item.client }}</span>
-                    <span v-if="value.show_description && item.description" class="desc">{{ item.description }}</span>
-                    <span v-if="value.button_label" class="cta">{{ value.button_label }}</span>
+                    <span v-if="item.model_code" class="pc-meta">{{ item.model_code }}</span>
+                    <span v-if="item.client" class="pc-meta">{{ item.client }}</span>
+                    <span v-if="value.show_description && item.description" class="pc-desc">{{ item.description }}</span>
+                    <span v-if="value.button_label" class="pc-cta">{{ value.button_label }}</span>
                 </span>
             </NuxtLink>
         </div>
@@ -29,6 +29,10 @@
 <script setup lang="ts">
 // "Card di pagine": cards for any pages of the site (products, services,
 // solutions, case studies), picked in the CMS.
+//
+// All class names are prefixed "pc-" on purpose: the site's global
+// stylesheet already defines a fixed-size ".card" (190x254 px with a glow),
+// which used to leak into these cards.
 type Item = {
     title: string;
     url: string;
@@ -67,41 +71,44 @@ h2 {
     font-weight: 500;
 }
 
-.grid {
+.pc-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 16px;
 }
 
-.cols-2 {
+.pc-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.cols-3 {
+.pc-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.cols-4 {
+.pc-cols-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.card {
+.pc-card {
     display: flex;
     flex-direction: column;
+    width: auto;
+    height: auto;
     overflow: hidden;
     border: 1px solid var(--cms-border, rgba(147, 183, 218, 0.22));
     border-radius: 14px;
     background: var(--cms-surface, rgba(12, 29, 45, 0.5));
+    box-shadow: none;
     text-decoration: none;
     transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.card:hover {
+.pc-card:hover {
     border-color: rgba(197, 35, 23, 0.45);
     transform: translateY(-2px);
 }
 
-.card:focus-visible {
+.pc-card:focus-visible {
     outline: 2px solid var(--ax-color-accent-red-soft, #ea3f30);
     outline-offset: 3px;
 }
@@ -113,7 +120,7 @@ img {
     object-fit: cover;
 }
 
-.body {
+.pc-body {
     display: flex;
     flex: 1;
     flex-direction: column;
@@ -135,18 +142,24 @@ strong {
     line-height: 1.35;
 }
 
-.meta {
+.pc-meta {
     color: var(--cms-text, var(--ax-color-text-primary));
     font-size: 0.84rem;
 }
 
-.desc {
+/* At most 3 lines, so a long text never cuts the card off. */
+.pc-desc {
+    display: -webkit-box;
+    overflow: hidden;
     color: var(--cms-text, var(--ax-color-text-primary));
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
 }
 
-.cta {
+.pc-cta {
     margin-top: auto;
     padding-top: 6px;
     color: var(--ax-color-accent-red-soft, #c52317);
@@ -155,23 +168,23 @@ strong {
 }
 
 @media (max-width: 900px) {
-    .cols-3,
-    .cols-4 {
+    .pc-cols-3,
+    .pc-cols-4 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 640px) {
-    .cols-2,
-    .cols-3,
-    .cols-4 {
+    .pc-cols-2,
+    .pc-cols-3,
+    .pc-cols-4 {
         grid-template-columns: minmax(0, 1fr);
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .card,
-    .card:hover {
+    .pc-card,
+    .pc-card:hover {
         transition: none;
         transform: none;
     }
