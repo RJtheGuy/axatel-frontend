@@ -21,7 +21,7 @@ export default defineNuxtConfig({
     }
   },
 
-  modules: ['@nuxtjs/i18n'],
+  modules: ['@nuxtjs/i18n', '@nuxt/image'],
 
   // Italian at the normal URLs (/monitoraggio), English and French under
   // /en/… and /fr/…. No automatic redirect by browser language: visitors
