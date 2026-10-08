@@ -14,8 +14,9 @@ defineProps<{ value: { quote: string; attribution?: string } }>();
 <style scoped>
 .cms-quote {
     max-width: 820px;
-    margin: 56px auto;
+    margin: 56px 0;
     padding: 0 8vw;
+    padding-left: 4vw;
     border-left: 2px solid var(--ax-color-accent-red-soft);
 }
 
