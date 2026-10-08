@@ -40,7 +40,7 @@ defineProps<{
     height: auto;
     display: block;
     border-radius: var(--ax-card-radius);
-    border: 1px solid var(--ax-color-border-soft);
+    border: 0px solid rgba(255, 255, 255, 0);
 }
 
 figcaption {
