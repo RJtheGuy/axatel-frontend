@@ -191,6 +191,12 @@ export const interfaceMessages = {
             newPostsOne: "1 nuova notizia",
             newPosts: "{count} nuove notizie",
         },
+        cookieNotice: {
+            text: "Questo sito usa solo cookie tecnici, necessari al suo funzionamento.",
+            more: "Leggi la Cookie policy",
+            ok: "OK",
+            label: "Avviso sui cookie",
+        },
         services: {
             title: "Servizi",
             lead: "Piattaforme, sensori, tecnologie e servizi per realizzare monitoraggio e automazione su misura.",
@@ -426,6 +432,12 @@ export const interfaceMessages = {
             newPostsOne: "1 new story",
             newPosts: "{count} new stories",
         },
+        cookieNotice: {
+            text: "This website only uses technical cookies, needed for it to work.",
+            more: "Read the Cookie policy",
+            ok: "OK",
+            label: "Cookie notice",
+        },
         services: {
             title: "Services",
             lead: "Platforms, sensors, technologies and services for tailored monitoring and automation.",
@@ -660,6 +672,12 @@ export const interfaceMessages = {
             notFound: "Article introuvable",
             newPostsOne: "1 nouvelle actualité",
             newPosts: "{count} nouvelles actualités",
+        },
+        cookieNotice: {
+            text: "Ce site utilise uniquement des cookies techniques, nécessaires à son fonctionnement.",
+            more: "Lire la politique de cookies",
+            ok: "OK",
+            label: "Information sur les cookies",
         },
         services: {
             title: "Services",
