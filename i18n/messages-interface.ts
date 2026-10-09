@@ -21,7 +21,7 @@ export const interfaceMessages = {
             openCase: "Apri caso di successo: {title}",
             explain: {
                 eyebrow: "Dall'hardware alla decisione",
-                title: "Gestiamo tutta la filiera.",
+                title: "Gestiamo tutta la filiera tecnologica",
                 lead: "Un unico processo connette il campo, i dati e le azioni. Progettiamo ogni passaggio per trasformare una misura in una risposta concreta e tempestiva.",
                 outcomeLabel: "Evento rilevato",
                 outcomeTitle: "Un allarme, due livelli di controllo",
