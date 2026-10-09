@@ -1,7 +1,7 @@
 <template>
-    <div v-if="config?.enabled !== false" class="chat-root">
+    <div v-if="config?.enabled !== false" class="chat-root" :class="{ 'is-open': open }">
         <transition name="panel">
-            <div v-if="open" class="chat-panel" role="dialog" :aria-label="title">
+            <div v-if="open" class="chat-panel" :style="panelStyle" role="dialog" :aria-label="title">
                 <header class="chat-header">
                     <span class="chat-title">
                         <span class="dot" aria-hidden="true"></span>
@@ -98,6 +98,7 @@
                         :placeholder="placeholder"
                         :disabled="pending"
                         :aria-label="t('chat.message')"
+                        @focus="onInputFocus"
                         @keydown.esc="toggle"
                     />
                     <button
@@ -317,6 +318,101 @@ watch(() => route.path, () => {
 onBeforeUnmount(() => {
     hintRequest++;
     clearHintTimers();
+});
+
+// -- full screen on phones and tablets ---------------------------------
+// A floating panel is unusable once the on-screen keyboard opens: it covers
+// most of it, leaving the input and the send button out of reach. Below
+// 1024px the chat therefore fills the screen, and its size comes from
+// visualViewport - the only viewport that shrinks with the keyboard on iOS
+// and on Android browsers that do not resize the layout viewport.
+const FULLSCREEN_QUERY = "(max-width: 1024px)";
+const compact = ref(false);
+const viewportHeight = ref(0);
+const viewportTop = ref(0);
+let compactQuery: MediaQueryList | null = null;
+let lastViewportHeight = 0;
+let keyboardProbes: ReturnType<typeof setTimeout>[] = [];
+
+const panelStyle = computed(() =>
+    compact.value && viewportHeight.value > 0
+        ? {
+            "--chat-panel-top": `${Math.round(viewportTop.value)}px`,
+            "--chat-panel-height": `${Math.round(viewportHeight.value)}px`
+        }
+        : undefined
+);
+
+function readViewport(): void {
+    const view = window.visualViewport;
+    viewportHeight.value = view ? view.height : window.innerHeight;
+    viewportTop.value = view ? view.offsetTop : 0;
+}
+
+function onViewportChange(): void {
+    readViewport();
+    if (!compact.value || !open.value) return;
+    // The keyboard opening or closing is the only change big enough to push
+    // the last messages out of sight, so the log follows it back down.
+    if (Math.abs(viewportHeight.value - lastViewportHeight) > 80) {
+        lastViewportHeight = viewportHeight.value;
+        void scrollToBottom();
+    }
+}
+
+function onCompactChange(event: MediaQueryListEvent): void {
+    compact.value = event.matches;
+}
+
+function clearKeyboardProbes(): void {
+    for (const probe of keyboardProbes) clearTimeout(probe);
+    keyboardProbes = [];
+}
+
+// A few browsers open the keyboard without firing a visualViewport resize,
+// which would leave the panel taller than the room left to type in. Taking
+// focus is that exact moment, so the viewport is re-read right after it.
+function onInputFocus(): void {
+    if (!compact.value) return;
+    clearKeyboardProbes();
+    keyboardProbes = [300, 700].map((delay) => setTimeout(onViewportChange, delay));
+}
+
+// The page behind must not scroll under the full-screen panel.
+function lockPageScroll(locked: boolean): void {
+    document.documentElement.classList.toggle("ax-chat-fullscreen", locked);
+}
+
+watch(
+    () => compact.value && open.value,
+    (fullscreen) => {
+        lockPageScroll(fullscreen);
+        if (!fullscreen) return;
+        readViewport();
+        lastViewportHeight = viewportHeight.value;
+    }
+);
+
+onMounted(() => {
+    compactQuery = window.matchMedia(FULLSCREEN_QUERY);
+    compact.value = compactQuery.matches;
+    compactQuery.addEventListener("change", onCompactChange);
+    window.visualViewport?.addEventListener("resize", onViewportChange);
+    window.visualViewport?.addEventListener("scroll", onViewportChange);
+    window.addEventListener("orientationchange", onViewportChange);
+    window.addEventListener("resize", onViewportChange);
+    readViewport();
+});
+
+onBeforeUnmount(() => {
+    compactQuery?.removeEventListener("change", onCompactChange);
+    compactQuery = null;
+    window.visualViewport?.removeEventListener("resize", onViewportChange);
+    window.visualViewport?.removeEventListener("scroll", onViewportChange);
+    window.removeEventListener("orientationchange", onViewportChange);
+    window.removeEventListener("resize", onViewportChange);
+    clearKeyboardProbes();
+    lockPageScroll(false);
 });
 
 async function toggle() {
@@ -824,6 +920,103 @@ async function send(options: { key?: string; hint?: boolean } = {}) {
 
 @media (max-width: 480px) {
     .chat-root { right: 14px; bottom: 14px; }
-    .chat-panel { height: min(70vh, calc(100vh - 110px)); }
+}
+
+/* -- full screen on phones and tablets ------------------------------- */
+/* Same panel, same style: only the frame changes, so the keyboard can
+   take its half of the screen while the input and the send button stay
+   where the thumb expects them. */
+@media (max-width: 1024px) {
+    .chat-panel {
+        position: fixed;
+        top: var(--chat-panel-top, 0px);
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: var(--chat-panel-height, 100dvh);
+        max-height: none;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .chat-header {
+        padding-top: max(14px, env(safe-area-inset-top));
+        padding-right: max(14px, env(safe-area-inset-right));
+        padding-left: max(16px, env(safe-area-inset-left));
+    }
+
+    /* Touch targets, not pointer targets. */
+    .icon-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .chat-log {
+        padding: 16px max(16px, env(safe-area-inset-left)) 16px max(16px, env(safe-area-inset-left));
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .msg {
+        max-width: min(90%, 560px);
+    }
+
+    .chips-compact {
+        padding-right: max(12px, env(safe-area-inset-right));
+        padding-left: max(12px, env(safe-area-inset-left));
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+    }
+
+    .chips-compact::-webkit-scrollbar {
+        display: none;
+    }
+
+    .chips-compact .chip {
+        flex: 0 0 auto;
+    }
+
+    .chat-input {
+        padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+
+    /* 16px keeps iOS from zooming into the field on focus, which would
+       leave the panel scrolled sideways. */
+    .chat-input input {
+        padding: 13px 16px;
+        font-size: 16px;
+    }
+
+    .send-btn {
+        width: 46px;
+        height: 46px;
+        flex: 0 0 46px;
+    }
+
+    /* The header already carries a close button; a floating one on top of
+       a full-screen panel would just sit over the conversation. */
+    .chat-root.is-open .chat-toggle,
+    .chat-root.is-open .chat-hint {
+        display: none;
+    }
+
+    .panel-enter-active,
+    .panel-leave-active {
+        transform-origin: center bottom;
+    }
+
+    .panel-enter-from,
+    .panel-leave-to {
+        opacity: 0;
+        transform: translateY(16px) scale(1);
+    }
+}
+
+:global(html.ax-chat-fullscreen),
+:global(html.ax-chat-fullscreen body) {
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 </style>

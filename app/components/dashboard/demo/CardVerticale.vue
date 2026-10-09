@@ -16,7 +16,6 @@
                 :src="logo"
                 :alt="application.name"
                 width="46"
-                height="46"
                 sizes="46px"
                 loading="lazy"
                 decoding="async"
@@ -369,7 +368,7 @@ onBeforeUnmount(() => {
     align-items:center;
     gap:18px;
 
-    padding:10px 18px;
+    padding:10px 18px 10px 22px;
 }
 
 .alarm-strip{
@@ -417,6 +416,7 @@ onBeforeUnmount(() => {
 .logo{
     width:46px;
     height:46px;
+    padding:5px;
     border-radius:12px;
     background:rgba(255,255,255,.24);
     display:flex;
@@ -426,10 +426,13 @@ onBeforeUnmount(() => {
     overflow:hidden;
 }
 
+/* The logos are not square: "contain" keeps them whole, and the padding
+   above keeps them clear of the rounded corners. */
 .logo img{
     width:100%;
     height:100%;
     object-fit:contain;
+    object-position:center;
 }
 
 .header-info{
@@ -525,12 +528,13 @@ h2{
 
     .card-header {
         gap: 12px;
-        padding: 8px 14px;
+        padding: 8px 14px 8px 18px;
     }
 
     .logo {
         width: 40px;
         height: 40px;
+        padding: 4px;
     }
 
     h2 {

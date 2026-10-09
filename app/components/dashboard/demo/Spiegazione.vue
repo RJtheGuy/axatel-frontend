@@ -270,10 +270,10 @@ function requestDemoScroll(): void {
 	.spiegazione-section {
 		height: auto;
 		min-height: 100svh;
-		background:
-			linear-gradient(rgba(2, 7, 18, 0.94), rgba(2, 7, 18, 0.86)),
-			radial-gradient(circle at 16% 24%, rgba(121, 207, 255, 0.16) 0 1px, transparent 1.6px);
-		background-size: 100% 100%, 28px 28px;
+		/* Transparent like on desktop: the fixed particle canvas lives
+		   behind the page, and an opaque background here hid the wing
+		   dissolving into free particles. */
+		background: transparent;
 	}
 
 	.process-content {

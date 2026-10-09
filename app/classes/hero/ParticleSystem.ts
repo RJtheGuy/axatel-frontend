@@ -567,16 +567,18 @@ export class ParticleSystem {
         const isTextStage = this.currentStageType === "text" || this.currentStageType === "composite";
         const isAnchoredFormationStage = isLogoStage || isTextStage || this.currentStageType === "scatter";
         const allowOutOfViewByScroll = isAnchoredFormationStage && this.anchorOffsetY > 0.0001;
-        // On portrait screens (phones) the hero headline fills the width,
-        // so the quote logo sits in the empty band above it instead of on
-        // the right, where it used to overlap the headline.
+        // On portrait screens (phones) the quote wing cannot sit on the
+        // right, where the headline fills the width. It sits low instead,
+        // inside the band the video hero uncovers while it scrolls away, so
+        // it is seen whole for a moment before the next section releases it
+        // into free particles.
         const isPortraitViewport = halfY > halfX * 1.1;
         const forcedLogoOffsetX = isQuoteLogoStage
             ? (isPortraitViewport ? 0 : halfX * 0.48)
             : isForcedLogoStage
                 ? halfX * 0.06
                 : 0;
-        const forcedLogoOffsetY = isQuoteLogoStage && isPortraitViewport ? halfY * 0.6 : 0;
+        const forcedLogoOffsetY = isQuoteLogoStage && isPortraitViewport ? -halfY * 0.42 : 0;
         const suffixTransitionProgress = this.clamp01(
             this.suffixTransitionElapsed / this.SUFFIX_TRANSITION_DURATION
         );

@@ -197,8 +197,8 @@ const isInternal = (href: string) => href.startsWith("/") && !href.startsWith("/
     width: 100%;
     padding: 72px max(24px, 8vw) 36px;
     color: var(--ax-color-text-secondary);
-    background: linear-gradient(180deg, #030b14 0%, #02070f 100%);
-    border-top: 1px solid var(--ax-color-border-soft);
+    background: linear-gradient(180deg, rgba(4, 14, 26, 0) 0%, rgba(1, 3, 5, 0.8) 4%, rgba(1, 3, 5, 0.96) 15%, rgba(1, 3, 5, 0.99) 100%);
+    /* border-top: 1px solid var(--ax-color-border-soft); */
 }
 
 .sr-only {
