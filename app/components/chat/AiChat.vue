@@ -505,6 +505,8 @@ async function send(options: { key?: string; hint?: boolean } = {}) {
     const text = draft.value.trim();
     if (!text || pending.value) return;
 
+    // The conversation so far (before this question), for the AI's context.
+    const history = messages.value.slice(-8).map((m) => ({ role: m.role, text: m.text.slice(0, 800) }));
     messages.value.push({ id: nextId++, role: "user", text });
     draft.value = "";
     error.value = "";
@@ -525,7 +527,7 @@ async function send(options: { key?: string; hint?: boolean } = {}) {
                 method: "POST",
                 body: {
                     message: text, locale: locale.value, key: options.key || undefined,
-                    hint: options.hint || undefined, context: chatContext.value,
+                    hint: options.hint || undefined, context: chatContext.value, history,
                 },
             }
         );
