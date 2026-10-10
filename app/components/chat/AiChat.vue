@@ -68,8 +68,29 @@
                                 :to="localePath(m.link)"
                                 class="msg-link"
                                 @click="followLink($event, m.link)"
-                            >{{ t("chat.more") }} <span aria-hidden="true">→</span></NuxtLink></div>
+                            >{{ m.linkLabel ? t("chat.moreAbout", { title: m.linkLabel }) : t("chat.more") }} <span aria-hidden="true">→</span></NuxtLink></div>
                     </transition-group>
+
+                    <!-- Buttons under the last answer: "Dimmi di piu", related
+                         pages, "Intendi A o B?", "Parla con un esperto"
+                         (chatbot/engine.py respond()). -->
+                    <div v-if="lastChips.length && !pending" class="chips answer-chips">
+                        <template v-for="(c, i) in lastChips" :key="i">
+                            <NuxtLink
+                                v-if="c.type === 'contact'"
+                                :to="localePath(c.link || '/contatti')"
+                                class="chip chip-sm chip-contact"
+                                @click="open = false"
+                            >{{ c.label }}</NuxtLink>
+                            <button
+                                v-else
+                                type="button"
+                                class="chip chip-sm"
+                                :class="{ 'chip-more': c.type === 'more' }"
+                                @click="askChip(c)"
+                            >{{ c.label }}</button>
+                        </template>
+                    </div>
 
                     <div v-if="pending" class="msg bot pending" aria-live="polite">
                         <span></span><span></span><span></span>
@@ -81,7 +102,7 @@
                 <!-- Once a conversation is going, keep the suggestions
                      reachable without re-opening: a compact row above
                      the input, shown only when idle. -->
-                <div v-if="messages.length && suggestions.length && !pending" class="chips chips-compact">
+                <div v-if="messages.length && suggestions.length && !pending && !lastChips.length" class="chips chips-compact">
                     <button
                         v-for="(s, i) in suggestions.slice(0, 3)"
                         :key="i"
@@ -174,7 +195,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-type Msg = { id: number; role: "user" | "bot"; text: string; link?: string };
+type Chip = { type: "ask" | "more" | "contact"; label: string; key?: string; link?: string };
+type Msg = { id: number; role: "user" | "bot"; text: string; link?: string; linkLabel?: string; chips?: Chip[] };
+type ChatContext = { key?: string; shown?: string[] };
 
 const props = defineProps<{
     config?: {
@@ -195,6 +218,15 @@ const pending = ref(false);
 const error = ref("");
 const scrollEl = ref<HTMLElement | null>(null);
 const inputEl = ref<HTMLInputElement | null>(null);
+
+// What the server needs to understand a follow-up ("dimmi di piu", "e
+// quanto costa?"): the subject of the last answer and the paragraphs already
+// shown. Sent back as received; forgotten with the conversation.
+const chatContext = ref<ChatContext>({});
+const lastChips = computed<Chip[]>(() => {
+    const last = messages.value[messages.value.length - 1];
+    return last?.role === "bot" ? last.chips || [] : [];
+});
 
 // transition-group needs a stable key per item; the array index is not
 // stable enough once messages are cleared and re-added by reset().
@@ -439,6 +471,7 @@ function followLink(event: MouseEvent, link: string) {
 
 function reset() {
     messages.value = [];
+    chatContext.value = {};
     error.value = "";
     draft.value = "";
     inputEl.value?.focus();
@@ -460,6 +493,12 @@ function ask(text: string) {
     send();
 }
 
+/** A button under an answer: its question, with the answer it stands for. */
+function askChip(chip: Chip) {
+    draft.value = chip.label;
+    send({ key: chip.key });
+}
+
 // options: a question picked in the page suggestion carries the key of its
 // answer (so it gets exactly that answer) and is counted as such.
 async function send(options: { key?: string; hint?: boolean } = {}) {
@@ -476,16 +515,31 @@ async function send(options: { key?: string; hint?: boolean } = {}) {
         // Always the browser-facing base: this only runs on a click,
         // never during SSR, so the internal container hostname would be
         // wrong here.
-        const res = await $fetch<{ response?: string; link?: string; error?: string }>(
+        const res = await $fetch<{
+            response?: string; link?: string; link_label?: string; chips?: Chip[]; context?: ChatContext; error?: string;
+        }>(
             `${runtime.public.apiBase}/chatbot/ask/`,
             // locale: the answer comes back in the visitor's language
             // when the CMS has it (Voci chatbot → Risposta EN/FR).
-            { method: "POST", body: { message: text, locale: locale.value, key: options.key || undefined, hint: options.hint || undefined } }
+            {
+                method: "POST",
+                body: {
+                    message: text, locale: locale.value, key: options.key || undefined,
+                    hint: options.hint || undefined, context: chatContext.value,
+                },
+            }
         );
 
         if (res?.response) {
-            // link: the page the answer comes from (pages, products, FAQ…).
-            messages.value.push({ id: nextId++, role: "bot", text: res.response, link: res.link || "" });
+            // link: the page the answer comes from (pages, products, FAQ…),
+            // shown once while the conversation stays on that page.
+            const previous = [...messages.value].reverse().find((m) => m.role === "bot" && m.link);
+            const link = res.link && res.link !== previous?.link ? res.link : "";
+            messages.value.push({
+                id: nextId++, role: "bot", text: res.response, link,
+                linkLabel: res.link_label || "", chips: Array.isArray(res.chips) ? res.chips.slice(0, 4) : [],
+            });
+            chatContext.value = res.context || {};
         } else {
             error.value = res?.error || t("chat.invalid");
         }
@@ -720,6 +774,22 @@ async function send(options: { key?: string; hint?: boolean } = {}) {
 .chip-sm {
     font-size: 0.76rem;
     padding: 6px 11px;
+}
+
+/* Buttons under the last answer. */
+.answer-chips {
+    margin-top: -2px;
+}
+
+.chip-more {
+    border-color: rgba(147, 183, 218, 0.55);
+    color: var(--ax-color-text-primary);
+}
+
+.chip-contact {
+    border-color: var(--ax-color-accent-red-border);
+    color: var(--ax-color-accent-red-soft);
+    text-decoration: none;
 }
 
 /* -- typing indicator ---------------------------------------------- */
