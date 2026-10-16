@@ -31,7 +31,7 @@ defineProps<{
 .cms-image {
     max-width: 1000px;
     margin: 48px auto;
-    padding: 0 8vw;
+    padding: 0 0;
 }
 
 .cms-image img {
