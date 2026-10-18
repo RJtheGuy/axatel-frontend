@@ -28,7 +28,9 @@
                         <p v-if="cms.short_description" class="lead">{{ cms.short_description }}</p>
                         <ContentMetaTags :tags="tags" />
                     </div>
-                    <figure v-if="sideImage" class="sol-badge">
+                    <!-- "Riquadro bianco attorno all'immagine" (Meta panel): off = the
+                         picture sits straight on the page, like on Monitoraggio. -->
+                    <figure v-if="sideImage" class="sol-badge" :class="{ 'is-plain': cms.image_frame === false }">
                         <ContentResponsiveImage
                             :src="cms.cover_image.url"
                             :alt="cms.cover_image.alt || cms.title"
@@ -41,21 +43,28 @@
                     </figure>
                 </div>
 
+                <!-- The CMS content. The "Come lavoriamo" and "Altre soluzioni"
+                     blocks show those sections exactly where they are placed. -->
                 <div class="sol-body">
-                    <CmsBlockRenderer :blocks="blocks" />
+                    <template v-for="part in parts" :key="part.key">
+                        <CmsBlockRenderer v-if="part.kind === 'blocks'" :blocks="part.blocks" />
+                        <ContentProcessSteps
+                            v-else-if="part.kind === 'process' && showProcess"
+                            :heading="part.value.heading"
+                            :steps="part.value.steps"
+                        />
+                        <ContentSolutionsRelated
+                            v-else-if="part.kind === 'related' && showRelated"
+                            :items="related"
+                            :heading="part.value.heading"
+                        />
+                    </template>
                 </div>
 
-                <ContentProcessSteps />
-
-                <nav v-if="related.length" class="related" :aria-label="t('solutions.related')">
-                    <h2>{{ t("solutions.related") }}</h2>
-                    <div class="related-grid">
-                        <NuxtLink v-for="item in related" :key="item.slug" :to="localePath(`/soluzioni/${item.slug}`)">
-                            <span>{{ groupLabel(item.group) }}</span>
-                            <strong>{{ item.title }}</strong>
-                        </NuxtLink>
-                    </div>
-                </nav>
+                <!-- Not placed in the content: after it, as always (unless switched
+                     off in the CMS: "Sezioni dopo il contenuto"). -->
+                <ContentProcessSteps v-if="showProcess && !placed.process" />
+                <ContentSolutionsRelated v-if="showRelated && !placed.related" :items="related" />
 
                 <ContentProjectCta :subject="cms.title" />
             </article>
@@ -80,7 +89,8 @@
  * Layout (Move Solutions style): intro + picture, the page's CMS blocks
  * (featured product, text sections, what we measure, device cards…),
  * "how we work" steps, other solutions in the same group, and a closing
- * "request a quote" call to action.
+ * "request a quote" call to action. The steps and the other solutions can be
+ * placed anywhere in the content with their CMS blocks, or switched off.
  */
 import { computed } from "vue";
 import { createError, useRoute, useSeoMeta } from "#app";
@@ -141,12 +151,47 @@ const blocks = computed(() => {
     return body.length && body[body.length - 1]!.type === "cta" ? body.slice(0, -1) : body;
 });
 
+// The content cut where the "Come lavoriamo" / "Altre soluzioni" blocks are.
+type Part =
+    | { kind: "blocks"; key: string; blocks: Array<{ type: string; value: any; id: string }> }
+    | { kind: "process" | "related"; key: string; value: any };
+const SECTION_KIND: Record<string, "process" | "related"> = { process_steps: "process", related_solutions: "related" };
+
+const parts = computed<Part[]>(() => {
+    const out: Part[] = [];
+    let run: Array<{ type: string; value: any; id: string }> = [];
+    const flush = () => {
+        if (run.length) out.push({ kind: "blocks", key: `blocks-${run[0]!.id}`, blocks: run });
+        run = [];
+    };
+    for (const block of blocks.value as Array<{ type: string; value: any; id: string }>) {
+        const kind = SECTION_KIND[block.type];
+        if (kind) {
+            flush();
+            out.push({ kind, key: block.id, value: block.value ?? {} });
+        } else {
+            run.push(block);
+        }
+    }
+    flush();
+    return out;
+});
+const placed = computed(() => ({
+    process: parts.value.some((part) => part.kind === "process"),
+    related: parts.value.some((part) => part.kind === "related"),
+}));
+// "Sezioni dopo il contenuto" switches in the CMS (on unless switched off).
+const showProcess = computed(() => cms.value?.show_process !== false);
+const showRelated = computed(() => cms.value?.show_related !== false);
+
 const related = computed(() => {
     const items = ((list.value?.items ?? []) as any[])
         .filter((p) => p.meta?.slug && p.meta.slug !== slug.value)
         .map((p) => ({ slug: p.meta.slug, title: p.title, group: p.group || "" }));
     const same = items.filter((p) => p.group && p.group === cms.value?.group);
-    return (same.length >= 2 ? same : [...same, ...items.filter((p) => !same.includes(p))]).slice(0, 4);
+    return (same.length >= 2 ? same : [...same, ...items.filter((p) => !same.includes(p))])
+        .slice(0, 4)
+        .map((p) => ({ slug: p.slug, title: p.title, label: groupLabel(p.group) }));
 });
 
 useSeoMeta({
@@ -245,6 +290,20 @@ useSeoMeta({
     box-shadow: 0 18px 40px rgba(17, 48, 78, 0.1);
 }
 
+/* "Riquadro bianco" switched off in the CMS: the picture sits on the page,
+   and its white background blends into the light background. */
+.sol-badge.is-plain {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.sol-badge.is-plain img {
+    mix-blend-mode: multiply;
+}
+
 .sol-badge img {
     display: block;
     width: 100%;
@@ -266,50 +325,6 @@ useSeoMeta({
 .sol-body :deep(.cms-rich-text) {
     max-width: none;
     padding: 0 0 8px;
-}
-
-.related {
-    margin-top: 44px;
-}
-
-.related h2 {
-    margin: 0 0 16px;
-    color: #0b355b;
-    font-size: 1.3rem;
-    font-weight: 500;
-}
-
-.related-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-}
-
-.related-grid a {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 18px 20px;
-    border: 1px solid rgba(11, 53, 91, 0.12);
-    border-radius: 14px;
-    background: #fff;
-    color: #0b355b;
-    text-decoration: none;
-    transition: border-color 0.15s ease, transform 0.15s ease;
-}
-
-.related-grid a:hover,
-.related-grid a:focus-visible {
-    border-color: #c52317;
-    transform: translateY(-2px);
-}
-
-.related-grid span {
-    color: #c52317;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
 }
 
 @media (max-width: 768px) {
