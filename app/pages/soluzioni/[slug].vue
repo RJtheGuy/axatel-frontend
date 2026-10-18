@@ -43,28 +43,19 @@
                     </figure>
                 </div>
 
-                <!-- The CMS content. The "Come lavoriamo" and "Altre soluzioni"
-                     blocks show those sections exactly where they are placed. -->
                 <div class="sol-body">
-                    <template v-for="part in parts" :key="part.key">
-                        <CmsBlockRenderer v-if="part.kind === 'blocks'" :blocks="part.blocks" />
-                        <ContentProcessSteps
-                            v-else-if="part.kind === 'process' && showProcess"
-                            :heading="part.value.heading"
-                            :steps="part.value.steps"
-                        />
-                        <ContentSolutionsRelated
-                            v-else-if="part.kind === 'related' && showRelated"
-                            :items="related"
-                            :heading="part.value.heading"
-                        />
-                    </template>
+                    <CmsBlockRenderer :blocks="blocks" />
                 </div>
 
-                <!-- Not placed in the content: after it, as always (unless switched
-                     off in the CMS: "Sezioni dopo il contenuto"). -->
-                <ContentProcessSteps v-if="showProcess && !placed.process" />
-                <ContentSolutionsRelated v-if="showRelated && !placed.related" :items="related" />
+                <ContentProcessSteps />
+
+                <ContentSolutionsRelated :items="related" />
+
+                <!-- "Contenuto in fondo (dopo 'Altre soluzioni')" in the CMS: any
+                     blocks (text, pictures, cards…) after the two sections above. -->
+                <div v-if="blocksAfter.length" class="sol-body sol-body-after">
+                    <CmsBlockRenderer :blocks="blocksAfter" />
+                </div>
 
                 <ContentProjectCta :subject="cms.title" />
             </article>
@@ -89,8 +80,8 @@
  * Layout (Move Solutions style): intro + picture, the page's CMS blocks
  * (featured product, text sections, what we measure, device cards…),
  * "how we work" steps, other solutions in the same group, and a closing
- * "request a quote" call to action. The steps and the other solutions can be
- * placed anywhere in the content with their CMS blocks, or switched off.
+ * "request a quote" call to action. "Contenuto in fondo" (CMS) adds more
+ * blocks after the other solutions, before the closing call to action.
  */
 import { computed } from "vue";
 import { createError, useRoute, useSeoMeta } from "#app";
@@ -144,45 +135,18 @@ const position = computed(() => coverPosition(cms.value));
 const sideImage = computed(() => Boolean(cms.value?.cover_image) && position.value === "side");
 const tags = computed(() => pageTags(cms.value));
 
-// A CTA block at the end of the body would repeat the closing call to
-// action, so it's left out here (it still shows on other page types).
+// A CTA block right before the closing call to action would repeat it, so
+// the last block of the page is left out when it is one (it still shows on
+// other page types).
+type Block = { type: string; value: any; id: string };
+const withoutFinalCta = (list: Block[]) =>
+    list.length && list[list.length - 1]!.type === "cta" ? list.slice(0, -1) : list;
+const blocksAfter = computed(() => withoutFinalCta((cms.value?.body_after ?? []) as Block[]));
 const blocks = computed(() => {
-    const body = (cms.value?.body ?? []) as Array<{ type: string }>;
-    return body.length && body[body.length - 1]!.type === "cta" ? body.slice(0, -1) : body;
+    const body = (cms.value?.body ?? []) as Block[];
+    // With content at the bottom, the main content no longer ends the page.
+    return blocksAfter.value.length ? body : withoutFinalCta(body);
 });
-
-// The content cut where the "Come lavoriamo" / "Altre soluzioni" blocks are.
-type Part =
-    | { kind: "blocks"; key: string; blocks: Array<{ type: string; value: any; id: string }> }
-    | { kind: "process" | "related"; key: string; value: any };
-const SECTION_KIND: Record<string, "process" | "related"> = { process_steps: "process", related_solutions: "related" };
-
-const parts = computed<Part[]>(() => {
-    const out: Part[] = [];
-    let run: Array<{ type: string; value: any; id: string }> = [];
-    const flush = () => {
-        if (run.length) out.push({ kind: "blocks", key: `blocks-${run[0]!.id}`, blocks: run });
-        run = [];
-    };
-    for (const block of blocks.value as Array<{ type: string; value: any; id: string }>) {
-        const kind = SECTION_KIND[block.type];
-        if (kind) {
-            flush();
-            out.push({ kind, key: block.id, value: block.value ?? {} });
-        } else {
-            run.push(block);
-        }
-    }
-    flush();
-    return out;
-});
-const placed = computed(() => ({
-    process: parts.value.some((part) => part.kind === "process"),
-    related: parts.value.some((part) => part.kind === "related"),
-}));
-// "Sezioni dopo il contenuto" switches in the CMS (on unless switched off).
-const showProcess = computed(() => cms.value?.show_process !== false);
-const showRelated = computed(() => cms.value?.show_related !== false);
 
 const related = computed(() => {
     const items = ((list.value?.items ?? []) as any[])
@@ -320,6 +284,10 @@ useSeoMeta({
     --cms-measure: 100%;
     --cms-wide: 100%;
     color: #0b355b;
+}
+
+.sol-body-after {
+    margin-top: 36px;
 }
 
 .sol-body :deep(.cms-rich-text) {
