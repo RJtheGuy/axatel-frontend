@@ -11,17 +11,18 @@
 </template>
 
 <script setup lang="ts">
-// "Altre soluzioni" on a solution page: the cards of other solutions (the
-// page chooses them: same group first, up to 4).
+// "Altre soluzioni" on a solution page: the cards chosen in the CMS for that
+// page, or (none chosen) up to 4 other solutions, same group first.
 import { computed } from "vue";
 
-defineProps<{
+const props = defineProps<{
     items: Array<{ slug: string; title: string; label: string }>;
+    heading?: string;
 }>();
 
 const { t } = useI18n();
 const localePath = useLocalePath();
-const title = computed(() => t("solutions.related"));
+const title = computed(() => props.heading || t("solutions.related"));
 </script>
 
 <style scoped>

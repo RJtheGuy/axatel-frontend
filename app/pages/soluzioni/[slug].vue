@@ -47,9 +47,9 @@
                     <CmsBlockRenderer :blocks="blocks" />
                 </div>
 
-                <ContentProcessSteps />
+                <ContentProcessSteps v-if="process.show" :heading="process.heading" :steps="process.steps" />
 
-                <ContentSolutionsRelated :items="related" />
+                <ContentSolutionsRelated :items="related" :heading="cms.related_heading" />
 
                 <!-- "Contenuto in fondo (dopo 'Altre soluzioni')" in the CMS: any
                      blocks (text, pictures, cards…) after the two sections above. -->
@@ -80,8 +80,9 @@
  * Layout (Move Solutions style): intro + picture, the page's CMS blocks
  * (featured product, text sections, what we measure, device cards…),
  * "how we work" steps, other solutions in the same group, and a closing
- * "request a quote" call to action. "Contenuto in fondo" (CMS) adds more
- * blocks after the other solutions, before the closing call to action.
+ * "request a quote" call to action. In the CMS: "Come lavoriamo" on the
+ * Soluzioni index page; the cards of "Altre soluzioni" and "Contenuto in
+ * fondo" (blocks after them, before the call to action) on each page.
  */
 import { computed } from "vue";
 import { createError, useRoute, useSeoMeta } from "#app";
@@ -110,6 +111,13 @@ const { data: cms } = await useAsyncData(
 const { data: list } = await useAsyncData(
     () => `soluzioni-related-${locale.value}`,
     () => getPage<any>("solutions.SolutionPage", { limit: 20 }).catch(() => null),
+    { watch: [locale] }
+);
+
+// "Come lavoriamo" is edited once, on the Soluzioni index page (CMS).
+const { data: index } = await useAsyncData(
+    () => `soluzioni-index-process-${locale.value}`,
+    () => getPageBySlug<any>("solutions.SolutionsIndexPage", "soluzioni").catch(() => null),
     { watch: [locale] }
 );
 
@@ -148,14 +156,34 @@ const blocks = computed(() => {
     return blocksAfter.value.length ? body : withoutFinalCta(body);
 });
 
+// The index page's steps, in the visitor's language. An index page shown in
+// Italian on the English or French site (no translation yet) is not used:
+// the built-in steps in that language are shown instead. No steps = no section.
+const process = computed(() => {
+    const page = index.value;
+    if (!page || page.__fallback || !Array.isArray(page.process_steps)) return { show: true, heading: "", steps: undefined };
+    const steps = (page.process_steps as Array<{ value?: { title?: string; text?: string } }>)
+        .map((block) => ({ title: block.value?.title || "", text: block.value?.text || "" }))
+        .filter((step) => step.title);
+    return { show: steps.length > 0, heading: page.process_heading || "", steps };
+});
+
+// "Altre soluzioni": the solutions chosen for this page in the CMS, in that
+// order; none chosen = up to 4 others, same group first.
 const related = computed(() => {
     const items = ((list.value?.items ?? []) as any[])
         .filter((p) => p.meta?.slug && p.meta.slug !== slug.value)
         .map((p) => ({ slug: p.meta.slug, title: p.title, group: p.group || "" }));
-    const same = items.filter((p) => p.group && p.group === cms.value?.group);
-    return (same.length >= 2 ? same : [...same, ...items.filter((p) => !same.includes(p))])
-        .slice(0, 4)
-        .map((p) => ({ slug: p.slug, title: p.title, label: groupLabel(p.group) }));
+    const chosen = ((cms.value?.related_solutions ?? []) as Array<{ value?: { slug?: string; title?: string } | null }>)
+        .map((block) => block.value)
+        .filter((value): value is { slug: string; title?: string } => Boolean(value?.slug));
+    const picked = chosen.length
+        ? chosen.map((value) => items.find((p) => p.slug === value.slug) ?? { slug: value.slug, title: value.title || value.slug, group: "" })
+        : (() => {
+              const same = items.filter((p) => p.group && p.group === cms.value?.group);
+              return (same.length >= 2 ? same : [...same, ...items.filter((p) => !same.includes(p))]).slice(0, 4);
+          })();
+    return picked.map((p) => ({ slug: p.slug, title: p.title, label: groupLabel(p.group) }));
 });
 
 useSeoMeta({

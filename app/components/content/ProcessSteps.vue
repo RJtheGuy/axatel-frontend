@@ -1,23 +1,34 @@
 <template>
     <section class="process" aria-labelledby="process-heading">
-        <h2 id="process-heading">{{ t("process.heading") }}</h2>
+        <h2 id="process-heading">{{ heading || t("process.heading") }}</h2>
         <ol>
-            <li v-for="(step, index) in steps" :key="index">
+            <li v-for="(step, index) in shown" :key="index">
                 <span class="num" aria-hidden="true">{{ String(index + 1).padStart(2, "0") }}</span>
-                <h3>{{ rt(step.title) }}</h3>
-                <p>{{ rt(step.text) }}</p>
+                <h3>{{ step.title }}</h3>
+                <p v-if="step.text">{{ step.text }}</p>
             </li>
         </ol>
     </section>
 </template>
 
 <script setup lang="ts">
-// Axatel's own five-step process (same as the homepage), shown on every
-// solution page as the "how it works" part of the layout.
+// "Come lavoriamo" on the solution pages. Title and steps come from the CMS
+// (Soluzioni index page, edited once for all solutions); without them (CMS
+// not reachable, or no page in this language yet) the built-in text in the
+// visitor's language is shown.
 import { computed } from "vue";
 
+const props = defineProps<{
+    heading?: string;
+    steps?: Array<{ title: string; text?: string }>;
+}>();
+
 const { t, tm, rt } = useI18n();
-const steps = computed(() => tm("process.steps") as Array<{ title: any; text: any }>);
+const shown = computed(() =>
+    props.steps
+        ? props.steps
+        : (tm("process.steps") as Array<{ title: any; text: any }>).map((step) => ({ title: rt(step.title), text: rt(step.text) }))
+);
 </script>
 
 <style scoped>
