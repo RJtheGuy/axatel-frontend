@@ -71,6 +71,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue"
 import { gsap } from "gsap"
+import { useOnScreenTicker } from "~/composables/useOnScreenTicker"
 
 const { t } = useI18n()
 
@@ -378,7 +379,6 @@ function onPointerCaptureLost(){
 }
 
 onMounted(() => {
-  gsap.ticker.add(tick)
 
   if (road.value) {
     roadWidthPx = road.value.getBoundingClientRect().width || roadWidthPx
@@ -392,9 +392,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  gsap.ticker.remove(tick)
   resizeObserver?.disconnect()
 })
+// Animate only while the game is on screen (update 54).
+useOnScreenTicker(road, tick)
 </script>
 
 <style scoped>

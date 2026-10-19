@@ -33,8 +33,28 @@ export default class HeroEngine {
     private readonly pointerWorld = new Vector3();
     private readonly pointerDir = new Vector3();
 
+    // Speed (update 54). The loop runs only while the canvas is on screen and
+    // the tab is visible. "Calm" visitors (phones and tablets, or "reduce
+    // motion" in the system settings) get the particles formed, then a still
+    // picture: the loop stops CALM_SECONDS after the last change (a new
+    // section, phrase or title wakes it again) and draws at most 30 frames/s.
+    private static readonly CALM_SECONDS = 6;
+    private readonly calm = HeroEngine.prefersCalm();
+    private started = false;
+    private looping = false;
+    private onScreen = true;
+    private awakeUntil = 0;
+    private lastFrameAt = 0;
+    private visibilityObserver: IntersectionObserver | null = null;
+
+    private static prefersCalm(): boolean {
+        if (typeof window === "undefined" || !window.matchMedia) return false;
+        return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            || (window.matchMedia("(pointer: coarse)").matches && window.innerWidth <= 1024);
+    }
+
     private getRenderPixelRatio(): number {
-        return Math.min(window.devicePixelRatio || 1, 1.5);
+        return Math.min(window.devicePixelRatio || 1, this.calm ? 1 : 1.5);
     }
 
     private getWorldBounds(): { width: number; height: number } {
@@ -85,15 +105,48 @@ export default class HeroEngine {
         window.addEventListener("pointerout", this.onPointerOut);
         window.addEventListener("pointerleave", this.onPointerLeave);
         window.addEventListener("blur", this.onPointerLeave);
+        document.addEventListener("visibilitychange", this.onVisibilityChange);
+
+        if (typeof IntersectionObserver !== "undefined") {
+            this.visibilityObserver = new IntersectionObserver((entries) => {
+                const entry = entries[entries.length - 1];
+                this.onScreen = Boolean(entry?.isIntersecting);
+                if (this.onScreen) this.wake();
+            }, { rootMargin: "120px 0px" });
+            this.visibilityObserver.observe(this.canvas);
+        }
     }
 
     public start(): void {
-        this.timer.reset();
-        this.animate();
+        this.started = true;
+        this.wake();
     }
 
+    /** Run the loop again (after a change, or when the canvas comes back on screen). */
+    private wake = (): void => {
+        if (this.calm) this.awakeUntil = performance.now() + HeroEngine.CALM_SECONDS * 1000;
+        if (!this.started || this.looping || !this.canRun()) return;
+        this.looping = true;
+        this.timer.reset();
+        this.animationId = requestAnimationFrame(this.animate);
+    };
+
+    private canRun(): boolean {
+        if (!this.onScreen || document.hidden) return false;
+        return !this.calm || performance.now() < this.awakeUntil;
+    }
+
+    private onVisibilityChange = () => {
+        if (!document.hidden) this.wake();
+    };
+
     public destroy(): void {
+        this.started = false;
+        this.looping = false;
         cancelAnimationFrame(this.animationId);
+        document.removeEventListener("visibilitychange", this.onVisibilityChange);
+        this.visibilityObserver?.disconnect();
+        this.visibilityObserver = null;
         window.removeEventListener("resize", this.onResize);
         window.removeEventListener("scroll", this.onScroll);
         window.removeEventListener("pointermove", this.onPointerMove);
@@ -107,6 +160,7 @@ export default class HeroEngine {
 
     public applyPhrases(phrases: string[]): void {
         this.sequence.setPhrases(phrases);
+        this.wake();
 
         if (this.forcedStage || this.ambientFlow) {
             return;
@@ -121,6 +175,7 @@ export default class HeroEngine {
 
     public setFormationSuppressed(suppressed: boolean): void {
         this.particleSystem.setFormationSuppressed(suppressed);
+        this.wake();
     }
 
     public clearForcedStage(): void {
@@ -135,6 +190,7 @@ export default class HeroEngine {
 
         this.ambientFlow = true;
         this.forcedStage = null;
+        this.wake();
         this.particleSystem.setFormationSuppressed(false);
         this.particleSystem
             .releaseToAmbientFlow()
@@ -207,6 +263,7 @@ export default class HeroEngine {
         }
 
         this.forcedStage = stage;
+        this.wake();
 
         if (this.forcedStage) {
             this.particleSystem
@@ -225,7 +282,17 @@ export default class HeroEngine {
     }
 
     private animate = (timestamp?: number) => {
+        if (!this.canRun()) {
+            this.looping = false;
+            return;
+        }
         this.animationId = requestAnimationFrame(this.animate);
+
+        // Calm: at most 30 frames per second.
+        if (this.calm && timestamp !== undefined) {
+            if (timestamp - this.lastFrameAt < 32) return;
+            this.lastFrameAt = timestamp;
+        }
 
         this.timer.update(timestamp);
         const delta = this.timer.getDelta();
@@ -301,6 +368,7 @@ export default class HeroEngine {
         this.renderer.setSize(width, height, false);
         this.updateParticleBounds();
         this.particleSystem.resize(this.getRenderPixelRatio());
+        this.wake();
         if (this.forcedStage?.type === "composite") {
             this.particleSystem.setStage(this.forcedStage).catch((error) => {
                 console.error("HeroEngine title resize failed", error);

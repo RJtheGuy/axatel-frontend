@@ -11,9 +11,13 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   css: ['~/assets/scss/main.scss'],
   hooks: {
+    // Videos and pictures are not prefetched: the browser downloaded every
+    // bundled picture (PNG and WebP copies, about 8 MB) on the first visit,
+    // whether the page showed it or not. They load when a page uses them.
     'build:manifest'(manifest) {
       for (const entry of Object.values(manifest)) {
-        if (entry.resourceType === 'video') {
+        if (entry.resourceType === 'video' || entry.resourceType === 'image'
+            || /\.(png|jpe?g|webp|avif|gif|svg)$/i.test(entry.file || '')) {
           entry.prefetch = false
           entry.preload = false
         }
