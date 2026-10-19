@@ -28,7 +28,9 @@
                         <p v-if="cms.short_description" class="lead">{{ cms.short_description }}</p>
                         <ContentMetaTags :tags="tags" />
                     </div>
-                    <figure v-if="sideImage" class="sol-badge">
+                    <!-- "Riquadro bianco attorno all'immagine" (Meta panel): off = the
+                         picture sits straight on the page, like on Monitoraggio. -->
+                    <figure v-if="sideImage" class="sol-badge" :class="{ 'is-plain': cms.image_frame === false }">
                         <ContentResponsiveImage
                             :src="cms.cover_image.url"
                             :alt="cms.cover_image.alt || cms.title"
@@ -45,17 +47,15 @@
                     <CmsBlockRenderer :blocks="blocks" />
                 </div>
 
-                <ContentProcessSteps />
+                <ContentProcessSteps v-if="process.show" :heading="process.heading" :steps="process.steps" />
 
-                <nav v-if="related.length" class="related" :aria-label="t('solutions.related')">
-                    <h2>{{ t("solutions.related") }}</h2>
-                    <div class="related-grid">
-                        <NuxtLink v-for="item in related" :key="item.slug" :to="localePath(`/soluzioni/${item.slug}`)">
-                            <span>{{ groupLabel(item.group) }}</span>
-                            <strong>{{ item.title }}</strong>
-                        </NuxtLink>
-                    </div>
-                </nav>
+                <ContentSolutionsRelated :items="related" :heading="cms.related_heading" />
+
+                <!-- "Contenuto in fondo (dopo 'Altre soluzioni')" in the CMS: any
+                     blocks (text, pictures, cards…) after the two sections above. -->
+                <div v-if="blocksAfter.length" class="sol-body sol-body-after">
+                    <CmsBlockRenderer :blocks="blocksAfter" />
+                </div>
 
                 <ContentProjectCta :subject="cms.title" />
             </article>
@@ -80,7 +80,9 @@
  * Layout (Move Solutions style): intro + picture, the page's CMS blocks
  * (featured product, text sections, what we measure, device cards…),
  * "how we work" steps, other solutions in the same group, and a closing
- * "request a quote" call to action.
+ * "request a quote" call to action. In the CMS: "Come lavoriamo" on the
+ * Soluzioni index page; the cards of "Altre soluzioni" and "Contenuto in
+ * fondo" (blocks after them, before the call to action) on each page.
  */
 import { computed } from "vue";
 import { createError, useRoute, useSeoMeta } from "#app";
@@ -112,6 +114,13 @@ const { data: list } = await useAsyncData(
     { watch: [locale] }
 );
 
+// "Come lavoriamo" is edited once, on the Soluzioni index page (CMS).
+const { data: index } = await useAsyncData(
+    () => `soluzioni-index-process-${locale.value}`,
+    () => getPageBySlug<any>("solutions.SolutionsIndexPage", "soluzioni").catch(() => null),
+    { watch: [locale] }
+);
+
 // Built-in fallback (the pages written in the code before the CMS).
 const area = contentAreas.soluzioni;
 const legacy = computed(() => area.pages[slug.value]);
@@ -134,19 +143,47 @@ const position = computed(() => coverPosition(cms.value));
 const sideImage = computed(() => Boolean(cms.value?.cover_image) && position.value === "side");
 const tags = computed(() => pageTags(cms.value));
 
-// A CTA block at the end of the body would repeat the closing call to
-// action, so it's left out here (it still shows on other page types).
+// A CTA block right before the closing call to action would repeat it, so
+// the last block of the page is left out when it is one (it still shows on
+// other page types).
+type Block = { type: string; value: any; id: string };
+const withoutFinalCta = (list: Block[]) =>
+    list.length && list[list.length - 1]!.type === "cta" ? list.slice(0, -1) : list;
+const blocksAfter = computed(() => withoutFinalCta((cms.value?.body_after ?? []) as Block[]));
 const blocks = computed(() => {
-    const body = (cms.value?.body ?? []) as Array<{ type: string }>;
-    return body.length && body[body.length - 1]!.type === "cta" ? body.slice(0, -1) : body;
+    const body = (cms.value?.body ?? []) as Block[];
+    // With content at the bottom, the main content no longer ends the page.
+    return blocksAfter.value.length ? body : withoutFinalCta(body);
 });
 
+// The index page's steps, in the visitor's language. An index page shown in
+// Italian on the English or French site (no translation yet) is not used:
+// the built-in steps in that language are shown instead. No steps = no section.
+const process = computed(() => {
+    const page = index.value;
+    if (!page || page.__fallback || !Array.isArray(page.process_steps)) return { show: true, heading: "", steps: undefined };
+    const steps = (page.process_steps as Array<{ value?: { title?: string; text?: string } }>)
+        .map((block) => ({ title: block.value?.title || "", text: block.value?.text || "" }))
+        .filter((step) => step.title);
+    return { show: steps.length > 0, heading: page.process_heading || "", steps };
+});
+
+// "Altre soluzioni": the solutions chosen for this page in the CMS, in that
+// order; none chosen = up to 4 others, same group first.
 const related = computed(() => {
     const items = ((list.value?.items ?? []) as any[])
         .filter((p) => p.meta?.slug && p.meta.slug !== slug.value)
         .map((p) => ({ slug: p.meta.slug, title: p.title, group: p.group || "" }));
-    const same = items.filter((p) => p.group && p.group === cms.value?.group);
-    return (same.length >= 2 ? same : [...same, ...items.filter((p) => !same.includes(p))]).slice(0, 4);
+    const chosen = ((cms.value?.related_solutions ?? []) as Array<{ value?: { slug?: string; title?: string } | null }>)
+        .map((block) => block.value)
+        .filter((value): value is { slug: string; title?: string } => Boolean(value?.slug));
+    const picked = chosen.length
+        ? chosen.map((value) => items.find((p) => p.slug === value.slug) ?? { slug: value.slug, title: value.title || value.slug, group: "" })
+        : (() => {
+              const same = items.filter((p) => p.group && p.group === cms.value?.group);
+              return (same.length >= 2 ? same : [...same, ...items.filter((p) => !same.includes(p))]).slice(0, 4);
+          })();
+    return picked.map((p) => ({ slug: p.slug, title: p.title, label: groupLabel(p.group) }));
 });
 
 useSeoMeta({
@@ -245,6 +282,20 @@ useSeoMeta({
     box-shadow: 0 18px 40px rgba(17, 48, 78, 0.1);
 }
 
+/* "Riquadro bianco" switched off in the CMS: the picture sits on the page,
+   and its white background blends into the light background. */
+.sol-badge.is-plain {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.sol-badge.is-plain img {
+    mix-blend-mode: multiply;
+}
+
 .sol-badge img {
     display: block;
     width: 100%;
@@ -263,53 +314,13 @@ useSeoMeta({
     color: #0b355b;
 }
 
+.sol-body-after {
+    margin-top: 36px;
+}
+
 .sol-body :deep(.cms-rich-text) {
     max-width: none;
     padding: 0 0 8px;
-}
-
-.related {
-    margin-top: 44px;
-}
-
-.related h2 {
-    margin: 0 0 16px;
-    color: #0b355b;
-    font-size: 1.3rem;
-    font-weight: 500;
-}
-
-.related-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-}
-
-.related-grid a {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 18px 20px;
-    border: 1px solid rgba(11, 53, 91, 0.12);
-    border-radius: 14px;
-    background: #fff;
-    color: #0b355b;
-    text-decoration: none;
-    transition: border-color 0.15s ease, transform 0.15s ease;
-}
-
-.related-grid a:hover,
-.related-grid a:focus-visible {
-    border-color: #c52317;
-    transform: translateY(-2px);
-}
-
-.related-grid span {
-    color: #c52317;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
 }
 
 @media (max-width: 768px) {
