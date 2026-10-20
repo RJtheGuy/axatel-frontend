@@ -94,8 +94,11 @@
 
 
 <script setup lang="ts">
-import { ref,onMounted,onUnmounted } from "vue"
+import { ref,onUnmounted } from "vue"
 import { gsap } from "gsap"
+import { useOnScreenTicker } from "~/composables/useOnScreenTicker"
+
+const card = ref<HTMLElement | null>(null)
 
 const { t } = useI18n()
 
@@ -323,15 +326,7 @@ function onPointerCaptureLost(){
 
 }
 
-onMounted(()=>{
-
-    gsap.ticker.add(tick)
-
-})
-
 onUnmounted(()=>{
-
-    gsap.ticker.remove(tick)
 
     if(alarmTimer){
 
@@ -340,6 +335,8 @@ onUnmounted(()=>{
     }
 
 })
+// Animate only while the game is on screen (update 54).
+useOnScreenTicker(card, tick)
 </script>
 
 <style scoped>
