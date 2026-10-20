@@ -5,6 +5,8 @@
  * handling never sees a visitor. This asks the API for the list (cached for
  * a minute) and answers matching addresses with a redirect, in every
  * language: /en/monitoraggio/gallerie → /en/monitoraggio/tunnel.
+ * Only the very first visit waits for the list; after that the last list is
+ * used while a fresh one is fetched in the background (update 55, speed).
  *
  * Wagtail adds a redirect by itself when the address (slug) of a published
  * page changes, so renaming a page in the CMS never breaks old links. The
@@ -12,7 +14,7 @@
  */
 type Row = { from: string; to: string; permanent: boolean };
 
-let cache: { at: number; rows: Map<string, Row> } = { at: 0, rows: new Map() };
+let cache: { at: number; rows: Map<string, Row>; loaded: boolean } = { at: 0, rows: new Map(), loaded: false };
 let pending: Promise<void> | null = null;
 const TTL = 60_000;
 const SKIP = /^\/(api|_nuxt|__nuxt|_ipx|media|static|cms|django-admin|documents)(\/|$)|\.[a-z0-9]{2,5}$/i;
@@ -31,7 +33,7 @@ async function refresh(api: string): Promise<void> {
         const res = await $fetch<{ redirects: Row[] }>(`${api}/redirects/`, { timeout: 3000 });
         const rows = new Map<string, Row>();
         for (const row of res?.redirects ?? []) rows.set(normalise(row.from), row);
-        cache = { at: Date.now(), rows };
+        cache = { at: Date.now(), rows, loaded: true };
     } catch {
         cache = { ...cache, at: Date.now() }; // keep the last good list, retry in a minute
     }
@@ -47,7 +49,7 @@ export default defineEventHandler(async (event) => {
         pending ??= refresh(api).finally(() => {
             pending = null;
         });
-        await pending;
+        if (!cache.loaded) await pending;
     }
     if (!cache.rows.size) return;
 
