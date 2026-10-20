@@ -1,8 +1,8 @@
 <template>
     <section ref="sectionEl" class="citazione-section">
-        <video class="hero-video" autoplay muted loop playsinline preload="auto" :poster="heroPosterUrl" aria-hidden="true" ref="videoEl">
-            <source :src="heroVideoUrl" type="video/mp4" />
-        </video>
+        <!-- No video address in the page itself: the first frame (poster) shows
+             at once and the video is added once the page has loaded (update 55). -->
+        <video class="hero-video" muted loop playsinline preload="none" :poster="heroPosterUrl" aria-hidden="true" ref="videoEl"></video>
         <div class="hero-video-overlay" aria-hidden="true"></div>
 
         <div class="hero-copy">
@@ -90,9 +90,60 @@ function emitQuoteVisibility(active: boolean): void {
 const UNLOCK_EVENTS = ["pointerdown", "keydown", "scroll", "touchstart"] as const;
 let reducedMotion = false;
 
+// Speed (update 55): the 4 MB video used to start downloading together with
+// the page and slowed down everything else on the first screen (Lighthouse
+// "Speed Index" 10 s). Now the still first frame shows straight away and the
+// video is only added once the page has finished loading and the browser is
+// idle. Visitors with "Save data" on or a very slow connection, and those who
+// ask for less motion, keep the still picture.
+let videoAdded = false;
+let idleHandle: number | null = null;
+let loadListener: (() => void) | null = null;
+
+function lightConnection(): boolean {
+    const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    return Boolean(c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || "")));
+}
+
+function addVideo(): void {
+    idleHandle = null;
+    const video = videoEl.value;
+    if (!video || videoAdded) return;
+    videoAdded = true;
+    video.preload = "auto";
+    video.src = heroVideoUrl;
+    startVideo();
+}
+
+function addVideoWhenIdle(): void {
+    loadListener = null;
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    idleHandle = w.requestIdleCallback ? w.requestIdleCallback(addVideo, { timeout: 2000 }) : window.setTimeout(addVideo, 300);
+}
+
+function scheduleVideo(): void {
+    if (reducedMotion || lightConnection()) return;
+    if (document.readyState === "complete") addVideoWhenIdle();
+    else {
+        loadListener = addVideoWhenIdle;
+        window.addEventListener("load", loadListener, { once: true });
+    }
+}
+
+function cancelScheduledVideo(): void {
+    if (loadListener) window.removeEventListener("load", loadListener);
+    loadListener = null;
+    if (idleHandle !== null) {
+        const w = window as Window & { cancelIdleCallback?: (h: number) => void };
+        if (w.cancelIdleCallback) w.cancelIdleCallback(idleHandle);
+        window.clearTimeout(idleHandle);
+    }
+    idleHandle = null;
+}
+
 function startVideo(): void {
     const video = videoEl.value;
-    if (!video || !sectionVisible || document.hidden || reducedMotion || !video.paused) return;
+    if (!video || !videoAdded || !sectionVisible || document.hidden || reducedMotion || !video.paused) return;
     video.muted = true;
     video.defaultMuted = true;
     video.setAttribute("muted", "");
@@ -122,7 +173,7 @@ onMounted(() => {
         videoEl.value.pause();
     } else if (videoEl.value) {
         videoEl.value.addEventListener("canplay", startVideo);
-        startVideo();
+        scheduleVideo();
         document.addEventListener("visibilitychange", onVisibility);
     }
     if (!sectionEl.value) return;
@@ -147,6 +198,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    cancelScheduledVideo();
     removeUnlock();
     document.removeEventListener("visibilitychange", onVisibility);
     videoEl.value?.removeEventListener("canplay", startVideo);
