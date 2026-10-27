@@ -7,12 +7,17 @@
  * language: /en/monitoraggio/gallerie → /en/monitoraggio/tunnel.
  * Only the very first visit waits for the list; after that the last list is
  * used while a fresh one is fetched in the background (update 55, speed).
+ * Per language (update 57): when only the Italian page is taken offline, the
+ * English and French ones keep their address and only Italian visitors are
+ * redirected; the CMS adds the redirect itself (core/auto_redirects.py).
  *
  * Wagtail adds a redirect by itself when the address (slug) of a published
  * page changes, so renaming a page in the CMS never breaks old links. The
  * same list is the place for old WordPress addresses at go-live.
  */
-type Row = { from: string; to: string; permanent: boolean };
+// live_in: languages that still have a published page at that address; those
+// visitors see the page, the other languages are redirected (update 57).
+type Row = { from: string; to: string; permanent: boolean; live_in?: string[] };
 
 let cache: { at: number; rows: Map<string, Row>; loaded: boolean } = { at: 0, rows: new Map(), loaded: false };
 let pending: Promise<void> | null = null;
@@ -30,7 +35,7 @@ const normalise = (path: string) => {
 
 async function refresh(api: string): Promise<void> {
     try {
-        const res = await $fetch<{ redirects: Row[] }>(`${api}/redirects/`, { timeout: 3000 });
+        const res = await $fetch<{ redirects: Row[] }>(`${api}/redirects/?v=2`, { timeout: 3000 });
         const rows = new Map<string, Row>();
         for (const row of res?.redirects ?? []) rows.set(normalise(row.from), row);
         cache = { at: Date.now(), rows, loaded: true };
@@ -58,6 +63,7 @@ export default defineEventHandler(async (event) => {
     const path = normalise(match ? match[2] || "/" : url.pathname);
     const row = cache.rows.get(path);
     if (!row) return;
+    if (row.live_in?.includes(match ? match[1] : "it")) return;
 
     let target = row.to;
     if (target.startsWith("/")) {
