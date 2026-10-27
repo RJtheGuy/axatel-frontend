@@ -14,9 +14,9 @@
 
                 <p v-if="!groups.length" class="empty">{{ t("products.empty") }}</p>
 
-                <section v-for="group in groups" :key="group.key" class="prod-group" :aria-labelledby="`cat-${group.key}`">
-                    <h2 :id="`cat-${group.key}`">{{ group.label }}</h2>
-                    <div class="prod-grid">
+                <section v-for="group in groups" :key="group.key" class="prod-group" :aria-labelledby="group.label ? `cat-${group.key}` : undefined">
+                    <h2 v-if="group.label" :id="`cat-${group.key}`">{{ group.label }}</h2>
+                    <div class="prod-grid" :class="gridClass">
                         <NuxtLink
                             v-for="item in group.items"
                             :key="item.slug"
@@ -52,6 +52,9 @@
 /**
  * Product catalogue (/prodotti), grouped by category.
  * Content: CMS → Pagine → Prodotti (one child page per product).
+ * Layout (update 58), set on the Prodotti page in the CMS ("Disposizione
+ * delle card"): grouped by category or one grid, the order of the groups,
+ * cards per row. The order of the products is the page order in the CMS.
  */
 import { computed } from "vue";
 import { useSeoMeta } from "#app";
@@ -65,7 +68,7 @@ const CATEGORY_ORDER = ["sistemi", "sensori", "piattaforme", "comunicazione"];
 
 const { data: list } = await useAsyncData(
     () => `prodotti-list-${locale.value}`,
-    () => getPage<any>("products.ProductPage", { limit: 20 }).catch(() => null),
+    () => getPage<any>("products.ProductPage", {}, { all: true }).catch(() => null),
     { watch: [locale] }
 );
 
@@ -93,8 +96,17 @@ const items = computed(() =>
     }))
 );
 
+type Display = { layout?: string; columns?: string; category_order?: string[] };
+const display = computed<Display>(() => (indexPage.value?.display as Display) || {});
+const gridClass = computed(() => (["2", "3", "4"].includes(display.value.columns || "") ? `cols-${display.value.columns}` : ""));
+
 const groups = computed(() => {
-    const keys = [...CATEGORY_ORDER, ...new Set(items.value.map((i) => i.category).filter((c) => !CATEGORY_ORDER.includes(c)))];
+    if (display.value.layout === "single") {
+        return items.value.length ? [{ key: "tutti", label: "", items: items.value }] : [];
+    }
+    const chosen = (display.value.category_order || []).filter((c) => typeof c === "string" && c);
+    const standard = [...new Set([...chosen, ...CATEGORY_ORDER])];
+    const keys = [...standard, ...new Set(items.value.map((i) => i.category).filter((c) => !standard.includes(c)))];
     return keys
         .map((key) => ({
             key: key || "altro",
@@ -200,6 +212,25 @@ useSeoMeta({
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 18px;
+}
+
+/* Cards per row chosen in the CMS (update 58): at most 2 on tablets, 1 on phones. */
+@media (min-width: 1024px) {
+    .prod-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .prod-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .prod-grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+    .prod-grid.cols-2,
+    .prod-grid.cols-3,
+    .prod-grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 639px) {
+    .prod-grid.cols-2,
+    .prod-grid.cols-3,
+    .prod-grid.cols-4 { grid-template-columns: minmax(0, 1fr); }
 }
 
 .prod-card {
