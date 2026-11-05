@@ -3,7 +3,7 @@
         <header class="cases-hero">
             <ArticleParticleHero :title="t('cases.title')" :asset-url="headerWing()" />
         </header>
-        <div class="cases-light-stage">
+        <div class="cases-light-stage" :class="toneClass">
             <section class="cases-shell">
                 <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
 
@@ -118,6 +118,9 @@ const hasUntranslated = computed(() => ((casiData.value?.items ?? []) as any[]).
 
 const lead = computed(() => (!indexPage.value?.__fallback && indexPage.value?.intro?.trim()) || t("cases.lead"));
 
+// Light or dark background (Pagine → Casi di successo → "Colori", update 62).
+const toneClass = computed(() => ((indexPage.value as any)?.display?.tone_index === "dark" ? "tone-dark" : "tone-light"));
+
 const cases = computed<CaseItem[]>(() =>
     casiData.value ? casiData.value.items.map((c: any) => ({
         title: c.title,
@@ -214,11 +217,11 @@ useSeoMeta({
 
 .cases-light-stage {
     flex: 1;
-    color: #0b355b;
-    background:
+    color: var(--tone-text, #0b355b);
+    background: var(--tone-stage,
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),
         radial-gradient(circle at 88% 30%, rgba(42, 111, 165, 0.07), transparent 30%),
-        linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f5f8fb 100%);
+        linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f5f8fb 100%));
 }
 
 .cases-shell {
@@ -230,14 +233,14 @@ useSeoMeta({
 .back-link {
     display: inline-block;
     margin-bottom: 18px;
-    color: #c52317;
+    color: var(--tone-accent, #c52317);
     text-decoration: none;
     font-weight: 700;
 }
 
 .page-kicker,
 .case-kicker {
-    color: #c52317;
+    color: var(--tone-accent, #c52317);
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -252,13 +255,13 @@ useSeoMeta({
 .lead {
     max-width: 720px;
     margin: 12px 0 28px;
-    color: #274e72;
+    color: var(--tone-body, #274e72);
     font-size: 1.08rem;
     line-height: 1.62;
 }
 
 .empty {
-    color: #667f97;
+    color: var(--tone-muted, #667f97);
     padding: 40px 0;
 }
 
@@ -275,10 +278,10 @@ useSeoMeta({
     gap: 8px;
     min-height: 38px;
     padding: 0 16px;
-    border: 1px solid rgba(11, 53, 91, 0.2);
+    border: 1px solid var(--tone-control-border, rgba(11, 53, 91, 0.2));
     border-radius: 999px;
-    background: #fff;
-    color: #0b355b;
+    background: var(--tone-control, #fff);
+    color: var(--tone-text, #0b355b);
     font: inherit;
     font-size: 0.86rem;
     font-weight: 600;
@@ -287,17 +290,17 @@ useSeoMeta({
 }
 
 .chip span {
-    color: #667f97;
+    color: var(--tone-muted, #667f97);
     font-size: 0.76rem;
     font-variant-numeric: tabular-nums;
 }
 
 .chip:hover {
-    border-color: #c52317;
+    border-color: var(--tone-accent, #c52317);
 }
 
 .chip[aria-pressed="true"] {
-    border-color: #c52317;
+    border-color: var(--tone-accent, #c52317);
     background: #c52317;
     color: #fff;
 }
@@ -319,10 +322,10 @@ useSeoMeta({
 
 .case-card {
     overflow: hidden;
-    border: 1px solid rgba(11, 53, 91, 0.14);
+    border: 1px solid var(--tone-card-border, rgba(11, 53, 91, 0.14));
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.82);
-    box-shadow: 0 14px 32px rgba(17, 48, 78, 0.08);
+    background: var(--tone-card, rgba(255, 255, 255, 0.82));
+    box-shadow: var(--tone-card-shadow, 0 14px 32px rgba(17, 48, 78, 0.08));
     transition: transform 0.22s ease, border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
 }
 
@@ -337,7 +340,7 @@ useSeoMeta({
 .case-media {
     position: relative;
     overflow: hidden;
-    background: #eaf1f6;
+    background: var(--tone-media, #eaf1f6);
 }
 
 .case-media::after {
@@ -362,7 +365,7 @@ useSeoMeta({
     height: 100%;
     display: grid;
     place-items: center;
-    color: #0b355b;
+    color: var(--tone-text, #0b355b);
     font-weight: 800;
     text-transform: uppercase;
 }
@@ -376,14 +379,14 @@ useSeoMeta({
 
 .case-content h2 {
     margin: 0;
-    color: #0b355b;
+    color: var(--tone-text, #0b355b);
     font-size: 1.18rem;
     line-height: 1.22;
 }
 
 .case-content p {
     margin: 0;
-    color: #274e72;
+    color: var(--tone-body, #274e72);
     line-height: 1.5;
 }
 
@@ -394,7 +397,7 @@ useSeoMeta({
 }
 
 .case-content .case-date {
-    color: #667f97;
+    color: var(--tone-muted, #667f97);
     font-size: 0.8rem;
     text-transform: capitalize;
 }
@@ -406,7 +409,7 @@ useSeoMeta({
 }
 
 .case-meta > span {
-    color: #667f97;
+    color: var(--tone-muted, #667f97);
     font-size: 0.82rem;
     font-weight: 700;
 }
@@ -418,10 +421,10 @@ useSeoMeta({
 }
 
 .case-tags small {
-    border: 1px solid rgba(234, 63, 48, 0.28);
+    border: 1px solid var(--tone-chip-border, rgba(234, 63, 48, 0.28));
     border-radius: 999px;
-    background: rgba(234, 63, 48, 0.12);
-    color: #0b355b;
+    background: var(--tone-chip, rgba(234, 63, 48, 0.12));
+    color: var(--tone-chip-text, #0b355b);
     padding: 5px 8px;
     font-weight: 700;
 }
@@ -433,8 +436,8 @@ useSeoMeta({
 .case-card:hover {
     transform: translateY(-5px);
     border-color: rgba(197, 35, 23, 0.48);
-    background: #ffffff;
-    box-shadow: 0 22px 44px rgba(17, 48, 78, 0.16);
+    background: var(--tone-card-hover, #ffffff);
+    box-shadow: var(--tone-card-shadow-hover, 0 22px 44px rgba(17, 48, 78, 0.16));
 }
 
 @media (max-width: 768px) {

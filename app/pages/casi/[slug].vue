@@ -1,5 +1,5 @@
 <template>
-    <main class="caso-page">
+    <main class="caso-page" :class="toneClass">
         <article class="caso-container">
             <nav class="breadcrumb" :aria-label="t('caseDetail.breadcrumb')">
                 <ol role="list">
@@ -59,6 +59,13 @@ const { t, locale } = useI18n();
 const localePath = useLocalePath();
 
 const slug = computed(() => String(route.params.slug));
+
+// Light or dark background for every case page: Pagine → Casi di successo →
+// "Colori" (update 62). Dark unless chosen otherwise, as the site always was.
+const { data: casiIndex } = await useAsyncData(() => `casi-index-${locale.value}`, () =>
+    getPageBySlug("casi.CasiIndexPage", "casi").catch(() => null)
+);
+const toneClass = computed(() => ((casiIndex.value as any)?.display?.tone_articles === "light" ? "tone-light" : "tone-dark"));
 
 // With the CMS unreachable, a built-in case with the same address is
 // shown instead (data/successCases.ts + data/homepageCases.ts).
@@ -128,6 +135,21 @@ useHead({
 .caso-page {
     min-height: 100vh;
     padding: 18vh 8vw 12vh;
+}
+
+/* Light background (update 62): the text colours used on this page follow
+   the site's --ax-* variables, so they are set to the light palette here.
+   The strip under the menu stays dark so the white menu stays readable. */
+.caso-page.tone-light {
+    --ax-color-text-primary: #0b355b;
+    --ax-color-text-secondary: #274e72;
+    --ax-color-text-muted: #667f97;
+    --ax-color-border-soft: rgba(11, 53, 91, 0.16);
+    --ax-color-accent-red-soft: #c52317;
+    color: #0b355b;
+    background:
+        linear-gradient(180deg, #020712 0, #020712 calc(var(--ax-navbar-height, 74px) + 6px), rgba(2, 7, 18, 0) calc(var(--ax-navbar-height, 74px) + 70px)),
+        var(--tone-stage);
 }
 
 .caso-container {

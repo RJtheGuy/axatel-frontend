@@ -4,7 +4,7 @@
             <ArticleParticleHero :title="t('blog.title')" :asset-url="headerWing()" />
         </header>
 
-        <div class="blog-light-stage">
+        <div class="blog-light-stage" :class="toneClass">
             <section class="blog-shell">
                 <NuxtLink :to="localePath('/')" class="back-link">{{ t("common.backHome") }}</NuxtLink>
 
@@ -97,9 +97,11 @@ const { data: indexPage } = await useAsyncData(() => `blog-index-${locale.value}
 
 // Card layout chosen in the CMS (Pagine → News → "Disposizione delle card",
 // update 61): cards per row and how many tags each card shows.
-type Display = { cards_per_row?: string; card_tags?: string };
+type Display = { cards_per_row?: string; card_tags?: string; tone_index?: string };
 const display = computed<Display>(() => (indexPage.value?.display as Display) || {});
 const gridClass = computed(() => (["2", "3", "4"].includes(display.value.cards_per_row || "") ? `cols-${display.value.cards_per_row}` : ""));
+// Light or dark background (Pagine → News → "Disposizione e colori", update 62).
+const toneClass = computed(() => (display.value.tone_index === "dark" ? "tone-dark" : "tone-light"));
 function cardTags(tags: string[]): { shown: string[]; more: number } {
     const mode = display.value.card_tags || "all";
     if (mode === "none") return { shown: [], more: 0 };
@@ -194,11 +196,11 @@ useSeoMeta({
 
 .blog-light-stage {
     flex: 1;
-    color: #0b355b;
-    background:
+    color: var(--tone-text, #0b355b);
+    background: var(--tone-stage,
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),
         radial-gradient(circle at 88% 30%, rgba(42, 111, 165, 0.07), transparent 30%),
-        linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f5f8fb 100%);
+        linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f5f8fb 100%));
 }
 
 .blog-shell {
@@ -210,7 +212,7 @@ useSeoMeta({
 .back-link {
     display: inline-block;
     margin-bottom: 18px;
-    color: #c52317;
+    color: var(--tone-accent, #c52317);
     text-decoration: none;
     font-weight: 700;
 }
@@ -218,7 +220,7 @@ useSeoMeta({
 .page-kicker {
     padding-left: 14px;
     border-left: 4px solid #c52317;
-    color: #c52317;
+    color: var(--tone-accent, #c52317);
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -228,13 +230,13 @@ useSeoMeta({
 .lead {
     max-width: 720px;
     margin: 12px 0 28px;
-    color: #274e72;
+    color: var(--tone-body, #274e72);
     font-size: 1.08rem;
     line-height: 1.62;
 }
 
 .empty {
-    color: #667f97;
+    color: var(--tone-muted, #667f97);
     padding: 40px 0;
 }
 
@@ -394,9 +396,9 @@ useSeoMeta({
 
 .post-card {
     overflow: hidden;
-    border: 1px solid rgba(11, 53, 91, 0.14);
-    background: rgba(255, 255, 255, 0.82);
-    box-shadow: 0 14px 32px rgba(17, 48, 78, 0.08);
+    border: 1px solid var(--tone-card-border, rgba(11, 53, 91, 0.14));
+    background: var(--tone-card, rgba(255, 255, 255, 0.82));
+    box-shadow: var(--tone-card-shadow, 0 14px 32px rgba(17, 48, 78, 0.08));
     transition: transform 0.22s ease, border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
 }
 
@@ -411,7 +413,7 @@ useSeoMeta({
 .post-media {
     position: relative;
     overflow: hidden;
-    background: #eaf1f6;
+    background: var(--tone-media, #eaf1f6);
 }
 
 .post-media::after {
@@ -436,7 +438,7 @@ useSeoMeta({
     height: 100%;
     display: grid;
     place-items: center;
-    color: #0b355b;
+    color: var(--tone-text, #0b355b);
     font-weight: 800;
     text-transform: uppercase;
     text-align: center;
@@ -453,21 +455,21 @@ useSeoMeta({
 .post-meta-top {
     display: flex;
     gap: 12px;
-    color: #667f97;
+    color: var(--tone-muted, #667f97);
     font-size: 0.78rem;
     font-weight: 700;
 }
 
 .post-content h2 {
     margin: 0;
-    color: #0b355b;
+    color: var(--tone-text, #0b355b);
     font-size: 1.18rem;
     line-height: 1.22;
 }
 
 .post-content p {
     margin: 0;
-    color: #274e72;
+    color: var(--tone-body, #274e72);
     line-height: 1.5;
 }
 
@@ -479,18 +481,18 @@ useSeoMeta({
 }
 
 .post-tags small {
-    border: 1px solid rgba(234, 63, 48, 0.28);
+    border: 1px solid var(--tone-chip-border, rgba(234, 63, 48, 0.28));
     border-radius: 999px;
-    background: rgba(234, 63, 48, 0.12);
-    color: #0b355b;
+    background: var(--tone-chip, rgba(234, 63, 48, 0.12));
+    color: var(--tone-chip-text, #0b355b);
     padding: 5px 8px;
     font-weight: 700;
 }
 
 .post-tags small.more-tags {
-    border-color: rgba(11, 53, 91, 0.18);
-    background: rgba(11, 53, 91, 0.06);
-    color: #667f97;
+    border-color: var(--tone-soft-chip-border, rgba(11, 53, 91, 0.18));
+    background: var(--tone-soft-chip, rgba(11, 53, 91, 0.06));
+    color: var(--tone-muted, #667f97);
 }
 
 .post-card:hover img {
@@ -500,8 +502,8 @@ useSeoMeta({
 .post-card:hover {
     transform: translateY(-5px);
     border-color: rgba(197, 35, 23, 0.48);
-    background: #ffffff;
-    box-shadow: 0 22px 44px rgba(17, 48, 78, 0.16);
+    background: var(--tone-card-hover, #ffffff);
+    box-shadow: var(--tone-card-shadow-hover, 0 22px 44px rgba(17, 48, 78, 0.16));
 }
 
 @media (max-width: 768px) {

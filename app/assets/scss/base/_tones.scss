@@ -1,0 +1,53 @@
+// Light or dark background for the News and Casi di successo pages (update 62).
+// Chosen in the CMS on the News page and on the Casi di successo page
+// ("Sfondo dell'elenco…", "Sfondo delle singole…"). The pages read these
+// --tone-* colours, each with the light value as fallback, so a page
+// without a tone class keeps looking exactly as before.
+
+.tone-light {
+    --tone-text: #0b355b;
+    --tone-body: #274e72;
+    --tone-muted: #667f97;
+    --tone-accent: #c52317;
+    --tone-stage:
+        radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),
+        radial-gradient(circle at 88% 30%, rgba(42, 111, 165, 0.07), transparent 30%),
+        linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f5f8fb 100%);
+    --tone-card: rgba(255, 255, 255, 0.82);
+    --tone-card-hover: #ffffff;
+    --tone-card-border: rgba(11, 53, 91, 0.14);
+    --tone-card-shadow: 0 14px 32px rgba(17, 48, 78, 0.08);
+    --tone-card-shadow-hover: 0 22px 44px rgba(17, 48, 78, 0.16);
+    --tone-media: #eaf1f6;
+    --tone-chip: rgba(234, 63, 48, 0.12);
+    --tone-chip-border: rgba(234, 63, 48, 0.28);
+    --tone-chip-text: #0b355b;
+    --tone-soft-chip: rgba(11, 53, 91, 0.06);
+    --tone-soft-chip-border: rgba(11, 53, 91, 0.18);
+    --tone-control: #ffffff;
+    --tone-control-border: rgba(11, 53, 91, 0.2);
+}
+
+.tone-dark {
+    --tone-text: var(--ax-color-text-primary, #f2f8ff);
+    --tone-body: var(--ax-color-text-secondary, #c6dcef);
+    --tone-muted: var(--ax-color-text-muted, #9ab6cf);
+    --tone-accent: var(--ax-color-accent-red-soft, #ea3f30);
+    --tone-stage:
+        radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.1), transparent 26%),
+        radial-gradient(circle at 88% 30%, rgba(42, 111, 165, 0.14), transparent 32%),
+        linear-gradient(180deg, #020712 0%, #061220 45%, #020712 100%);
+    --tone-card: rgba(9, 22, 34, 0.74);
+    --tone-card-hover: #0b1a29;
+    --tone-card-border: rgba(147, 183, 218, 0.24);
+    --tone-card-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+    --tone-card-shadow-hover: 0 22px 44px rgba(0, 0, 0, 0.5);
+    --tone-media: #0d1b29;
+    --tone-chip: rgba(234, 63, 48, 0.16);
+    --tone-chip-border: rgba(234, 63, 48, 0.42);
+    --tone-chip-text: #f2f8ff;
+    --tone-soft-chip: rgba(198, 220, 239, 0.08);
+    --tone-soft-chip-border: rgba(198, 220, 239, 0.28);
+    --tone-control: rgba(9, 22, 34, 0.9);
+    --tone-control-border: rgba(147, 183, 218, 0.32);
+}
