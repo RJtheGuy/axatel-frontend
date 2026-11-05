@@ -267,17 +267,19 @@ onMounted(() => {
 .post-body {
     --cms-text: var(--tone-body, #274e72);
     --cms-heading: var(--tone-text, #0b355b);
+    --cms-border: var(--tone-card-border, rgba(11, 53, 91, 0.14));
+    --cms-surface: var(--tone-card, #ffffff);
+    /* The site's own text colours, following this page's light/dark
+       switch, so every block stays readable on either background.
+       Dark panels ("Prodotto in evidenza", "Invito all'azione") keep
+       their own colours. */
+    --ax-color-text-primary: var(--tone-text, #0b355b);
+    --ax-color-text-secondary: var(--tone-body, #274e72);
+    --ax-color-text-muted: var(--tone-muted, #667f97);
+    --ax-color-border-soft: var(--tone-card-border, rgba(11, 53, 91, 0.16));
+    --ax-color-border-card: var(--tone-card-border, rgba(11, 53, 91, 0.22));
+    --ax-color-bg-main: var(--tone-bg, #f7fafc);
     color: var(--tone-text, #0b355b);
-}
-
-.post-body :deep(h2),
-.post-body :deep(h3),
-.post-body :deep(h4) {
-    color: var(--tone-text, #0b355b);
-}
-
-.post-body :deep(p) {
-    color: var(--tone-body, #274e72);
 }
 
 @media (max-width: 768px) {

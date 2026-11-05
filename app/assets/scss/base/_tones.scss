@@ -9,6 +9,7 @@
     --tone-body: #274e72;
     --tone-muted: #667f97;
     --tone-accent: #c52317;
+    --tone-bg: #f7fafc;
     --tone-stage:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),
         radial-gradient(circle at 88% 30%, rgba(42, 111, 165, 0.07), transparent 30%),
@@ -33,6 +34,7 @@
     --tone-body: var(--ax-color-text-secondary, #c6dcef);
     --tone-muted: var(--ax-color-text-muted, #9ab6cf);
     --tone-accent: var(--ax-color-accent-red-soft, #ea3f30);
+    --tone-bg: var(--ax-color-bg-main, #020712);
     --tone-stage:
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.1), transparent 26%),
         radial-gradient(circle at 88% 30%, rgba(42, 111, 165, 0.14), transparent 32%),

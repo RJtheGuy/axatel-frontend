@@ -30,7 +30,7 @@ a {
     padding: 14px 22px;
     border: 1px solid var(--ax-color-border-soft);
     border-radius: var(--ax-card-radius);
-    background: rgba(7, 17, 29, 0.34);
+    background: var(--cms-surface, rgba(7, 17, 29, 0.34));
     color: var(--ax-color-text-primary);
     text-decoration: none;
     transition: border-color 0.22s ease, background-color 0.22s ease;
