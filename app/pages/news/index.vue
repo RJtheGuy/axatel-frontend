@@ -27,7 +27,7 @@
                     </div>
                 </section>
 
-                <div v-else class="blog-grid">
+                <div v-else class="blog-grid" :class="gridClass">
                     <article v-for="(item, index) in posts" :key="item.slug" class="post-card">
                         <NuxtLink :to="localePath(`/news/${item.slug}`)" class="post-link" :aria-label="t('blog.read', { title: item.title })">
                             <div class="post-media">
@@ -52,8 +52,9 @@
                                 <h2>{{ item.title }}</h2>
                                 <p>{{ item.intro }}</p>
 
-                                <div v-if="item.tags.length" class="post-tags">
-                                    <small v-for="tag in item.tags" :key="tag">{{ tag }}</small>
+                                <div v-if="cardTags(item.tags).shown.length" class="post-tags">
+                                    <small v-for="tag in cardTags(item.tags).shown" :key="tag">{{ tag }}</small>
+                                    <small v-if="cardTags(item.tags).more" class="more-tags" :title="item.tags.join(', ')">+{{ cardTags(item.tags).more }}</small>
                                 </div>
                             </div>
                         </NuxtLink>
@@ -93,6 +94,18 @@ const { data: indexPage } = await useAsyncData(() => `blog-index-${locale.value}
     getPage<any>("blog.BlogIndexPage", { limit: 1 }).then((res) => res?.items?.[0] ?? null).catch(() => null)
 );
 
+
+// Card layout chosen in the CMS (Pagine → News → "Disposizione delle card",
+// update 61): cards per row and how many tags each card shows.
+type Display = { cards_per_row?: string; card_tags?: string };
+const display = computed<Display>(() => (indexPage.value?.display as Display) || {});
+const gridClass = computed(() => (["2", "3", "4"].includes(display.value.cards_per_row || "") ? `cols-${display.value.cards_per_row}` : ""));
+function cardTags(tags: string[]): { shown: string[]; more: number } {
+    const mode = display.value.card_tags || "all";
+    if (mode === "none") return { shown: [], more: 0 };
+    if (mode === "3") return { shown: tags.slice(0, 3), more: Math.max(0, tags.length - 3) };
+    return { shown: tags, more: 0 };
+}
 
 const lead = computed(() => {
     const intro = indexPage.value?.intro;
@@ -360,6 +373,25 @@ useSeoMeta({
     gap: 18px;
 }
 
+/* News per row chosen in the CMS (update 61): at most 2 on tablets, 1 on phones. */
+@media (min-width: 1024px) {
+    .blog-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .blog-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .blog-grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+    .blog-grid.cols-2,
+    .blog-grid.cols-3,
+    .blog-grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 639px) {
+    .blog-grid.cols-2,
+    .blog-grid.cols-3,
+    .blog-grid.cols-4 { grid-template-columns: minmax(0, 1fr); }
+}
+
 .post-card {
     overflow: hidden;
     border: 1px solid rgba(11, 53, 91, 0.14);
@@ -453,6 +485,12 @@ useSeoMeta({
     color: #0b355b;
     padding: 5px 8px;
     font-weight: 700;
+}
+
+.post-tags small.more-tags {
+    border-color: rgba(11, 53, 91, 0.18);
+    background: rgba(11, 53, 91, 0.06);
+    color: #667f97;
 }
 
 .post-card:hover img {
