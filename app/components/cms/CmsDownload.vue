@@ -1,6 +1,13 @@
 <template>
     <div v-if="value.document?.url" class="cms-download">
-        <a :href="value.document.url" download>
+        <!-- Impostazioni → Link ai documenti: new tab = opens the PDF in
+             a new tab; otherwise it downloads, as before. -->
+        <a v-if="newTab" :href="value.document.url" target="_blank" rel="noopener">
+            <span class="icon" aria-hidden="true">↓</span>
+            <span v-if="value.label" v-html="unwrapParagraph(value.label)"></span>
+            <span v-else>{{ value.document.title }}</span>
+        </a>
+        <a v-else :href="value.document.url" download>
             <span class="icon" aria-hidden="true">↓</span>
             <span v-if="value.label" v-html="unwrapParagraph(value.label)"></span>
             <span v-else>{{ value.document.title }}</span>
@@ -14,6 +21,8 @@ import { unwrapParagraph } from "~/composables/richtext";
 defineProps<{
     value: { document?: { url: string; title: string }; label?: string };
 }>();
+
+const { newTab } = useDocumentLinks();
 </script>
 
 <style scoped>

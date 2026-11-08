@@ -38,7 +38,7 @@
                  CMS admin by trusted staff, not submitted by end users.
                  Do not "fix" this to {{ }} — it would render escaped
                  markup as literal text. -->
-            <div v-if="caso?.body" class="caso-body" v-html="caso.body"></div>
+            <div v-if="caso?.body" class="caso-body" v-html="withTarget(caso.body)"></div>
             <p v-else-if="caso?.description" class="caso-body">{{ caso.description }}</p>
 
             <NuxtLink class="caso-back ax-cta-outline" :to="localePath('/casi')">
@@ -57,6 +57,8 @@ const route = useRoute();
 const { getPageBySlug } = useCms();
 const { t, locale } = useI18n();
 const localePath = useLocalePath();
+// Impostazioni → Link ai documenti: open PDFs in a new tab when chosen.
+const { withTarget } = useDocumentLinks();
 
 const slug = computed(() => String(route.params.slug));
 

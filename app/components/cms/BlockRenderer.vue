@@ -51,6 +51,7 @@ const componentMap: Record<string, any> = {
     feature_grid: resolveComponent("CmsFeatureGrid"),
     testimonial: resolveComponent("CmsTestimonial"),
     partner_logos: resolveComponent("CmsPartnerLogos"),
+    certifications: resolveComponent("CmsCertifications"),
     portfolio_grid: resolveComponent("CmsPortfolioGrid"),
     // Structured solution / product blocks (core/blocks_solutions.py)
     text_section: resolveComponent("CmsTextSection"),

@@ -20,4 +20,8 @@ const isHome = computed(() => String(route.name ?? "").split("___")[0] === "inde
 // Same shared request as the navbar and footer (one fetch per language).
 const { settings } = useSiteSettings();
 const chatbot = computed(() => settings.value?.chatbot);
+// Impostazioni → Link ai documenti → Aspetto: read by base/_doc-links.scss.
+useHead({
+    htmlAttrs: { "data-doc-links": computed(() => settings.value?.documents?.link_style || "default") },
+});
 </script>

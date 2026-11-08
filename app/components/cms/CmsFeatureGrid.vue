@@ -1,7 +1,7 @@
 <template>
     <section
         class="cms-features"
-        :class="{ 'center-heading': value.center_heading, 'center-items': value.center_items }" style="padding: 0px !important"
+        :class="[{ 'center-heading': value.center_heading, 'center-items': value.center_items }, `heading-gap-${value.heading_gap || 'small'}`]" style="padding: 0px !important"
     >
         <h2 v-if="value.heading" v-html="unwrapParagraph(value.heading)"></h2>
         <div v-if="value.subheading" class="sub" v-html="value.subheading"></div>
@@ -41,6 +41,7 @@ const props = defineProps<{
         center_heading?: boolean;
         center_items?: boolean;
         columns?: "auto" | "2" | "3" | "4" | "6";
+        heading_gap?: "small" | "medium" | "large" | "xlarge";
         features?: Feature[];
     };
 }>();
@@ -63,6 +64,19 @@ h2 {
     color: var(--cms-heading, var(--ax-color-text-primary));
     font-size: clamp(1.4rem, 2.8vw, 2rem);
     font-weight: 300;
+}
+
+/* "Spazio sotto il titolo" chosen in the CMS; small = today's 12px. */
+.heading-gap-medium h2 {
+    margin-bottom: 28px;
+}
+
+.heading-gap-large h2 {
+    margin-bottom: 44px;
+}
+
+.heading-gap-xlarge h2 {
+    margin-bottom: 64px;
 }
 
 .sub :deep(p) {
