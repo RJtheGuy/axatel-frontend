@@ -31,6 +31,11 @@ export interface SiteSettings {
         tax_label: string
         tax_value: string
     }
+    // Impostazioni → Link ai documenti
+    documents?: {
+        open_in_new_tab: boolean
+        link_style: "default" | "red" | "blue" | "button"
+    }
     chatbot: {
         enabled: boolean
         title: string

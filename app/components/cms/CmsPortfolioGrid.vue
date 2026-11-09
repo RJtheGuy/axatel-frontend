@@ -93,7 +93,7 @@ h2 {
     overflow: hidden;
     border: 1px solid var(--ax-color-border-soft);
     border-radius: 14px;
-    background: rgba(7, 17, 29, 0.34);
+    background: var(--cms-surface, rgba(7, 17, 29, 0.34));
     color: inherit;
     text-decoration: none;
     transition: transform 0.22s ease, border-color 0.22s ease;

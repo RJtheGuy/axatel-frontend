@@ -7,7 +7,7 @@
             />
         </header>
 
-        <div class="post-light-stage">
+        <div class="post-light-stage" :class="toneClass">
             <article class="post-shell">
                 <NuxtLink :to="localePath('/news')" class="back-link">{{ t("blog.back") }}</NuxtLink>
                 <LayoutTranslationNotice v-if="raw?.__fallback" />
@@ -54,7 +54,7 @@ import { createError, useHead, useRoute, useRuntimeConfig, useSeoMeta } from "#a
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 
 const route = useRoute();
-const { getPageBySlug } = useCms();
+const { getPage, getPageBySlug } = useCms();
 const { t, locale } = useI18n();
 const localePath = useLocalePath();
 
@@ -83,6 +83,13 @@ const { data: raw, error: postError } = await useAsyncData(
 if (!raw.value) {
     throw cmsPageError(postError.value, t("blog.notFound"));
 }
+
+// Light or dark background for every news article: Pagine → News →
+// "Disposizione e colori" (update 62). Same request as the News list.
+const { data: newsIndex } = await useAsyncData(() => `blog-index-${locale.value}`, () =>
+    getPage<any>("blog.BlogIndexPage", { limit: 1 }).then((res) => res?.items?.[0] ?? null).catch(() => null)
+);
+const toneClass = computed(() => (newsIndex.value?.display?.tone_articles === "dark" ? "tone-dark" : "tone-light"));
 
 const post = computed<BlogPostData>(() => ({
     title: raw.value.title,
@@ -184,11 +191,11 @@ onMounted(() => {
 
 .post-light-stage {
     flex: 1;
-    color: #0b355b;
-    background:
+    color: var(--tone-text, #0b355b);
+    background: var(--tone-stage,
         radial-gradient(circle at 12% 12%, rgba(197, 35, 23, 0.055), transparent 24%),
         radial-gradient(circle at 88% 30%, rgba(42, 111, 165, 0.07), transparent 30%),
-        linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f5f8fb 100%);
+        linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f5f8fb 100%));
 }
 
 .post-shell {
@@ -200,7 +207,7 @@ onMounted(() => {
 .back-link {
     display: inline-block;
     margin-bottom: 18px;
-    color: #c52317;
+    color: var(--tone-accent, #c52317);
     text-decoration: none;
     font-weight: 700;
 }
@@ -208,7 +215,7 @@ onMounted(() => {
 .post-meta-top {
     display: flex;
     gap: 14px;
-    color: #667f97;
+    color: var(--tone-muted, #667f97);
     font-size: 0.82rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -219,7 +226,7 @@ onMounted(() => {
 .lead {
     max-width: 720px;
     margin: 0 0 20px;
-    color: #274e72;
+    color: var(--tone-body, #274e72);
     font-size: 1.12rem;
     line-height: 1.62;
 }
@@ -232,10 +239,10 @@ onMounted(() => {
 }
 
 .post-tags small {
-    border: 1px solid rgba(234, 63, 48, 0.28);
+    border: 1px solid var(--tone-chip-border, rgba(234, 63, 48, 0.28));
     border-radius: 999px;
-    background: rgba(234, 63, 48, 0.12);
-    color: #0b355b;
+    background: var(--tone-chip, rgba(234, 63, 48, 0.12));
+    color: var(--tone-chip-text, #0b355b);
     padding: 5px 10px;
     font-weight: 700;
 }
@@ -258,19 +265,21 @@ onMounted(() => {
    defaults those components assume (they're normally used on the
    near-black homepage) to fit this page's light stage. */
 .post-body {
-    --cms-text: #274e72;
-    --cms-heading: #0b355b;
-    color: #0b355b;
-}
-
-.post-body :deep(h2),
-.post-body :deep(h3),
-.post-body :deep(h4) {
-    color: #0b355b;
-}
-
-.post-body :deep(p) {
-    color: #274e72;
+    --cms-text: var(--tone-body, #274e72);
+    --cms-heading: var(--tone-text, #0b355b);
+    --cms-border: var(--tone-card-border, rgba(11, 53, 91, 0.14));
+    --cms-surface: var(--tone-card, #ffffff);
+    /* The site's own text colours, following this page's light/dark
+       switch, so every block stays readable on either background.
+       Dark panels ("Prodotto in evidenza", "Invito all'azione") keep
+       their own colours. */
+    --ax-color-text-primary: var(--tone-text, #0b355b);
+    --ax-color-text-secondary: var(--tone-body, #274e72);
+    --ax-color-text-muted: var(--tone-muted, #667f97);
+    --ax-color-border-soft: var(--tone-card-border, rgba(11, 53, 91, 0.16));
+    --ax-color-border-card: var(--tone-card-border, rgba(11, 53, 91, 0.22));
+    --ax-color-bg-main: var(--tone-bg, #f7fafc);
+    color: var(--tone-text, #0b355b);
 }
 
 @media (max-width: 768px) {

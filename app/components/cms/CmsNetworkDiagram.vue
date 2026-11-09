@@ -68,7 +68,7 @@ h2 {
 }
 
 .node circle {
-    fill: rgba(7, 17, 29, 0.6);
+    fill: var(--cms-surface, rgba(7, 17, 29, 0.6));
     stroke: var(--ax-color-border-card);
     stroke-width: 1;
 }

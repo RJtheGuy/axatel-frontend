@@ -29,7 +29,7 @@ const props = defineProps<{
     value: { heading?: string; services?: ServiceRef[] };
 }>();
 
-const services = computed<ServiceRef[]>(() => props.value.services ?? []);
+const services = computed<ServiceRef[]>(() => (props.value.services ?? []).filter(Boolean));
 </script>
 
 <style scoped>
@@ -59,7 +59,7 @@ h2 {
     padding: 22px;
     border: 1px solid var(--ax-color-border-soft);
     border-radius: var(--ax-card-radius);
-    background: rgba(7, 17, 29, 0.34);
+    background: var(--cms-surface, rgba(7, 17, 29, 0.34));
     color: var(--ax-color-text-primary);
     text-decoration: none;
     font-weight: 600;

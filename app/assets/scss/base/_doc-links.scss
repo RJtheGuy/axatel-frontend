@@ -1,0 +1,63 @@
+// Impostazioni → Link ai documenti → "Aspetto dei link ai documenti nel testo".
+// The layout puts the choice on <html data-doc-links="...">. Only links to
+// files chosen with the "Documento" button (/documents/<n>/...) inside CMS
+// text change; "default" adds nothing, so the site looks as before.
+
+$doc-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 2h8l6 6v14H6z' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M14 2v6h6M9 13h6M9 17h6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+@mixin doc-link-icon {
+    &::before {
+        content: "";
+        display: inline-block;
+        width: 0.95em;
+        height: 1.05em;
+        margin-right: 0.35em;
+        vertical-align: -0.15em;
+        background: currentColor;
+        -webkit-mask: $doc-icon center / contain no-repeat;
+        mask: $doc-icon center / contain no-repeat;
+    }
+}
+
+[data-doc-links="red"],
+[data-doc-links="blue"],
+[data-doc-links="button"] {
+    :is(.cms-rich-text, .caso-body) a[href*="/documents/"] {
+        font-weight: 600;
+        @include doc-link-icon;
+    }
+}
+
+[data-doc-links="red"] :is(.cms-rich-text, .caso-body) a[href*="/documents/"] {
+    color: var(--ax-color-accent-red-soft, #ea3f30);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+// Dark blue on light pages; light blue on dark pages so it stays readable.
+[data-doc-links="blue"] :is(.cms-rich-text, .caso-body) a[href*="/documents/"] {
+    color: var(--cms-heading, #9cc7ef);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+[data-doc-links="button"] :is(.cms-rich-text, .caso-body) a[href*="/documents/"] {
+    display: inline-block;
+    margin: 0.15em 0;
+    padding: 0.2em 0.85em;
+    border: 1.5px solid currentColor;
+    border-radius: 999px;
+    color: var(--ax-color-accent-red-soft, #ea3f30);
+    line-height: 1.5;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease;
+
+    &:hover,
+    &:focus-visible {
+        background: var(--ax-color-accent-red, #c52317);
+        border-color: var(--ax-color-accent-red, #c52317);
+        color: #ffffff;
+    }
+}

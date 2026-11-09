@@ -71,7 +71,7 @@ const actions = computed(() => {
         linear-gradient(160deg, #0b1a2b 0%, #050d18 100%);
 }
 
-.label {
+.cms-product-feature.cms-product-feature .label {
     margin: 0 0 8px;
     color: #ff8a7d;
     font-size: 0.72rem;
@@ -80,14 +80,14 @@ const actions = computed(() => {
     text-transform: uppercase;
 }
 
-.cms-product-feature h2 {
+.cms-product-feature.cms-product-feature h2 {
     margin: 0 0 10px;
     color: #fff;
     font-size: clamp(1.4rem, 2.6vw, 1.9rem);
     font-weight: 500;
 }
 
-.description {
+.cms-product-feature.cms-product-feature .description {
     margin: 0;
     max-width: 60ch;
     color: #c6dcef;

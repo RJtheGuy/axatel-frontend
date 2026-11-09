@@ -313,6 +313,15 @@ useSeoMeta({
     --cms-surface: #ffffff;
     --cms-measure: 100%;
     --cms-wide: 100%;
+    /* The site's own text colours, made dark for this light page, so the
+       blocks drawn for the dark homepage (quote, numbers, card titles,
+       headings) stay readable here too. Dark panels keep their own colours. */
+    --ax-color-text-primary: #0b355b;
+    --ax-color-text-secondary: #274e72;
+    --ax-color-text-muted: #667f97;
+    --ax-color-border-soft: rgba(11, 53, 91, 0.16);
+    --ax-color-border-card: rgba(11, 53, 91, 0.22);
+    --ax-color-bg-main: #f7fafc;
     color: #0b355b;
 }
 

@@ -1,6 +1,8 @@
 @use "base/colors";
+@use "base/tones";
 @use "base/reset";
 @use "base/typography";
+@use "base/doc-links";
 @use "utilities/responsive";
 @use "components/buttons";
 @use "layout/sections";
@@ -166,6 +168,15 @@ h1{
 .u-mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.95em;
+}
+
+.u-medium {
+    font-size: 1.125em;
+}
+
+.u-xlarge {
+    font-size: 1.5em;
+    line-height: 1.3;
 }
 
 .u-large {

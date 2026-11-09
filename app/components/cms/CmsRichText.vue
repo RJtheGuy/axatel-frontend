@@ -3,11 +3,13 @@
          RichTextBlock. v-html is correct: content is authored by trusted
          staff in the CMS admin, not user-submitted. Do NOT change this
          to {{ }} — it would print escaped tags as literal text. -->
-    <div class="cms-rich-text" v-html="value"></div>
+    <div class="cms-rich-text" v-html="withTarget(value)"></div>
 </template>
 
 <script setup lang="ts">
 defineProps<{ value: string }>();
+// Impostazioni → Link ai documenti: open PDFs in a new tab when chosen.
+const { withTarget } = useDocumentLinks();
 </script>
 
 <style scoped>

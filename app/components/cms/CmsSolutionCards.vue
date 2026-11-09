@@ -59,7 +59,7 @@ h2 {
     padding: 26px;
     border: 1px solid var(--ax-color-border-soft);
     border-radius: var(--ax-card-radius);
-    background: rgba(7, 17, 29, 0.34);
+    background: var(--cms-surface, rgba(7, 17, 29, 0.34));
     transition: transform 0.22s ease, border-color 0.22s ease;
 }
 
