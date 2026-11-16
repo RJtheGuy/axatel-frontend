@@ -25,18 +25,28 @@
                             >{{ t("products.datasheet") }} <span aria-hidden="true">↓</span></a>
                             <NuxtLink :to="quoteLink" class="btn-secondary">{{ t("project.quote") }}</NuxtLink>
                         </div>
-                    </div>
-                    <figure v-if="product.cover_image" class="prod-media">
-                        <ContentResponsiveImage
-                            :src="product.cover_image.url"
-                            :alt="product.cover_image.alt || product.title"
-                            :width="product.cover_image.width"
-                            :height="product.cover_image.height"
-                            sizes="100vw md:50vw lg:520px"
-                            loading="eager"
-                            fetchpriority="high"
+                        <!-- No picture: the CMS buttons go under the text buttons. -->
+                        <ContentProductMediaLinks
+                            v-if="!product.cover_image"
+                            :items="product.media_links"
+                            :align="product.media_links_align"
                         />
-                    </figure>
+                    </div>
+                    <div v-if="product.cover_image" class="prod-media-col">
+                        <figure class="prod-media">
+                            <ContentResponsiveImage
+                                :src="product.cover_image.url"
+                                :alt="product.cover_image.alt || product.title"
+                                :width="product.cover_image.width"
+                                :height="product.cover_image.height"
+                                sizes="100vw md:50vw lg:520px"
+                                loading="eager"
+                                fetchpriority="high"
+                            />
+                        </figure>
+                        <!-- "Pulsanti sotto l'immagine" from the CMS (files or links). -->
+                        <ContentProductMediaLinks :items="product.media_links" :align="product.media_links_align" />
+                    </div>
                 </div>
 
                 <section v-if="specs.length" class="specs" aria-labelledby="specs-title">
@@ -341,7 +351,7 @@ useSeoMeta({
         grid-template-columns: 1fr;
     }
 
-    .prod-media {
+    .prod-media-col {
         order: -1;
     }
 
