@@ -44,6 +44,7 @@ const componentMap: Record<string, any> = {
     columns: resolveComponent("CmsColumns"),
     video_embed: resolveComponent("CmsVideoEmbed"),
     download: resolveComponent("CmsDownload"),
+    link_button: resolveComponent("CmsLinkButton"),
     spacer: resolveComponent("CmsSpacer"),
     stats: resolveComponent("CmsStats"),
     network_diagram: resolveComponent("CmsNetworkDiagram"),

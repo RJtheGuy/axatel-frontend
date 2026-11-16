@@ -10,7 +10,8 @@
 
                 <LayoutTranslationNotice v-if="product.__fallback" />
 
-                <div class="prod-intro" :class="{ 'has-media': product.cover_image }">
+                <!-- "Mostra la scheda in cima alla pagina" (CMS): off = only on the cards. -->
+                <div v-if="product.show_intro !== false" class="prod-intro" :class="{ 'has-media': product.cover_image }">
                     <div>
                         <p class="prod-kicker">{{ categoryLabel }}</p>
                         <p v-if="product.model_code" class="model">{{ t("products.model") }}: <strong>{{ product.model_code }}</strong></p>
@@ -25,28 +26,18 @@
                             >{{ t("products.datasheet") }} <span aria-hidden="true">↓</span></a>
                             <NuxtLink :to="quoteLink" class="btn-secondary">{{ t("project.quote") }}</NuxtLink>
                         </div>
-                        <!-- No picture: the CMS buttons go under the text buttons. -->
-                        <ContentProductMediaLinks
-                            v-if="!product.cover_image"
-                            :items="product.media_links"
-                            :align="product.media_links_align"
+                    </div>
+                    <figure v-if="product.cover_image" class="prod-media">
+                        <ContentResponsiveImage
+                            :src="product.cover_image.url"
+                            :alt="product.cover_image.alt || product.title"
+                            :width="product.cover_image.width"
+                            :height="product.cover_image.height"
+                            sizes="100vw md:50vw lg:520px"
+                            loading="eager"
+                            fetchpriority="high"
                         />
-                    </div>
-                    <div v-if="product.cover_image" class="prod-media-col">
-                        <figure class="prod-media">
-                            <ContentResponsiveImage
-                                :src="product.cover_image.url"
-                                :alt="product.cover_image.alt || product.title"
-                                :width="product.cover_image.width"
-                                :height="product.cover_image.height"
-                                sizes="100vw md:50vw lg:520px"
-                                loading="eager"
-                                fetchpriority="high"
-                            />
-                        </figure>
-                        <!-- "Pulsanti sotto l'immagine" from the CMS (files or links). -->
-                        <ContentProductMediaLinks :items="product.media_links" :align="product.media_links_align" />
-                    </div>
+                    </figure>
                 </div>
 
                 <section v-if="specs.length" class="specs" aria-labelledby="specs-title">
@@ -351,7 +342,7 @@ useSeoMeta({
         grid-template-columns: 1fr;
     }
 
-    .prod-media-col {
+    .prod-media {
         order: -1;
     }
 

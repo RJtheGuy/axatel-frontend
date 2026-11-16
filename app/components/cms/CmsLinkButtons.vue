@@ -1,5 +1,5 @@
 <template>
-    <!-- "Pulsanti sotto l'immagine" of a product (Prodotto → CMS). -->
+    <!-- One or more file/link buttons styled in the CMS ("Pulsante" block). -->
     <div v-if="links.length" class="pml" :class="`align-${align || 'center'}`">
         <a
             v-for="(link, i) in links"
@@ -27,22 +27,19 @@
 // colour that is readable on the chosen background.
 import { computed } from "vue";
 
-export type ProductLink = {
-    type?: string;
-    value: {
-        label: string;
-        document?: { url: string; title?: string } | null;
-        url?: string | null;
-        open_in_new_tab?: boolean;
-        background?: "red" | "navy" | "ivory" | "white" | "none";
-        text_color?: "auto" | "white" | "ivory" | "navy" | "red";
-        font?: "normal" | "heading" | "mono";
-        size?: "small" | "normal" | "large";
-    };
+export type LinkButton = {
+    label: string;
+    document?: { url: string; title?: string } | null;
+    url?: string | null;
+    open_in_new_tab?: boolean;
+    background?: "red" | "navy" | "ivory" | "white" | "none";
+    text_color?: "auto" | "white" | "ivory" | "navy" | "red";
+    font?: "normal" | "heading" | "mono";
+    size?: "small" | "normal" | "large";
 };
 
 const props = defineProps<{
-    items?: ProductLink[] | null;
+    items?: LinkButton[] | null;
     align?: "left" | "center" | "right" | "full" | null;
 }>();
 
@@ -50,12 +47,11 @@ const AUTO_TEXT: Record<string, string> = { red: "white", navy: "white", ivory: 
 
 const links = computed(() =>
     (props.items ?? [])
-        .map((item) => item?.value)
-        .filter((v): v is ProductLink["value"] => !!v && !!v.label && !!(v.document?.url || v.url))
+        .filter((v): v is LinkButton => !!v && !!v.label && !!(v.document?.url || v.url))
         .map((v) => ({ ...v, href: (v.document?.url || v.url || "").trim(), isFile: !!v.document?.url })),
 );
 
-function textColor(link: ProductLink["value"]): string {
+function textColor(link: LinkButton): string {
     const chosen = link.text_color || "auto";
     return chosen === "auto" ? AUTO_TEXT[link.background || "red"] || "white" : chosen;
 }
