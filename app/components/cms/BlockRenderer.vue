@@ -53,6 +53,7 @@ const componentMap: Record<string, any> = {
     testimonial: resolveComponent("CmsTestimonial"),
     partner_logos: resolveComponent("CmsPartnerLogos"),
     certifications: resolveComponent("CmsCertifications"),
+    interactive_image: resolveComponent("CmsInteractiveImage"),
     portfolio_grid: resolveComponent("CmsPortfolioGrid"),
     // Structured solution / product blocks (core/blocks_solutions.py)
     text_section: resolveComponent("CmsTextSection"),
