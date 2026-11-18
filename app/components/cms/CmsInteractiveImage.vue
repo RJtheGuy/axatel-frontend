@@ -4,7 +4,15 @@
     <section
         v-if="value.image?.url"
         class="cms-ii"
-        :class="[ `layout-${layout}`, `marker-${value.marker || 'ring'}`, `size-${value.marker_size || 'medium'}`, `color-${value.color || 'blue'}`, { 'has-motion': value.motion !== false && !pickMode, 'has-active': active }, ]"
+        :class="[
+            `layout-${layout}`,
+            `width-${value.width || 'wide'}`,
+            `marker-${value.marker || 'ring'}`,
+            `size-${value.marker_size || 'medium'}`,
+            `color-${value.color || 'blue'}`,
+            { 'has-motion': value.motion !== false && !pickMode, 'has-active': active, 'is-zoomed': zoomScale > 1, 'shows-detail': detailShown },
+        ]"
+        :style="{ '--ii-zoom': String(zoomScale) }"
         @keydown.esc="close"
     >
         <!-- Side panel (layout "panel"): intro, or the chosen point. -->
@@ -26,35 +34,54 @@
         </div>
 
         <div class="ii-stage" @click="onStageClick">
-            <!-- Image and points move together, so the points stay on their icons. -->
-            <div ref="layer" class="ii-layer">
-                <ContentResponsiveImage
-                    :src="value.image.url"
-                    :alt="value.alt_text || value.image.alt || ''"
-                    :width="value.image.width"
-                    :height="value.image.height"
-                    sizes="100vw lg:1200px"
-                    loading="lazy"
-                    decoding="async"
-                />
-                <button
-                    v-for="(p, i) in points"
-                    :key="i"
-                    type="button"
-                    class="ii-hs"
-                    :class="{ 'is-active': i === activeIndex }"
-                    :style="{ left: `${p.x}%`, top: `${p.y}%`, '--delay': `${(i % 5) * 0.45}s` }"
-                    :aria-label="p.title"
-                    :aria-pressed="i === activeIndex"
-                    @click.stop="select(i)"
-                >
-                    <span class="ii-pulse" aria-hidden="true"></span>
-                    <span class="ii-pulse ii-p2" aria-hidden="true"></span>
-                    <span class="ii-core" aria-hidden="true"></span>
-                    <span class="ii-tip" aria-hidden="true">{{ p.title }}</span>
-                    <span v-if="pickMode" class="ii-num">{{ i + 1 }}</span>
-                </button>
+            <!-- Zoom on click (outer) + slow drift (inner): image and points
+                 move together, so the points stay on their icons. -->
+            <div class="ii-zoom" :style="zoomStyle">
+                <div ref="layer" class="ii-layer">
+                    <ContentResponsiveImage
+                        :src="value.image.url"
+                        :alt="value.alt_text || value.image.alt || ''"
+                        :width="value.image.width"
+                        :height="value.image.height"
+                        sizes="100vw lg:1200px"
+                        loading="lazy"
+                        decoding="async"
+                    />
+                    <button
+                        v-for="(p, i) in points"
+                        :key="i"
+                        type="button"
+                        class="ii-hs"
+                        :class="{ 'is-active': i === activeIndex }"
+                        :style="{ left: `${p.x}%`, top: `${p.y}%`, '--delay': `${(i % 5) * 0.45}s` }"
+                        :aria-label="p.title"
+                        :aria-pressed="i === activeIndex"
+                        @click.stop="select(i)"
+                    >
+                        <span class="ii-pulse" aria-hidden="true"></span>
+                        <span class="ii-pulse ii-p2" aria-hidden="true"></span>
+                        <span class="ii-core" aria-hidden="true"></span>
+                        <span class="ii-tip" aria-hidden="true">{{ p.title }}</span>
+                        <span v-if="pickMode" class="ii-num">{{ i + 1 }}</span>
+                    </button>
+                </div>
             </div>
+
+            <!-- Detail image of the point (e.g. a 3D render), after the zoom. -->
+            <Transition name="ii-detail">
+                <div v-if="detailShown && active?.detail_image?.url" class="ii-detail" @click.stop>
+                    <ContentResponsiveImage
+                        :src="active.detail_image.url"
+                        :alt="active.title"
+                        :width="active.detail_image.width"
+                        :height="active.detail_image.height"
+                        sizes="100vw lg:1200px"
+                        loading="lazy"
+                        decoding="async"
+                    />
+                    <button type="button" class="ii-detail-back" @click="close">← {{ labels.map }}</button>
+                </div>
+            </Transition>
 
             <!-- Card next to the point (layout "full"; below the image on phones). -->
             <Transition name="ii-pop">
@@ -77,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, ref, resolveComponent } from "vue";
+import { computed, defineComponent, h, onBeforeUnmount, ref, resolveComponent, watch } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
 
 type Point = {
@@ -88,6 +115,7 @@ type Point = {
     page?: { url?: string } | null;
     url?: string | null;
     link_label?: string | null;
+    detail_image?: { url: string; width?: number; height?: number } | null;
 };
 
 const props = defineProps<{
@@ -102,6 +130,8 @@ const props = defineProps<{
         marker_size?: "small" | "medium" | "large";
         color?: "blue" | "red" | "white" | "yellow";
         motion?: boolean;
+        zoom?: "none" | "light" | "medium" | "strong";
+        width?: "wide" | "normal";
         hotspots?: Point[];
     };
 }>();
@@ -110,10 +140,10 @@ const { locale } = useI18n();
 const route = useRoute();
 const localePath = useLocalePath();
 
-const TEXT: Record<string, { back: string; more: string; hint: string; close: string }> = {
-    it: { back: "Panoramica", more: "Scopri di più", hint: "Clicca sui punti dell'immagine per scoprire di più", close: "Chiudi" },
-    en: { back: "Overview", more: "Learn more", hint: "Click the points on the image to learn more", close: "Close" },
-    fr: { back: "Vue d'ensemble", more: "En savoir plus", hint: "Cliquez sur les points de l'image pour en savoir plus", close: "Fermer" },
+const TEXT: Record<string, { back: string; more: string; hint: string; close: string; map: string }> = {
+    it: { back: "Panoramica", more: "Scopri di più", hint: "Clicca sui punti dell'immagine per scoprire di più", close: "Chiudi", map: "Torna all'immagine" },
+    en: { back: "Overview", more: "Learn more", hint: "Click the points on the image to learn more", close: "Close", map: "Back to the image" },
+    fr: { back: "Vue d'ensemble", more: "En savoir plus", hint: "Cliquez sur les points de l'image pour en savoir plus", close: "Fermer", map: "Retour à l'image" },
 };
 const labels = computed(() => TEXT[locale.value] ?? TEXT.it!);
 
@@ -141,10 +171,46 @@ function close() {
     activeIndex.value = null;
 }
 
+// "Zoom al clic": the picture moves so the chosen point comes to the
+// centre, as close as the edges allow (no empty border ever shows).
+const ZOOM: Record<string, number> = { none: 1, light: 1.6, medium: 2.1, strong: 2.8 };
+const zoomScale = computed(() => (active.value && !pickMode.value ? ZOOM[props.value.zoom || "medium"] ?? 1 : 1));
+
+function shift(pos: number, z: number): number {
+    return Math.min(0, Math.max(100 - 100 * z, 50 - pos * z));
+}
+
+const zoomStyle = computed(() => {
+    const p = active.value;
+    const z = zoomScale.value;
+    if (!p || z <= 1) return {};
+    return { transform: `translate(${shift(p.x, z)}%, ${shift(p.y, z)}%) scale(${z})` };
+});
+
+// Where the point is on screen (after the zoom), in % of the image.
+const shown = computed(() => {
+    const p = active.value;
+    const z = zoomScale.value;
+    if (!p) return { x: 0, y: 0 };
+    return z > 1 ? { x: shift(p.x, z) + p.x * z, y: shift(p.y, z) + p.y * z } : { x: p.x, y: p.y };
+});
+
+// The detail image fades in once the zoom has arrived.
+const detailShown = ref(false);
+let detailTimer: ReturnType<typeof setTimeout> | undefined;
+watch(activeIndex, () => {
+    detailShown.value = false;
+    clearTimeout(detailTimer);
+    if (active.value?.detail_image?.url) {
+        detailTimer = setTimeout(() => (detailShown.value = true), zoomScale.value > 1 ? 750 : 150);
+    }
+});
+onBeforeUnmount(() => clearTimeout(detailTimer));
+
 // Card on the side of the point that has more room.
 const cardStyle = computed(() => {
-    const p = active.value;
-    if (!p) return {};
+    const p = shown.value;
+    if (!active.value) return {};
     const style: Record<string, string> = {};
     if (p.x > 55) style.right = `${100 - p.x + 3}%`;
     else style.left = `${p.x + 3}%`;
@@ -219,7 +285,12 @@ const LinkOut = defineComponent({
 }
 
 .layout-panel {
-    grid-template-columns: minmax(260px, 0.42fr) 1fr;
+    grid-template-columns: minmax(240px, 0.32fr) 1fr;
+}
+
+/* "Larghezza: Larga": step out of the page's text column (max 1280px). */
+.cms-ii.width-wide {
+    margin-inline: calc(50% - min(640px, 46vw));
 }
 
 /* ---------- Panel ---------- */
@@ -330,9 +401,18 @@ const LinkOut = defineComponent({
     container-type: inline-size;
 }
 
+.ii-zoom {
+    transform-origin: 0 0;
+    transition: transform 0.9s cubic-bezier(0.22, 0.7, 0.2, 1);
+}
+
 .ii-layer {
     position: relative;
     transform-origin: 50% 50%;
+}
+
+.is-zoomed .ii-layer {
+    animation-play-state: paused;
 }
 
 .ii-layer :deep(img) {
@@ -355,7 +435,7 @@ const LinkOut = defineComponent({
     pointer-events: none;
 }
 
-.has-active .ii-layer::after {
+.has-active:not(.is-zoomed) .ii-layer::after {
     background: rgba(2, 7, 18, 0.18);
 }
 
@@ -370,7 +450,14 @@ const LinkOut = defineComponent({
     border-radius: 50%;
     background: transparent;
     transform: translate(-50%, -50%);
+    transition: transform 0.9s cubic-bezier(0.22, 0.7, 0.2, 1), opacity 0.3s ease;
     cursor: pointer;
+}
+
+/* Rings grow with the picture (they stay around their icon); solid dots
+   keep their normal size on screen while zoomed. */
+.marker-dot .ii-hs {
+    transform: translate(-50%, -50%) scale(calc(1 / var(--ii-zoom, 1)));
 }
 
 .size-small {
@@ -440,6 +527,60 @@ const LinkOut = defineComponent({
 
 .has-active .ii-hs:not(.is-active) {
     opacity: 0.6;
+}
+
+.is-zoomed .ii-hs:not(.is-active) {
+    opacity: 0.35;
+}
+
+/* ---------- Detail image (after the zoom) ---------- */
+.ii-detail {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    overflow: hidden;
+    background: #0b1a2b;
+}
+
+.ii-detail :deep(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: ii-settle 1.2s cubic-bezier(0.22, 0.7, 0.2, 1);
+}
+
+.ii-detail-back {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(2, 7, 18, 0.78);
+    color: #ffffff;
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.ii-detail-enter-active,
+.ii-detail-leave-active {
+    transition: opacity 0.45s ease;
+}
+
+.ii-detail-enter-from,
+.ii-detail-leave-to {
+    opacity: 0;
+}
+
+@keyframes ii-settle {
+    0% {
+        transform: scale(1.08);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 /* Name above the point on hover. */
@@ -596,8 +737,14 @@ const LinkOut = defineComponent({
 @media (prefers-reduced-motion: reduce) {
     .has-motion .ii-layer,
     .ii-hs .ii-pulse,
-    .ii-hint-dot {
+    .ii-hint-dot,
+    .ii-detail :deep(img) {
         animation: none;
+    }
+
+    .ii-zoom,
+    .ii-hs {
+        transition: none;
     }
 }
 
