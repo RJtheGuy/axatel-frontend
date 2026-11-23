@@ -6,32 +6,49 @@
         </div>
 
         <!-- "Certificati per riga" from the CMS; extra ones wrap to the next row. -->
-        <div class="grid" :class="`cols-${value.columns || '3'}`">
-            <component
-                :is="item.document?.url ? 'a' : 'div'"
-                v-for="(item, i) in items"
-                :key="i"
-                class="cert"
-                :class="{ 'is-link': item.document?.url }"
-                :href="item.document?.url || undefined"
-                :target="item.document?.url && newTab ? '_blank' : undefined"
-                :rel="item.document?.url && newTab ? 'noopener' : undefined"
-            >
-                <div v-if="item.logo?.url" class="logo">
-                    <ContentResponsiveImage :src="item.logo.url" alt="" width="140" height="80" sizes="140px" />
-                </div>
-                <div class="body">
+        <ul class="grid" :class="`cols-${value.columns || '3'}`">
+            <li v-for="(item, i) in items" :key="i">
+                <!-- With a PDF the whole card is the link, always in a new tab:
+                     the browser shows the certificate with its download button. -->
+                <component
+                    :is="item.document?.url ? 'a' : 'div'"
+                    class="cert"
+                    :class="{ 'is-link': !!item.document?.url }"
+                    :href="item.document?.url || undefined"
+                    :target="item.document?.url ? '_blank' : undefined"
+                    :rel="item.document?.url ? 'noopener' : undefined"
+                >
+                    <!-- Same logo box on every card, so the names line up in a row. -->
+                    <div v-if="anyLogo" class="logo">
+                        <ContentResponsiveImage
+                            v-if="item.logo?.url"
+                            :src="item.logo.url"
+                            :alt="plain(item.title)"
+                            width="160"
+                            height="90"
+                            sizes="160px"
+                        />
+                    </div>
                     <h3 v-html="unwrapParagraph(item.title)"></h3>
                     <div v-if="hasText(item.text)" class="text" v-html="item.text"></div>
-                </div>
-            </component>
-        </div>
+                    <span v-if="item.document?.url" class="open">
+                        {{ labels.open }}
+                        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                            <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span class="sr-only">{{ labels.newTab }}</span>
+                    </span>
+                </component>
+            </li>
+        </ul>
     </section>
 </template>
 
 <script setup lang="ts">
 // "Certificazioni": any number of certificates, a fixed number per row.
-// Each one: logo, name, optional text, optional PDF (the whole card opens it).
+// Each one: logo on top, name, optional text, optional PDF.
+// With a PDF the whole card opens it in a new tab (always, whatever the
+// "Link ai documenti" setting), where it can be read and downloaded.
 // Colours follow the page (--cms-* on light pages, site colours on dark ones).
 import { computed } from "vue";
 import { unwrapParagraph } from "~/composables/richtext";
@@ -51,11 +68,23 @@ const props = defineProps<{
     };
 }>();
 
+const { locale } = useI18n();
+const TEXT: Record<string, { open: string; newTab: string }> = {
+    it: { open: "Apri il certificato (PDF)", newTab: "si apre in una nuova scheda" },
+    en: { open: "Open the certificate (PDF)", newTab: "opens in a new tab" },
+    fr: { open: "Ouvrir le certificat (PDF)", newTab: "s'ouvre dans un nouvel onglet" },
+};
+const labels = computed(() => TEXT[locale.value] ?? TEXT.it!);
+
 const items = computed<Certification[]>(() => (props.value.items ?? []).filter(Boolean));
-const { newTab } = useDocumentLinks();
+const anyLogo = computed(() => items.value.some((item) => !!item.logo?.url));
+
+function plain(html?: string | null): string {
+    return (html ?? "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+}
 
 function hasText(html?: string | null): boolean {
-    return !!html && html.replace(/<[^>]*>/g, "").trim().length > 0;
+    return plain(html).length > 0;
 }
 </script>
 
@@ -93,7 +122,10 @@ h2 {
 .grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 32px 36px;
+    gap: 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
 .cols-1 {
@@ -108,39 +140,52 @@ h2 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.grid > li {
+    display: flex;
+    min-width: 0;
+}
+
+/* Card: logo, name and text stacked and centred; equal height in a row. */
 .cert {
     display: flex;
-    align-items: flex-start;
-    gap: 16px;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
     min-width: 0;
+    padding: 26px 20px 22px;
+    border: 1px solid transparent;
+    border-radius: 12px;
     color: inherit;
+    text-align: center;
     text-decoration: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 
 .logo {
-    flex: 0 0 auto;
-    width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 90px;
+    margin-bottom: 18px;
 }
 
 .logo :deep(img) {
     display: block;
-    width: 100%;
+    width: auto;
     height: auto;
+    max-width: 160px;
     max-height: 90px;
     object-fit: contain;
-    object-position: left top;
-}
-
-.body {
-    min-width: 0;
 }
 
 h3 {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     color: var(--ax-color-accent-red-soft, #ea3f30);
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 600;
     line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 .text :deep(p) {
@@ -150,16 +195,61 @@ h3 {
     line-height: 1.55;
 }
 
-.is-link h3 {
+/* "Apri il certificato" sits at the bottom, so it lines up across a row. */
+.open {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 16px;
+    color: var(--cms-heading, var(--ax-color-text-primary));
+    font-size: 0.85rem;
+    font-weight: 500;
     text-decoration: underline;
     text-decoration-color: transparent;
     text-underline-offset: 3px;
     transition: text-decoration-color 0.18s ease;
 }
 
-.is-link:hover h3,
-.is-link:focus-visible h3 {
+.is-link {
+    cursor: pointer;
+}
+
+.is-link:hover,
+.is-link:focus-visible {
+    border-color: var(--cms-border, rgba(127, 127, 127, 0.28));
+    background: var(--cms-surface, rgba(127, 127, 127, 0.07));
+    transform: translateY(-2px);
+}
+
+.is-link:focus-visible {
+    outline: 2px solid var(--ax-color-accent-red-soft, #ea3f30);
+    outline-offset: 2px;
+}
+
+.is-link:hover .open,
+.is-link:focus-visible .open {
     text-decoration-color: currentColor;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cert {
+        transition: none;
+    }
+
+    .is-link:hover,
+    .is-link:focus-visible {
+        transform: none;
+    }
 }
 
 /* Fewer per row on smaller screens so the text stays readable. */
