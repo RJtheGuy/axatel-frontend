@@ -22,7 +22,7 @@
                 </svg>
             </button>
 
-            <ul :id="trackId" ref="track" class="track" :aria-label="plain(value.heading) || labels.region">
+            <ul :id="trackId" ref="track" class="track" :aria-label="plain(value.heading) || labels.region" @scroll.passive="onScroll">
                 <li v-for="(item, i) in items" :key="i">
                     <!-- With a PDF the whole card (logo, name, text) is the link, always
                          in a new tab: the browser shows the certificate with its download
@@ -35,7 +35,8 @@
                         :target="item.document?.url ? '_blank' : undefined"
                         :rel="item.document?.url ? 'noopener' : undefined"
                     >
-                        <!-- Same logo box on every card, so the names line up in a row. -->
+                        <!-- Logo on the left, name and text on the right (stacked when the
+                             card is narrow). Same logo box on every card, so the names line up. -->
                         <div v-if="anyLogo" class="logo">
                             <ContentResponsiveImage
                                 v-if="item.logo?.url"
@@ -46,9 +47,11 @@
                                 sizes="160px"
                             />
                         </div>
-                        <h3 v-html="unwrapParagraph(item.title)"></h3>
-                        <div v-if="hasText(item.text)" class="text" v-html="item.text"></div>
-                        <span v-if="item.document?.url" class="sr-only">{{ labels.open }}</span>
+                        <div class="body">
+                            <h3 v-html="unwrapParagraph(item.title)"></h3>
+                            <div v-if="hasText(item.text)" class="text" v-html="item.text"></div>
+                            <span v-if="item.document?.url" class="sr-only">{{ labels.open }}</span>
+                        </div>
                     </component>
                 </li>
             </ul>
@@ -66,6 +69,21 @@
                 </svg>
             </button>
         </div>
+
+        <!-- One dot per group of visible certificates; the current group is highlighted. -->
+        <div v-if="canScroll && pageCount > 1" class="dots">
+            <button
+                v-for="p in pageCount"
+                :key="p"
+                type="button"
+                class="dot"
+                :class="{ active: p - 1 === page }"
+                :aria-label="`${labels.page} ${p} / ${pageCount}`"
+                :aria-current="p - 1 === page ? 'true' : undefined"
+                :aria-controls="trackId"
+                @click="goTo(p - 1)"
+            ></button>
+        </div>
     </section>
 </template>
 
@@ -73,7 +91,8 @@
 // "Certificazioni": a row showing N certificates at a time (CMS: "Certificati
 // visibili insieme", default 3). With more certificates than fit, arrows on both
 // sides scroll one card at a time and wrap around at the ends.
-// Each card: logo on top, name, optional text, optional PDF. With a PDF the whole
+// Each card: logo on the left, name and optional text on the right, optional PDF.
+// Dots under the row show which group of certificates is visible and jump to it. With a PDF the whole
 // card opens it in a new tab (always, whatever the "Link ai documenti" setting);
 // screen readers also hear "PDF, new tab".
 // Colours follow the page (--cms-* on light pages, site colours on dark ones).
@@ -96,10 +115,10 @@ const props = defineProps<{
 }>();
 
 const { locale } = useI18n();
-const TEXT: Record<string, { open: string; prev: string; next: string; region: string }> = {
-    it: { open: "(certificato PDF, si apre in una nuova scheda)", prev: "Certificati precedenti", next: "Certificati successivi", region: "Certificazioni" },
-    en: { open: "(PDF certificate, opens in a new tab)", prev: "Previous certificates", next: "Next certificates", region: "Certifications" },
-    fr: { open: "(certificat PDF, s'ouvre dans un nouvel onglet)", prev: "Certificats précédents", next: "Certificats suivants", region: "Certifications" },
+const TEXT: Record<string, { open: string; prev: string; next: string; region: string; page: string }> = {
+    it: { open: "(certificato PDF, si apre in una nuova scheda)", prev: "Certificati precedenti", next: "Certificati successivi", region: "Certificazioni", page: "Gruppo" },
+    en: { open: "(PDF certificate, opens in a new tab)", prev: "Previous certificates", next: "Next certificates", region: "Certifications", page: "Group" },
+    fr: { open: "(certificat PDF, s'ouvre dans un nouvel onglet)", prev: "Certificats précédents", next: "Certificats suivants", region: "Certifications", page: "Groupe" },
 };
 const labels = computed(() => TEXT[locale.value] ?? TEXT.it!);
 
@@ -120,9 +139,41 @@ const track = ref<HTMLElement | null>(null);
 const measured = ref<boolean | null>(null);
 const canScroll = computed(() => measured.value ?? items.value.length > per.value);
 
+// Dots: how many cards fit (measured in the browser, the CMS value before that)
+// and which group is in view.
+const shown = ref<number | null>(null);
+const step = ref(0);
+const page = ref(0);
+const shownNow = computed(() => shown.value ?? per.value);
+const pageCount = computed(() => Math.max(1, Math.ceil(items.value.length / shownNow.value)));
+
 function measure() {
     const el = track.value;
-    if (el) measured.value = el.scrollWidth - el.clientWidth > 2;
+    if (!el) return;
+    measured.value = el.scrollWidth - el.clientWidth > 2;
+    const card = el.querySelector("li");
+    if (card) {
+        const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+        step.value = card.getBoundingClientRect().width + gap;
+        if (step.value > 0) shown.value = Math.max(1, Math.round((el.clientWidth + gap) / step.value));
+    }
+    onScroll();
+}
+
+function onScroll() {
+    const el = track.value;
+    if (!el || !step.value) return;
+    const last = pageCount.value - 1;
+    const end = el.scrollWidth - el.clientWidth;
+    page.value = el.scrollLeft >= end - 2 ? last : Math.min(last, Math.round(el.scrollLeft / (shownNow.value * step.value)));
+}
+
+function goTo(p: number) {
+    const el = track.value;
+    if (!el || !step.value) return;
+    const end = el.scrollWidth - el.clientWidth;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollTo({ left: Math.min(p * shownNow.value * step.value, end), behavior: reduce ? "auto" : "smooth" });
 }
 
 function go(direction: 1 | -1) {
@@ -162,10 +213,11 @@ function hasText(html?: string | null): boolean {
 
 <style scoped>
 .cms-certs {
-    /* Same width rule as "Card pagine": the page's width on light pages,
-       1100px centred on the dark full-width ones. */
+    /* Wider than "Card pagine" (1320px on the dark full-width pages) so three
+       cards fit with the logo beside the text. On light pages the page column
+       is narrower and still sets the width. */
     --gap: 24px;
-    max-width: var(--cms-wide, 1100px);
+    max-width: max(var(--cms-wide, 1100px), 1320px);
     margin: 0 auto;
     padding: 56px 0;
 }
@@ -180,7 +232,8 @@ h2 {
     color: var(--cms-heading, var(--ax-color-text-primary));
     font-size: clamp(1.3rem, 2.4vw, 1.8rem);
     font-weight: 400;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
 .bar {
@@ -197,7 +250,7 @@ h2 {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     align-items: center;
-    gap: 12px;
+    gap: 24px;
 }
 
 .carousel.scrolls {
@@ -212,6 +265,8 @@ h2 {
     grid-auto-flow: column;
     grid-auto-columns: calc((100% - (var(--shown) - 1) * var(--gap)) / var(--shown));
     gap: var(--gap);
+    position: relative; /* keeps the hidden screen-reader text of off-screen cards inside
+                           the row; without it the page could scroll sideways on phones */
     margin: 0;
     padding: 4px 2px 8px;
     list-style: none;
@@ -234,19 +289,21 @@ h2 {
     display: flex;
     min-width: 0;
     scroll-snap-align: start;
+    container-type: inline-size; /* the card's own width decides beside / stacked */
 }
 
+/* Large round grey arrows, red on hover. */
 .arrow {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
+    width: 64px;
+    height: 64px;
     padding: 0;
-    border: 1px solid var(--cms-border, rgba(127, 127, 127, 0.35));
+    border: 1px solid transparent;
     border-radius: 50%;
-    background: transparent;
-    color: var(--cms-heading, var(--ax-color-text-primary));
+    background: var(--cms-arrow-bg, rgba(110, 110, 110, 0.85));
+    color: #fff;
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
@@ -263,54 +320,113 @@ h2 {
     outline-offset: 2px;
 }
 
-/* Card: logo, name and text stacked and centred; equal height in a row. */
+.arrow svg {
+    width: 26px;
+    height: 26px;
+}
+
+/* Card: logo on the left, name and text beside it; equal height in a row. */
 .cert {
     display: flex;
     flex: 1;
-    flex-direction: column;
-    align-items: center;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
     min-width: 0;
-    padding: 26px 20px 22px;
+    padding: 18px 16px;
     border: 1px solid transparent;
     border-radius: 12px;
     color: inherit;
-    text-align: center;
+    text-align: left;
     text-decoration: none;
     transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 
 .logo {
     display: flex;
+    flex: 0 0 140px;
     align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 90px;
-    margin-bottom: 18px;
+    justify-content: flex-start;
+    width: 140px;
+    height: 80px;
 }
 
 .logo :deep(img) {
     display: block;
     width: auto;
     height: auto;
-    max-width: 160px;
-    max-height: 90px;
+    max-width: 140px;
+    max-height: 80px;
     object-fit: contain;
 }
 
+.body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding-top: 2px;
+}
+
 h3 {
-    margin: 0 0 8px;
+    margin: 0;
     color: var(--ax-color-accent-red-soft, #ea3f30);
     font-size: 1.05rem;
-    font-weight: 600;
-    line-height: 1.35;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    line-height: 1.3;
     overflow-wrap: anywhere;
 }
 
 .text :deep(p) {
     margin: 0;
     color: var(--cms-text, var(--ax-color-text-secondary));
-    font-size: 0.93rem;
-    line-height: 1.55;
+    font-size: 0.98rem;
+    line-height: 1.6;
+}
+
+/* Narrow card (phones, or many cards per row): logo on top, all centred. */
+@container (max-width: 320px) {
+    .cert {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .logo {
+        flex-basis: auto;
+        justify-content: center;
+    }
+}
+
+/* Dots under the row. */
+.dots {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 32px;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--cms-border, rgba(127, 127, 127, 0.3));
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.dot.active {
+    background: var(--cms-text, var(--ax-color-text-secondary, #6b6b6b));
+    transform: scale(1.1);
+}
+
+.dot:focus-visible {
+    outline: 2px solid var(--ax-color-accent-red-soft, #ea3f30);
+    outline-offset: 3px;
 }
 
 .is-link {
@@ -352,7 +468,8 @@ h3 {
 
 @media (prefers-reduced-motion: reduce) {
     .cert,
-    .arrow {
+    .arrow,
+    .dot {
         transition: none;
     }
 
@@ -389,8 +506,13 @@ h3 {
     }
 
     .arrow {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
+    }
+
+    .arrow svg {
+        width: 20px;
+        height: 20px;
     }
 }
 </style>
