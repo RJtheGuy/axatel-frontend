@@ -1,88 +1,92 @@
 <template>
-    <section v-if="items.length" class="cms-certs" :style="{ '--per': per }">
-        <div v-if="hasText(value.heading)" class="head">
-            <h2 v-html="unwrapParagraph(value.heading)"></h2>
-            <span class="bar" aria-hidden="true"></span>
-        </div>
+    <!-- Full-width band (like a page banner) even when the page text is narrow,
+         so three certificates fit with the logo beside the text. -->
+    <section v-if="items.length" ref="band" class="cms-certs-band" :style="bandStyle">
+        <div class="cms-certs" :style="{ '--per': per }">
+            <div v-if="hasText(value.heading)" class="head">
+                <h2 v-html="unwrapParagraph(value.heading)"></h2>
+                <span class="bar" aria-hidden="true"></span>
+            </div>
 
-        <!-- "Certificati visibili insieme" from the CMS (default 3). When there are
-             more, the arrows scroll the row both ways, wrapping at the ends;
-             on touch screens the row can also be swiped. -->
-        <div class="carousel" :class="{ scrolls: canScroll }">
-            <button
-                v-show="canScroll"
-                type="button"
-                class="arrow prev"
-                :aria-label="labels.prev"
-                :aria-controls="trackId"
-                @click="go(-1)"
-            >
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                    <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-            </button>
+            <!-- "Certificati visibili insieme" from the CMS (default 3). When there are
+                 more, the arrows scroll the row both ways, wrapping at the ends;
+                 on touch screens the row can also be swiped. -->
+            <div class="carousel" :class="{ scrolls: canScroll }">
+                <button
+                    v-show="canScroll"
+                    type="button"
+                    class="arrow prev"
+                    :aria-label="labels.prev"
+                    :aria-controls="trackId"
+                    @click="go(-1)"
+                >
+                    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                        <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
 
-            <ul :id="trackId" ref="track" class="track" :aria-label="plain(value.heading) || labels.region" @scroll.passive="onScroll">
-                <li v-for="(item, i) in items" :key="i">
-                    <!-- With a PDF the whole card (logo, name, text) is the link, always
-                         in a new tab: the browser shows the certificate with its download
-                         button. No separate button inside the card. -->
-                    <component
-                        :is="item.document?.url ? 'a' : 'div'"
-                        class="cert"
-                        :class="{ 'is-link': !!item.document?.url }"
-                        :href="item.document?.url || undefined"
-                        :target="item.document?.url ? '_blank' : undefined"
-                        :rel="item.document?.url ? 'noopener' : undefined"
-                    >
-                        <!-- Logo on the left, name and text on the right (stacked when the
-                             card is narrow). Same logo box on every card, so the names line up. -->
-                        <div v-if="anyLogo" class="logo">
-                            <ContentResponsiveImage
-                                v-if="item.logo?.url"
-                                :src="item.logo.url"
-                                :alt="plain(item.title)"
-                                width="160"
-                                height="90"
-                                sizes="160px"
-                            />
-                        </div>
-                        <div class="body">
-                            <h3 v-html="unwrapParagraph(item.title)"></h3>
-                            <div v-if="hasText(item.text)" class="text" v-html="item.text"></div>
-                            <span v-if="item.document?.url" class="sr-only">{{ labels.open }}</span>
-                        </div>
-                    </component>
-                </li>
-            </ul>
+                <ul :id="trackId" ref="track" class="track" :aria-label="plain(value.heading) || labels.region" @scroll.passive="onScroll">
+                    <li v-for="(item, i) in items" :key="i">
+                        <!-- With a PDF the whole card (logo, name, text) is the link, always
+                             in a new tab: the browser shows the certificate with its download
+                             button. No separate button inside the card. -->
+                        <component
+                            :is="item.document?.url ? 'a' : 'div'"
+                            class="cert"
+                            :class="{ 'is-link': !!item.document?.url }"
+                            :href="item.document?.url || undefined"
+                            :target="item.document?.url ? '_blank' : undefined"
+                            :rel="item.document?.url ? 'noopener' : undefined"
+                        >
+                            <!-- Logo on the left, name and text on the right (stacked when the
+                                 card is narrow). Same logo box on every card, so the names line up. -->
+                            <div v-if="anyLogo" class="logo">
+                                <ContentResponsiveImage
+                                    v-if="item.logo?.url"
+                                    :src="item.logo.url"
+                                    :alt="plain(item.title)"
+                                    width="160"
+                                    height="90"
+                                    sizes="160px"
+                                />
+                            </div>
+                            <div class="body">
+                                <h3 v-html="unwrapParagraph(item.title)"></h3>
+                                <div v-if="hasText(item.text)" class="text" v-html="item.text"></div>
+                                <span v-if="item.document?.url" class="sr-only">{{ labels.open }}</span>
+                            </div>
+                        </component>
+                    </li>
+                </ul>
 
-            <button
-                v-show="canScroll"
-                type="button"
-                class="arrow next"
-                :aria-label="labels.next"
-                :aria-controls="trackId"
-                @click="go(1)"
-            >
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                    <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-            </button>
-        </div>
+                <button
+                    v-show="canScroll"
+                    type="button"
+                    class="arrow next"
+                    :aria-label="labels.next"
+                    :aria-controls="trackId"
+                    @click="go(1)"
+                >
+                    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                        <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
 
-        <!-- One dot per group of visible certificates; the current group is highlighted. -->
-        <div v-if="canScroll && pageCount > 1" class="dots">
-            <button
-                v-for="p in pageCount"
-                :key="p"
-                type="button"
-                class="dot"
-                :class="{ active: p - 1 === page }"
-                :aria-label="`${labels.page} ${p} / ${pageCount}`"
-                :aria-current="p - 1 === page ? 'true' : undefined"
-                :aria-controls="trackId"
-                @click="goTo(p - 1)"
-            ></button>
+            <!-- One dot per group of visible certificates; the current group is highlighted. -->
+            <div v-if="canScroll && pageCount > 1" class="dots">
+                <button
+                    v-for="p in pageCount"
+                    :key="p"
+                    type="button"
+                    class="dot"
+                    :class="{ active: p - 1 === page }"
+                    :aria-label="`${labels.page} ${p} / ${pageCount}`"
+                    :aria-current="p - 1 === page ? 'true' : undefined"
+                    :aria-controls="trackId"
+                    @click="goTo(p - 1)"
+                ></button>
+            </div>
         </div>
     </section>
 </template>
@@ -92,8 +96,8 @@
 // visibili insieme", default 3). With more certificates than fit, arrows on both
 // sides scroll one card at a time and wrap around at the ends.
 // Each card: logo on the left, name and optional text on the right, optional PDF.
-// Dots under the row show which group of certificates is visible and jump to it. With a PDF the whole
-// card opens it in a new tab (always, whatever the "Link ai documenti" setting);
+// Dots under the row show which group of certificates is visible and jump to it.
+// With a PDF the whole card opens it in a new tab (always, whatever the "Link ai documenti" setting);
 // screen readers also hear "PDF, new tab".
 // Colours follow the page (--cms-* on light pages, site colours on dark ones).
 import { computed, onBeforeUnmount, onMounted, ref, useId } from "vue";
@@ -133,6 +137,24 @@ const per = computed(() => {
 
 const trackId = `certs-${useId()}`;
 const track = ref<HTMLElement | null>(null);
+
+// Full-width band: in the browser the band is stretched exactly from the left to
+// the right edge of the window (scrollbar excluded), whatever column it sits in.
+// Before that, CSS does the same approximately (100vw, centred).
+const band = ref<HTMLElement | null>(null);
+const bleed = ref<{ left: number; width: number } | null>(null);
+const bandStyle = computed(() =>
+    bleed.value ? { marginLeft: `${-bleed.value.left}px`, width: `${bleed.value.width}px` } : undefined,
+);
+
+function measureBand() {
+    const el = band.value;
+    const parent = el?.parentElement;
+    if (!el || !parent) return;
+    const cs = getComputedStyle(parent);
+    const left = parent.getBoundingClientRect().left + (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0);
+    bleed.value = { left, width: document.documentElement.clientWidth };
+}
 
 // Before the page runs in the browser: arrows if there are more than fit on a
 // wide screen. Afterwards: measured, so phones (fewer per row) get them too.
@@ -193,14 +215,25 @@ function go(direction: 1 | -1) {
 }
 
 let observer: ResizeObserver | null = null;
+let pageObserver: ResizeObserver | null = null;
 onMounted(() => {
+    measureBand();
     measure();
-    if (typeof ResizeObserver !== "undefined" && track.value) {
-        observer = new ResizeObserver(measure);
-        observer.observe(track.value);
+    if (typeof ResizeObserver !== "undefined") {
+        if (track.value) {
+            observer = new ResizeObserver(measure);
+            observer.observe(track.value);
+        }
+        // window resized, scrollbar appearing, sidebar opening…: band follows
+        pageObserver = new ResizeObserver(measureBand);
+        pageObserver.observe(document.documentElement);
+        if (band.value?.parentElement) pageObserver.observe(band.value.parentElement);
     }
 });
-onBeforeUnmount(() => observer?.disconnect());
+onBeforeUnmount(() => {
+    observer?.disconnect();
+    pageObserver?.disconnect();
+});
 
 function plain(html?: string | null): string {
     return (html ?? "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
@@ -212,12 +245,18 @@ function hasText(html?: string | null): boolean {
 </script>
 
 <style scoped>
+/* Band across the whole window; light grey so the section reads as its own strip. */
+.cms-certs-band {
+    box-sizing: border-box;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    padding: 0 clamp(16px, 3vw, 40px);
+    background: var(--cms-certs-band, rgba(127, 127, 127, 0.07));
+}
+
 .cms-certs {
-    /* Wider than "Card pagine" (1320px on the dark full-width pages) so three
-       cards fit with the logo beside the text. On light pages the page column
-       is narrower and still sets the width. */
     --gap: 24px;
-    max-width: max(var(--cms-wide, 1100px), 1320px);
+    max-width: 1320px;
     margin: 0 auto;
     padding: 56px 0;
 }
@@ -344,10 +383,9 @@ h2 {
 
 .logo {
     display: flex;
-    flex: 0 0 140px;
-    align-items: center;
+    flex: 0 0 clamp(96px, 38%, 140px);
+    align-items: flex-start; /* top of the logo in line with the name */
     justify-content: flex-start;
-    width: 140px;
     height: 80px;
 }
 
@@ -355,7 +393,7 @@ h2 {
     display: block;
     width: auto;
     height: auto;
-    max-width: 140px;
+    max-width: 100%;
     max-height: 80px;
     object-fit: contain;
 }
@@ -376,7 +414,23 @@ h3 {
     font-weight: 700;
     letter-spacing: 0.03em;
     line-height: 1.3;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    /* a long name: at most 2 lines */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+/* A long description is cut after 4 lines, so one card can't make the whole
+   row tall. The full text stays in the CMS (and in the page for search engines). */
+.text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
 }
 
 .text :deep(p) {
@@ -387,7 +441,7 @@ h3 {
 }
 
 /* Narrow card (phones, or many cards per row): logo on top, all centred. */
-@container (max-width: 320px) {
+@container (max-width: 260px) {
     .cert {
         flex-direction: column;
         align-items: center;
@@ -396,6 +450,8 @@ h3 {
 
     .logo {
         flex-basis: auto;
+        width: 100%;
+        align-items: center;
         justify-content: center;
     }
 }
