@@ -20,7 +20,7 @@
                      Both are kept in the address (?categoria=…&q=…) so a filtered list
                      can be shared, as on Casi di successo. -->
                 <div v-if="items.length" class="prod-tools">
-                    <div v-if="categoryList.length > 1" class="cat-bar" role="group" :aria-label="L.filterLabel">
+                    <div v-if="categoryList.length" class="cat-bar" role="group" :aria-label="L.filterLabel">
                         <button type="button" class="cat" :aria-pressed="!activeCategory" @click="setCategory('')">
                             {{ L.all }}
                             <span class="count" aria-hidden="true">{{ items.length }}</span>
@@ -59,40 +59,42 @@
                     <p v-if="isFiltering" class="result-count" aria-live="polite">{{ resultLabel }}</p>
                 </div>
 
-                <div v-if="isFiltering && !filtered.length" class="no-match">
+                <div v-if="isFiltering && !filtered.length && query.trim()" class="no-match">
                     <p>{{ L.noMatch }}</p>
                     <button type="button" @click="resetFilters">{{ L.showAll }}</button>
                 </div>
 
-                <section v-for="group in groups" :key="group.key" class="prod-group" :aria-labelledby="group.label ? `cat-${group.key}` : undefined">
-                    <h2 v-if="group.label" :id="`cat-${group.key}`">{{ group.label }}</h2>
-                    <div class="prod-grid" :class="gridClass">
-                        <NuxtLink
-                            v-for="item in group.items"
-                            :key="item.slug"
-                            :to="localePath(`/prodotti/${item.slug}`)"
-                            class="prod-card"
-                        >
-                            <span class="media">
-                                <ContentResponsiveImage
-                                    v-if="item.image"
-                                    :src="item.image.url"
-                                    :alt="item.image.alt || item.title"
-                                    :width="400"
-                                    :height="250"
-                                    sizes="100vw sm:50vw lg:400px"
-                                />
-                                <span v-else class="placeholder" aria-hidden="true">{{ item.title }}</span>
-                            </span>
-                            <span class="body">
-                                <small v-if="item.codes.length">{{ item.codes.join(" · ") }}</small>
-                                <strong>{{ item.title }}</strong>
-                                <span class="text">{{ item.tagline }}</span>
-                                <span class="more">{{ t("products.viewProduct") }} <span aria-hidden="true">→</span></span>
-                            </span>
-                        </NuxtLink>
-                    </div>
-                </section>
+                <div v-if="activeCategory && !query.trim() && !filtered.length" class="no-match">
+                    <p>{{ L.emptyCategory }}</p>
+                    <button type="button" @click="resetFilters">{{ L.showAll }}</button>
+                </div>
+
+                <div v-if="visible.length" class="prod-grid" :class="gridClass">
+                    <NuxtLink
+                        v-for="item in visible"
+                        :key="item.slug"
+                        :to="localePath(`/prodotti/${item.slug}`)"
+                        class="prod-card"
+                    >
+                        <span class="media">
+                            <ContentResponsiveImage
+                                v-if="item.image"
+                                :src="item.image.url"
+                                :alt="item.image.alt || item.title"
+                                :width="400"
+                                :height="225"
+                                sizes="100vw sm:50vw lg:400px"
+                            />
+                            <span v-else class="placeholder" aria-hidden="true">{{ item.title }}</span>
+                        </span>
+                        <span class="body">
+                            <small v-if="item.codes.length" class="codes">{{ item.codes.join(" · ") }}</small>
+                            <strong>{{ item.title }}</strong>
+                            <span class="text">{{ item.tagline }}</span>
+                            <span class="more">{{ t("products.viewProduct") }} <span aria-hidden="true">→</span></span>
+                        </span>
+                    </NuxtLink>
+                </div>
             </section>
         </div>
     </main>
@@ -100,11 +102,11 @@
 
 <script setup lang="ts">
 /**
- * Product catalogue (/prodotti), grouped by category.
+ * Product catalogue (/prodotti): one grid, filtered by the category bar and the search.
  * Content: CMS → Pagine → Prodotti (one child page per product).
- * Layout (update 58), set on the Prodotti page in the CMS ("Disposizione
- * delle card"): grouped by category or one grid, the order of the groups,
- * cards per row. The order of the products is the page order in the CMS.
+ * Set on the Prodotti page in the CMS: which categories the bar shows and in
+ * what order ("Ordine delle categorie") and the cards per row. The order of the
+ * products is the page order in the CMS. (Grouping into sections: removed, update 74.)
  */
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useSeoMeta } from "#app";
@@ -120,9 +122,9 @@ const router = useRouter();
 const CATEGORY_ORDER = ["lavoratori", "idrogeologico", "ambiente", "strutturale", "predittiva", "stradale", "lorawan", "master-slave", "edili"];
 
 const TEXT: Record<string, Record<string, string>> = {
-    it: { all: "Tutti", filterLabel: "Filtra per categoria", searchLabel: "Cerca un prodotto", placeholder: "Cerca per nome, codice o modello…", clear: "Cancella la ricerca", one: "1 prodotto", many: "{n} prodotti", noMatch: "Nessun prodotto corrisponde alla ricerca.", showAll: "Mostra tutti i prodotti" },
-    en: { all: "All", filterLabel: "Filter by category", searchLabel: "Search for a product", placeholder: "Search by name, code or model…", clear: "Clear the search", one: "1 product", many: "{n} products", noMatch: "No product matches your search.", showAll: "Show all products" },
-    fr: { all: "Tous", filterLabel: "Filtrer par catégorie", searchLabel: "Rechercher un produit", placeholder: "Rechercher par nom, code ou modèle…", clear: "Effacer la recherche", one: "1 produit", many: "{n} produits", noMatch: "Aucun produit ne correspond à la recherche.", showAll: "Afficher tous les produits" },
+    it: { all: "Tutti", filterLabel: "Filtra per categoria", searchLabel: "Cerca un prodotto", placeholder: "Cerca per nome, codice o modello…", clear: "Cancella la ricerca", one: "1 prodotto", many: "{n} prodotti", noMatch: "Nessun prodotto corrisponde alla ricerca.", showAll: "Mostra tutti i prodotti", emptyCategory: "Nessun prodotto in questa categoria per ora." },
+    en: { all: "All", filterLabel: "Filter by category", searchLabel: "Search for a product", placeholder: "Search by name, code or model…", clear: "Clear the search", one: "1 product", many: "{n} products", noMatch: "No product matches your search.", showAll: "Show all products", emptyCategory: "No products in this category yet." },
+    fr: { all: "Tous", filterLabel: "Filtrer par catégorie", searchLabel: "Rechercher un produit", placeholder: "Rechercher par nom, code ou modèle…", clear: "Effacer la recherche", one: "1 produit", many: "{n} produits", noMatch: "Aucun produit ne correspond à la recherche.", showAll: "Afficher tous les produits", emptyCategory: "Aucun produit dans cette catégorie pour le moment." },
 };
 const L = computed(() => TEXT[locale.value] ?? TEXT.it!);
 
@@ -171,12 +173,22 @@ function labelOf(key: string): string {
     return key && te(`products.categories.${key}`) ? t(`products.categories.${key}`) : "";
 }
 
-// The bar: only categories that have at least one product.
+type Display = { layout?: string; columns?: string; category_order?: string[] };
+const display = computed<Display>(() => (indexPage.value?.display as Display) || {});
+
+// The bar (update 74):
+// - the categories listed in "Ordine delle categorie" on the Prodotti page, in that
+//   order, even before a product has been put in them (count 0);
+// - then any other category that products use, so no product is ever unreachable;
+// - nothing chosen there: every category that has products, in the standard order.
 const categoryList = computed(() => {
-    const keys = cmsCategories.value.length ? cmsCategories.value.map((c) => c.key) : CATEGORY_ORDER;
-    return keys
+    const valid = new Set(cmsCategories.value.length ? cmsCategories.value.map((c) => c.key) : CATEGORY_ORDER);
+    const chosen = [...new Set((display.value.category_order || []).filter((k) => typeof k === "string" && valid.has(k)))];
+    const standard = cmsCategories.value.length ? cmsCategories.value.map((c) => c.key) : CATEGORY_ORDER;
+    const used = standard.filter((k) => !chosen.includes(k) && items.value.some((i) => i.category === k));
+    return [...chosen, ...used]
         .map((key) => ({ key, label: labelOf(key), count: items.value.filter((i) => i.category === key).length }))
-        .filter((c) => c.count > 0 && c.label);
+        .filter((c) => c.label);
 });
 
 const activeCategory = computed(() => {
@@ -236,30 +248,12 @@ function resetFilters(): void {
     router.replace({ query: next });
 }
 
-type Display = { layout?: string; columns?: string; category_order?: string[] };
-const display = computed<Display>(() => (indexPage.value?.display as Display) || {});
+// Cards per row from the CMS ("Disposizione delle card").
 const gridClass = computed(() => (["2", "3", "4"].includes(display.value.columns || "") ? `cols-${display.value.columns}` : ""));
 
-const groups = computed(() => {
-    // A category or a search chosen: one grid with the results, no group titles.
-    if (isFiltering.value) {
-        return filtered.value.length ? [{ key: "risultati", label: "", items: filtered.value }] : [];
-    }
-    if (display.value.layout === "single") {
-        return items.value.length ? [{ key: "tutti", label: "", items: items.value }] : [];
-    }
-    const chosen = (display.value.category_order || []).filter((c) => typeof c === "string" && c);
-    const order = cmsCategories.value.length ? cmsCategories.value.map((c) => c.key) : CATEGORY_ORDER;
-    const standard = [...new Set([...chosen, ...order])];
-    const keys = [...standard, ...new Set(items.value.map((i) => i.category).filter((c) => !standard.includes(c)))];
-    return keys
-        .map((key) => ({
-            key: key || "altro",
-            label: labelOf(key) || t("products.title"),
-            items: items.value.filter((i) => i.category === key),
-        }))
-        .filter((g) => g.items.length);
-});
+// One grid, always in the page order of the CMS (update 74): choosing categories
+// no longer splits the page into sections; the bar does the filtering.
+const visible = computed(() => (isFiltering.value ? filtered.value : items.value));
 
 useSeoMeta({
     title: () => `${t("products.title")} | Axatel`,
@@ -305,10 +299,11 @@ useSeoMeta({
         linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f5f8fb 100%);
 }
 
+/* Same width as Casi di successo (update 74): 1180px on large screens. */
 .prod-shell {
-    max-width: 1180px;
+    width: min(1180px, 90vw);
     margin: 0 auto;
-    padding: 7vh 5vw 8vh;
+    padding: 7vh 0 8vh;
 }
 
 .back-link {
@@ -536,21 +531,12 @@ useSeoMeta({
     white-space: nowrap;
 }
 
-.prod-group {
-    margin-top: 36px;
-}
-
-.prod-group h2 {
-    margin: 0 0 14px;
-    color: #0b355b;
-    font-size: 1.35rem;
-    font-weight: 500;
-}
-
+/* Cards: same look as Casi di successo (update 74). */
 .prod-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(max(260px, calc((100% - 36px) / 3)), 1fr));
     gap: 18px;
+    margin-top: 28px;
 }
 
 /* Cards per row chosen in the CMS (update 58): at most 2 on tablets, 1 on phones. */
@@ -567,46 +553,73 @@ useSeoMeta({
 }
 
 @media (max-width: 639px) {
+    .prod-grid,
     .prod-grid.cols-2,
     .prod-grid.cols-3,
     .prod-grid.cols-4 { grid-template-columns: minmax(0, 1fr); }
 }
 
 .prod-card {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: 190px 1fr;
     overflow: hidden;
     border: 1px solid rgba(11, 53, 91, 0.14);
-    border-radius: 16px;
-    background: #fff;
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.82);
     color: inherit;
     text-decoration: none;
     box-shadow: 0 14px 32px rgba(17, 48, 78, 0.08);
-    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+    transition: transform 0.22s ease, border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
 }
 
 .prod-card:hover,
 .prod-card:focus-visible {
-    transform: translateY(-4px);
+    transform: translateY(-5px);
     border-color: rgba(197, 35, 23, 0.48);
+    background: #fff;
     box-shadow: 0 22px 44px rgba(17, 48, 78, 0.16);
 }
 
-.media {
-    display: grid;
-    place-items: center;
-    aspect-ratio: 16 / 10;
-    padding: 18px;
-    background: linear-gradient(160deg, #f1f6fb 0%, #e6eef6 100%);
+.prod-card:focus-visible {
+    outline: 2px solid #c52317;
+    outline-offset: 2px;
 }
 
-.media img {
+.media {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    background: #eaf1f6;
+}
+
+/* The red line under the picture, as on Casi di successo. */
+.media::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #c52317 0 22%, rgba(197, 35, 23, 0.2) 22% 100%);
+}
+
+.media :deep(img) {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    display: block;
+    object-fit: cover;
+    transition: transform 0.35s ease;
+}
+
+.prod-card:hover .media :deep(img) {
+    transform: scale(1.04);
 }
 
 .placeholder {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 18px;
     color: rgba(11, 53, 91, 0.35);
     font-size: 1.4rem;
     font-weight: 600;
@@ -616,23 +629,21 @@ useSeoMeta({
 
 .body {
     display: flex;
-    flex: 1;
     flex-direction: column;
-    gap: 6px;
-    padding: 20px 22px 22px;
+    gap: 10px;
+    padding: 18px;
 }
 
-.body small {
+.body .codes {
     color: #c52317;
-    font-size: 0.7rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
 }
 
 .body strong {
     color: #0b355b;
-    font-size: 1.14rem;
+    font-size: 1.18rem;
+    line-height: 1.22;
 }
 
 .text {
@@ -642,7 +653,6 @@ useSeoMeta({
 }
 
 .more {
-    margin-top: 8px;
     color: #c52317;
     font-size: 0.86rem;
     font-weight: 700;
@@ -651,6 +661,10 @@ useSeoMeta({
 @media (max-width: 768px) {
     .prod-hero {
         min-height: calc(var(--ax-navbar-height, 78px) + 28svh);
+    }
+
+    .prod-shell {
+        padding: 5vh 0 6vh;
     }
 }
 </style>
