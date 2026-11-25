@@ -76,7 +76,7 @@
                         :to="localePath(`/prodotti/${item.slug}`)"
                         class="prod-card"
                     >
-                        <span class="media">
+                        <span class="media" :style="mediaStyle(item)">
                             <ContentResponsiveImage
                                 v-if="item.image"
                                 :src="item.image.url"
@@ -158,6 +158,10 @@ const items = computed(() =>
         category: p.category || "",
         categoryLabel: (p.category_label || "") as string,
         image: p.cover_image as { url: string; alt?: string } | null,
+        // Card picture settings of this product (update 74): "" / null = the Prodotti page's.
+        fit: (["cover", "contain"].includes(p.card_image?.fit) ? p.card_image.fit : "") as string,
+        width: Number(p.card_image?.width) || 0,
+        height: Number(p.card_image?.height) || 0,
     }))
 );
 
@@ -173,7 +177,7 @@ function labelOf(key: string): string {
     return key && te(`products.categories.${key}`) ? t(`products.categories.${key}`) : "";
 }
 
-type Display = { layout?: string; columns?: string; category_order?: string[] };
+type Display = { layout?: string; columns?: string; category_order?: string[]; image_height?: number | null; image_fit?: string };
 const display = computed<Display>(() => (indexPage.value?.display as Display) || {});
 
 // The bar (update 74):
@@ -250,6 +254,27 @@ function resetFilters(): void {
 
 // Cards per row from the CMS ("Disposizione delle card").
 const gridClass = computed(() => (["2", "3", "4"].includes(display.value.columns || "") ? `cols-${display.value.columns}` : ""));
+
+// Card pictures (update 74), set in the CMS:
+// - height of the picture space, in % of the card width (Prodotti page; empty = 190px);
+// - fill the space or show the whole picture (Prodotti page, can be changed per product);
+// - width and height of the picture inside its space, in % (per product; empty = 100).
+//   Taller than the space: the top of the picture shows, the rest is cut off.
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+const defaultFit = computed(() => (display.value.image_fit === "contain" ? "contain" : "cover"));
+function mediaStyle(item: { fit: string; width: number; height: number }): Record<string, string> {
+    const style: Record<string, string> = {};
+    const height = Number(display.value.image_height) || 0;
+    if (height) {
+        style.height = "auto";
+        style.aspectRatio = `100 / ${clamp(height, 30, 100)}`;
+    }
+    if (item.width) style["--img-w"] = `${clamp(item.width, 20, 300)}%`;
+    if (item.height) style["--img-h"] = `${clamp(item.height, 20, 300)}%`;
+    if (item.height > 100) style.alignItems = "start";
+    style["--img-fit"] = item.fit || defaultFit.value;
+    return style;
+}
 
 // One grid, always in the page order of the CMS (update 74): choosing categories
 // no longer splits the page into sections; the bar does the filtering.
@@ -561,7 +586,7 @@ useSeoMeta({
 
 .prod-card {
     display: grid;
-    grid-template-rows: 190px 1fr;
+    grid-template-rows: auto 1fr;
     overflow: hidden;
     border: 1px solid rgba(11, 53, 91, 0.14);
     border-radius: 0;
@@ -587,12 +612,14 @@ useSeoMeta({
 
 .media {
     position: relative;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 190px; /* changed by "Altezza delle immagini nelle card" in the CMS */
     overflow: hidden;
     background: #eaf1f6;
 }
 
-/* The red line under the picture, as on Casi di successo. */
 .media::after {
     content: "";
     position: absolute;
@@ -604,10 +631,12 @@ useSeoMeta({
 }
 
 .media :deep(img) {
-    width: 100%;
-    height: 100%;
+    width: var(--img-w, 100%);
+    height: var(--img-h, 100%);
+    max-width: none;
+    flex: 0 0 auto;
     display: block;
-    object-fit: cover;
+    object-fit: var(--img-fit, cover);
     transition: transform 0.35s ease;
 }
 
