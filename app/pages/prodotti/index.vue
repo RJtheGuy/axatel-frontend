@@ -12,7 +12,57 @@
                 <p class="lead">{{ lead }}</p>
                 <LayoutTranslationNotice v-if="hasUntranslated" />
 
-                <p v-if="!groups.length" class="empty">{{ t("products.empty") }}</p>
+                <p v-if="!items.length" class="empty">{{ t("products.empty") }}</p>
+
+                <!-- Category bar (update 73): one entry per category that has products,
+                     the number of products shown on hover; a click shows only that
+                     category. Search: name, codes, models and description, as you type.
+                     Both are kept in the address (?categoria=…&q=…) so a filtered list
+                     can be shared, as on Casi di successo. -->
+                <div v-if="items.length" class="prod-tools">
+                    <div v-if="categoryList.length > 1" class="cat-bar" role="group" :aria-label="L.filterLabel">
+                        <button type="button" class="cat" :aria-pressed="!activeCategory" @click="setCategory('')">
+                            {{ L.all }}
+                            <span class="count" aria-hidden="true">{{ items.length }}</span>
+                            <span class="sr-only">({{ items.length }})</span>
+                        </button>
+                        <button
+                            v-for="c in categoryList"
+                            :key="c.key"
+                            type="button"
+                            class="cat"
+                            :aria-pressed="activeCategory === c.key"
+                            @click="setCategory(c.key)"
+                        >
+                            {{ c.label }}
+                            <span class="count" aria-hidden="true">{{ c.count }}</span>
+                            <span class="sr-only">({{ c.count }})</span>
+                        </button>
+                    </div>
+
+                    <div class="search">
+                        <label class="sr-only" for="prod-search">{{ L.searchLabel }}</label>
+                        <span class="search-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" /><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+                        </span>
+                        <input
+                            id="prod-search"
+                            v-model="query"
+                            type="search"
+                            :placeholder="L.placeholder"
+                            autocomplete="off"
+                            enterkeyhint="search"
+                        />
+                        <button v-if="query" type="button" class="clear" :aria-label="L.clear" @click="query = ''">×</button>
+                    </div>
+
+                    <p v-if="isFiltering" class="result-count" aria-live="polite">{{ resultLabel }}</p>
+                </div>
+
+                <div v-if="isFiltering && !filtered.length" class="no-match">
+                    <p>{{ L.noMatch }}</p>
+                    <button type="button" @click="resetFilters">{{ L.showAll }}</button>
+                </div>
 
                 <section v-for="group in groups" :key="group.key" class="prod-group" :aria-labelledby="group.label ? `cat-${group.key}` : undefined">
                     <h2 v-if="group.label" :id="`cat-${group.key}`">{{ group.label }}</h2>
@@ -35,7 +85,7 @@
                                 <span v-else class="placeholder" aria-hidden="true">{{ item.title }}</span>
                             </span>
                             <span class="body">
-                                <small v-if="item.model">{{ item.model }}</small>
+                                <small v-if="item.codes.length">{{ item.codes.join(" · ") }}</small>
                                 <strong>{{ item.title }}</strong>
                                 <span class="text">{{ item.tagline }}</span>
                                 <span class="more">{{ t("products.viewProduct") }} <span aria-hidden="true">→</span></span>
@@ -56,15 +106,25 @@
  * delle card"): grouped by category or one grid, the order of the groups,
  * cards per row. The order of the products is the page order in the CMS.
  */
-import { computed } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useSeoMeta } from "#app";
 import ArticleParticleHero from "../../components/articles/ArticleParticleHero.vue";
 
 const { t, te, locale } = useI18n();
 const localePath = useLocalePath();
 const { getPage, getPageBySlug } = useCms();
+const route = useRoute();
+const router = useRouter();
 
-const CATEGORY_ORDER = ["sistemi", "sensori", "piattaforme", "comunicazione"];
+// Only used if the CMS sends no category list (older backend).
+const CATEGORY_ORDER = ["lavoratori", "idrogeologico", "ambiente", "strutturale", "predittiva", "stradale", "lorawan", "master-slave", "edili"];
+
+const TEXT: Record<string, Record<string, string>> = {
+    it: { all: "Tutti", filterLabel: "Filtra per categoria", searchLabel: "Cerca un prodotto", placeholder: "Cerca per nome, codice o modello…", clear: "Cancella la ricerca", one: "1 prodotto", many: "{n} prodotti", noMatch: "Nessun prodotto corrisponde alla ricerca.", showAll: "Mostra tutti i prodotti" },
+    en: { all: "All", filterLabel: "Filter by category", searchLabel: "Search for a product", placeholder: "Search by name, code or model…", clear: "Clear the search", one: "1 product", many: "{n} products", noMatch: "No product matches your search.", showAll: "Show all products" },
+    fr: { all: "Tous", filterLabel: "Filtrer par catégorie", searchLabel: "Rechercher un produit", placeholder: "Rechercher par nom, code ou modèle…", clear: "Effacer la recherche", one: "1 produit", many: "{n} produits", noMatch: "Aucun produit ne correspond à la recherche.", showAll: "Afficher tous les produits" },
+};
+const L = computed(() => TEXT[locale.value] ?? TEXT.it!);
 
 const { data: list } = await useAsyncData(
     () => `prodotti-list-${locale.value}`,
@@ -89,28 +149,113 @@ const items = computed(() =>
     ((list.value?.items ?? []) as any[]).map((p) => ({
         slug: p.meta?.slug as string,
         title: p.title as string,
-        model: p.model_code || "",
+        // Main code + "Altri codici prodotto" (update 73); older backend: the one code.
+        codes: (Array.isArray(p.product_codes) ? p.product_codes : [p.model_code]).filter(Boolean) as string[],
+        models: ((p.available_models ?? []) as Array<{ value: string }>).map((b) => b?.value).filter(Boolean) as string[],
         tagline: p.tagline || "",
         category: p.category || "",
+        categoryLabel: (p.category_label || "") as string,
         image: p.cover_image as { url: string; alt?: string } | null,
     }))
 );
+
+// Categories in the order set in the CMS, with their name in this language.
+const cmsCategories = computed<Array<{ key: string; label: string }>>(() =>
+    Array.isArray(indexPage.value?.categories) ? indexPage.value.categories : []
+);
+function labelOf(key: string): string {
+    const fromCms = cmsCategories.value.find((c) => c.key === key)?.label;
+    if (fromCms) return fromCms;
+    const fromItem = items.value.find((i) => i.category === key)?.categoryLabel;
+    if (fromItem) return fromItem;
+    return key && te(`products.categories.${key}`) ? t(`products.categories.${key}`) : "";
+}
+
+// The bar: only categories that have at least one product.
+const categoryList = computed(() => {
+    const keys = cmsCategories.value.length ? cmsCategories.value.map((c) => c.key) : CATEGORY_ORDER;
+    return keys
+        .map((key) => ({ key, label: labelOf(key), count: items.value.filter((i) => i.category === key).length }))
+        .filter((c) => c.count > 0 && c.label);
+});
+
+const activeCategory = computed(() => {
+    const q = String(route.query.categoria ?? "");
+    return categoryList.value.some((c) => c.key === q) ? q : "";
+});
+
+function setCategory(key: string): void {
+    const query = { ...route.query };
+    if (key) query.categoria = key;
+    else delete query.categoria;
+    router.replace({ query });
+}
+
+// Search: as you type; written to the address after a short pause.
+const query = ref(String(route.query.q ?? ""));
+let urlTimer: ReturnType<typeof setTimeout> | undefined;
+watch(query, (value) => {
+    clearTimeout(urlTimer);
+    urlTimer = setTimeout(() => {
+        const next = { ...route.query };
+        if (value.trim()) next.q = value.trim();
+        else delete next.q;
+        router.replace({ query: next });
+    }, 350);
+});
+watch(() => route.query.q, (q) => {
+    const value = String(q ?? "");
+    if (value !== query.value.trim()) query.value = value;
+});
+onBeforeUnmount(() => clearTimeout(urlTimer));
+
+const normalize = (value: string): string =>
+    value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("it").trim();
+
+const isFiltering = computed(() => Boolean(activeCategory.value || query.value.trim()));
+
+const filtered = computed(() => {
+    const words = normalize(query.value).split(/\s+/).filter(Boolean);
+    return items.value.filter((i) => {
+        if (activeCategory.value && i.category !== activeCategory.value) return false;
+        if (!words.length) return true;
+        const text = normalize([i.title, i.tagline, ...i.codes, ...i.models, i.categoryLabel].join(" "));
+        return words.every((w) => text.includes(w));
+    });
+});
+
+const resultLabel = computed(() =>
+    filtered.value.length === 1 ? L.value.one : L.value.many.replace("{n}", String(filtered.value.length))
+);
+
+function resetFilters(): void {
+    query.value = "";
+    const next = { ...route.query };
+    delete next.categoria;
+    delete next.q;
+    router.replace({ query: next });
+}
 
 type Display = { layout?: string; columns?: string; category_order?: string[] };
 const display = computed<Display>(() => (indexPage.value?.display as Display) || {});
 const gridClass = computed(() => (["2", "3", "4"].includes(display.value.columns || "") ? `cols-${display.value.columns}` : ""));
 
 const groups = computed(() => {
+    // A category or a search chosen: one grid with the results, no group titles.
+    if (isFiltering.value) {
+        return filtered.value.length ? [{ key: "risultati", label: "", items: filtered.value }] : [];
+    }
     if (display.value.layout === "single") {
         return items.value.length ? [{ key: "tutti", label: "", items: items.value }] : [];
     }
     const chosen = (display.value.category_order || []).filter((c) => typeof c === "string" && c);
-    const standard = [...new Set([...chosen, ...CATEGORY_ORDER])];
+    const order = cmsCategories.value.length ? cmsCategories.value.map((c) => c.key) : CATEGORY_ORDER;
+    const standard = [...new Set([...chosen, ...order])];
     const keys = [...standard, ...new Set(items.value.map((i) => i.category).filter((c) => !standard.includes(c)))];
     return keys
         .map((key) => ({
             key: key || "altro",
-            label: key && te(`products.categories.${key}`) ? t(`products.categories.${key}`) : t("products.title"),
+            label: labelOf(key) || t("products.title"),
             items: items.value.filter((i) => i.category === key),
         }))
         .filter((g) => g.items.length);
@@ -195,6 +340,200 @@ useSeoMeta({
 .empty {
     padding: 40px 0;
     color: #667f97;
+}
+
+/* Category bar + search (update 73) */
+.prod-tools {
+    margin: 28px 0 8px;
+}
+
+.cat-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 4px;
+    padding-top: 30px; /* room for the count bubble above the first row */
+}
+
+.cat {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1.5px solid transparent;
+    background: transparent;
+    color: #7c8fa2;
+    font: inherit;
+    font-size: 0.98rem;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.cat:hover,
+.cat:focus-visible {
+    color: #0b355b;
+}
+
+.cat[aria-pressed="true"] {
+    border-color: #c52317;
+    color: #0b355b;
+}
+
+.cat:focus-visible {
+    outline: 2px solid #c52317;
+    outline-offset: 2px;
+}
+
+/* Number of products: a small bubble above the name, on hover or keyboard focus. */
+.cat .count {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    min-width: 26px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #5f6b76;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.cat .count::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    border: 5px solid transparent;
+    border-top-color: #5f6b76;
+    transform: translateX(-50%);
+}
+
+.cat:hover .count,
+.cat:focus-visible .count {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* Touch screens have no hover: the number sits next to the name instead. */
+@media (hover: none) {
+    .cat-bar {
+        padding-top: 0;
+    }
+
+    .cat .count {
+        position: static;
+        margin-left: 6px;
+        padding: 1px 6px;
+        background: rgba(11, 53, 91, 0.1);
+        color: #4a6883;
+        opacity: 1;
+        transform: none;
+    }
+
+    .cat .count::after {
+        display: none;
+    }
+}
+
+.search {
+    position: relative;
+    max-width: 520px;
+    margin-top: 16px;
+}
+
+.search input {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 42px 0 42px;
+    border: 1px solid rgba(11, 53, 91, 0.28);
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.9);
+    color: #0b355b;
+    font: inherit;
+    outline: none;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.search input::-webkit-search-cancel-button {
+    display: none;
+}
+
+.search input:focus {
+    border-color: #c52317;
+    box-shadow: 0 0 0 3px rgba(197, 35, 23, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    display: flex;
+    color: #667f97;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.search .clear {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    background: transparent;
+    color: #4a6883;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.search .clear:hover,
+.search .clear:focus-visible {
+    color: #c52317;
+}
+
+.result-count {
+    margin: 10px 0 0;
+    color: #667f97;
+    font-size: 0.86rem;
+}
+
+.no-match {
+    padding: 34px 0 10px;
+    color: #274e72;
+}
+
+.no-match p {
+    margin: 0 0 14px;
+}
+
+.no-match button {
+    padding: 10px 16px;
+    border: 1px solid #c52317;
+    background: transparent;
+    color: #0b355b;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
 }
 
 .prod-group {

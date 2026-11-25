@@ -10,12 +10,29 @@
 
                 <LayoutTranslationNotice v-if="product.__fallback" />
 
+                <!-- "Immagine nella pagina" (CMS, update 73): large at the top, as on a
+                     success story, or next to the description as before. -->
+                <ContentMetaCover
+                    v-if="product.show_intro !== false && product.cover_image && coverTop"
+                    :src="product.cover_image.url"
+                    :alt="product.cover_image.alt || product.title"
+                    :width="product.cover_image.width"
+                    :height="product.cover_image.height"
+                />
+
                 <!-- "Mostra la scheda in cima alla pagina" (CMS): off = only on the cards. -->
-                <div v-if="product.show_intro !== false" class="prod-intro" :class="{ 'has-media': product.cover_image }">
+                <div v-if="product.show_intro !== false" class="prod-intro" :class="{ 'has-media': sideImage }">
                     <div>
                         <p class="prod-kicker">{{ categoryLabel }}</p>
-                        <p v-if="product.model_code" class="model">{{ t("products.model") }}: <strong>{{ product.model_code }}</strong></p>
+                        <p v-if="codes.length" class="model">{{ codes.length > 1 ? L.codes : L.code }}: <strong>{{ codes.join(" · ") }}</strong></p>
                         <p v-if="product.tagline" class="lead">{{ product.tagline }}</p>
+                        <!-- "Modelli disponibili" (update 73): only when filled in. -->
+                        <div v-if="models.length" class="variants">
+                            <p class="variants-title">{{ L.models }}</p>
+                            <ul role="list">
+                                <li v-for="m in models" :key="m">{{ m }}</li>
+                            </ul>
+                        </div>
                         <div class="actions">
                             <a
                                 v-if="datasheet"
@@ -27,7 +44,7 @@
                             <NuxtLink :to="quoteLink" class="btn-secondary">{{ t("project.quote") }}</NuxtLink>
                         </div>
                     </div>
-                    <figure v-if="product.cover_image" class="prod-media">
+                    <figure v-if="sideImage" class="prod-media">
                         <ContentResponsiveImage
                             :src="product.cover_image.url"
                             :alt="product.cover_image.alt || product.title"
@@ -93,10 +110,31 @@ if (!raw.value) {
 
 const product = computed(() => raw.value as any);
 
+const TEXT: Record<string, { code: string; codes: string; models: string }> = {
+    it: { code: "Codice", codes: "Codici", models: "Modelli disponibili" },
+    en: { code: "Code", codes: "Codes", models: "Available models" },
+    fr: { code: "Code", codes: "Codes", models: "Modèles disponibles" },
+};
+const L = computed(() => TEXT[locale.value] ?? TEXT.it!);
+
+// Category name in this page's language (CMS); older backend: the site's own labels.
 const categoryLabel = computed(() => {
+    if (product.value.category_label) return product.value.category_label;
     const c = product.value.category;
     return c && te(`products.categories.${c}`) ? t(`products.categories.${c}`) : t("products.title");
 });
+
+// Main code + "Altri codici prodotto"; older backend: the one code.
+const codes = computed<string[]>(() =>
+    (Array.isArray(product.value.product_codes) ? product.value.product_codes : [product.value.model_code]).filter(Boolean)
+);
+
+const models = computed<string[]>(() =>
+    ((product.value.available_models ?? []) as Array<{ value: string }>).map((b) => b?.value).filter(Boolean)
+);
+
+const coverTop = computed(() => product.value.cover_position === "top");
+const sideImage = computed(() => Boolean(product.value.cover_image) && !coverTop.value);
 
 // An uploaded PDF (Documenti) wins over the external link.
 const datasheet = computed(() => product.value.datasheet?.url || product.value.datasheet_url || "");
@@ -209,6 +247,38 @@ useSeoMeta({
     color: #274e72;
     font-size: 1.14rem;
     line-height: 1.62;
+}
+
+.variants {
+    margin-top: 18px;
+}
+
+.variants-title {
+    margin: 0 0 8px;
+    color: #4a6883;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.variants ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.variants li {
+    padding: 6px 12px;
+    border: 1px solid rgba(11, 53, 91, 0.2);
+    border-radius: 999px;
+    background: #fff;
+    color: #0b355b;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
 .actions {
