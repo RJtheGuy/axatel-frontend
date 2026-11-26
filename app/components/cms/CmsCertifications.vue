@@ -27,16 +27,16 @@
 
                 <ul :id="trackId" ref="track" class="track" :aria-label="plain(value.heading) || labels.region" @scroll.passive="onScroll">
                     <li v-for="(item, i) in items" :key="i">
-                        <!-- With a PDF the whole card (logo, name, text) is the link, always
-                             in a new tab: the browser shows the certificate with its download
-                             button. No separate button inside the card. -->
+                        <!-- With a PDF or an external link the whole card (logo, name, text)
+                             is the link, always in a new tab: for a PDF the browser shows the
+                             certificate with its download button. The PDF wins if both are set. -->
                         <component
-                            :is="item.document?.url ? 'a' : 'div'"
+                            :is="hrefOf(item) ? 'a' : 'div'"
                             class="cert"
-                            :class="{ 'is-link': !!item.document?.url }"
-                            :href="item.document?.url || undefined"
-                            :target="item.document?.url ? '_blank' : undefined"
-                            :rel="item.document?.url ? 'noopener' : undefined"
+                            :class="{ 'is-link': !!hrefOf(item) }"
+                            :href="hrefOf(item) || undefined"
+                            :target="hrefOf(item) ? '_blank' : undefined"
+                            :rel="hrefOf(item) ? 'noopener' : undefined"
                         >
                             <!-- Logo on the left, name and text on the right (stacked when the
                                  card is narrow). Same logo box on every card, so the names line up. -->
@@ -54,6 +54,7 @@
                                 <h3 v-html="unwrapParagraph(item.title)"></h3>
                                 <div v-if="hasText(item.text)" class="text" v-html="item.text"></div>
                                 <span v-if="item.document?.url" class="sr-only">{{ labels.open }}</span>
+                                <span v-else-if="hrefOf(item)" class="sr-only">{{ labels.openLink }}</span>
                             </div>
                         </component>
                     </li>
@@ -95,7 +96,8 @@
 // "Certificazioni": a row showing N certificates at a time (CMS: "Certificati
 // visibili insieme", default 3). With more certificates than fit, arrows on both
 // sides scroll one card at a time and wrap around at the ends.
-// Each card: logo on the left, name and optional text on the right, optional PDF.
+// Each card: logo on the left, name and optional text on the right, optional PDF
+// or external link ("Link esterno", update 78).
 // Dots under the row show which group of certificates is visible and jump to it.
 // With a PDF the whole card opens it in a new tab (always, whatever the "Link ai documenti" setting);
 // screen readers also hear "PDF, new tab".
@@ -108,6 +110,7 @@ type Certification = {
     title: string;
     text?: string | null;
     document?: { url: string; title?: string } | null;
+    link?: string | null;
 };
 
 const props = defineProps<{
@@ -119,14 +122,21 @@ const props = defineProps<{
 }>();
 
 const { locale } = useI18n();
-const TEXT: Record<string, { open: string; prev: string; next: string; region: string; page: string }> = {
-    it: { open: "(certificato PDF, si apre in una nuova scheda)", prev: "Certificati precedenti", next: "Certificati successivi", region: "Certificazioni", page: "Gruppo" },
-    en: { open: "(PDF certificate, opens in a new tab)", prev: "Previous certificates", next: "Next certificates", region: "Certifications", page: "Group" },
-    fr: { open: "(certificat PDF, s'ouvre dans un nouvel onglet)", prev: "Certificats précédents", next: "Certificats suivants", region: "Certifications", page: "Groupe" },
+const TEXT: Record<string, { open: string; openLink: string; prev: string; next: string; region: string; page: string }> = {
+    it: { open: "(certificato PDF, si apre in una nuova scheda)", openLink: "(si apre in una nuova scheda)", prev: "Certificati precedenti", next: "Certificati successivi", region: "Certificazioni", page: "Gruppo" },
+    en: { open: "(PDF certificate, opens in a new tab)", openLink: "(opens in a new tab)", prev: "Previous certificates", next: "Next certificates", region: "Certifications", page: "Group" },
+    fr: { open: "(certificat PDF, s'ouvre dans un nouvel onglet)", openLink: "(s'ouvre dans un nouvel onglet)", prev: "Certificats précédents", next: "Certificats suivants", region: "Certifications", page: "Groupe" },
 };
 const labels = computed(() => TEXT[locale.value] ?? TEXT.it!);
 
 const items = computed<Certification[]>(() => (props.value.items ?? []).filter(Boolean));
+// Where a click on the card goes: the PDF, else the external link (http/https only).
+function hrefOf(item: Certification): string {
+    if (item.document?.url) return item.document.url;
+    const link = String(item.link ?? "").trim();
+    return /^https?:\/\//i.test(link) ? link : "";
+}
+
 const anyLogo = computed(() => items.value.some((item) => !!item.logo?.url));
 
 // How many are visible at once on a wide screen (1-5; anything else: 3).
