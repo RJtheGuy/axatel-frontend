@@ -404,7 +404,7 @@ h2 {
     flex-direction: column;
     gap: 8px;
     min-width: 0;
-    padding-top: 2px;
+    padding-top: 17px;
 }
 
 h3 {
