@@ -19,7 +19,6 @@
         <div v-if="layout === 'panel'" class="ii-panel" aria-live="polite">
             <Transition name="ii-fade" mode="out-in">
                 <div v-if="active" :key="`p${activeIndex}`" class="ii-panel-inner">
-                    <p class="ii-count">{{ (activeIndex ?? 0) + 1 }} / {{ points.length }}</p>
                     <h3>{{ active.title }}</h3>
                     <div v-if="hasText(active.text)" class="ii-text" v-html="active.text"></div>
                     <LinkOut v-if="active.href" :point="active" class="ii-more" />
@@ -331,13 +330,6 @@ const LinkOut = defineComponent({
     line-height: 1.65;
 }
 
-.ii-count {
-    margin: 0 0 10px;
-    color: var(--ii-color);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-}
 
 .ii-hint {
     display: flex;
