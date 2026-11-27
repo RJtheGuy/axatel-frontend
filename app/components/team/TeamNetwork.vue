@@ -12,7 +12,19 @@
             <p>{{ t("team.subtitle") }}</p>
         </header>
 
-        <div class="team-field" :aria-label="t('team.peopleAria')">
+        <!-- Org chart (update 80): boxes and dotted lines, like the company slide. -->
+        <TeamOrgChart
+            v-if="tree"
+            v-show="!selectedMember"
+            :members="members"
+            :manager-of="tree.managerOf"
+            :reports-of="tree.reportsOf"
+            :label-mode="labelMode"
+            :narrow="isNarrow"
+            @select="selectMember"
+        />
+
+        <div v-else class="team-field" :aria-label="t('team.peopleAria')">
             <button
                 v-for="(member, index) in members"
                 :key="member.id"
@@ -34,8 +46,12 @@
             </button>
         </div>
 
-        <Transition name="profile">
+        <Transition :name="isTree ? 'profile-tree' : 'profile'">
             <article v-if="selectedMember" class="member-profile" aria-live="polite">
+                <span v-if="isTree" class="profile-photo">
+                    <ContentResponsiveImage v-if="selectedMember.image" :src="selectedMember.image" :alt="selectedMember.name" :width="180" :height="180" sizes="140px" />
+                    <span v-else class="initials" aria-hidden="true">{{ initials(selectedMember.name) }}</span>
+                </span>
                 <p class="profile-kicker">{{ selectedMember.role || t("team.kicker") }}</p>
                 <h2>{{ selectedMember.name }}</h2>
                 <p v-if="selectedDepartment" class="profile-dept">{{ t("team.department", { name: selectedDepartment }) }}</p>
@@ -63,6 +79,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import TeamNeuralBackground from "./TeamNeuralBackground.vue";
+import TeamOrgChart from "./TeamOrgChart.vue";
 import type { TeamMember } from "../../data/team";
 import { hasHierarchy, layoutTree } from "../../utils/teamTree";
 
@@ -96,9 +113,9 @@ function positionOf(member: TeamMember): { x: number; y: number } {
     return tree.value?.positions[member.id] ?? member.position;
 }
 
-// Lines for the background: only manager → person in tree mode. While a
-// profile is open the people are stacked, so no lines are drawn.
-const edges = computed(() => (tree.value ? (selectedMember.value ? [] : tree.value.edges) : null));
+// Lines for the background: none in tree mode (the org chart draws its own
+// dotted lines since update 80); in the network, lines between nearby people.
+const edges = computed(() => (tree.value ? [] : null));
 
 const stageStyle = computed<Record<string, string>>(() => {
     if (!tree.value) return {};
@@ -169,6 +186,10 @@ function initials(name: string): string {
 
 function selectMember(member: TeamMember): void {
     selectedMember.value = member;
+    // Org chart: the profile replaces the chart, so bring it into view.
+    if (isTree.value && typeof window !== "undefined") {
+        requestAnimationFrame(() => stageEl.value?.querySelector(".member-profile")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+    }
 }
 
 function clearSelection(): void {
@@ -289,7 +310,7 @@ function clearSelection(): void {
 
 /* Org chart: the stage grows with the number of rows. */
 .team-stage.is-tree:not(.has-selection) {
-    min-height: max(100svh, calc(clamp(290px, 34vh, 350px) + var(--tree-height, 0px) + 60px));
+    min-height: 100svh; /* update 80: the org chart is in the page flow */
 }
 
 .team-stage.is-tree:not(.has-selection) .team-field {
@@ -488,6 +509,55 @@ function clearSelection(): void {
     transform: translate(-50%, 18px);
 }
 
+/* Org chart (update 80): the page grows with the chart; the heading stays,
+   and an open profile takes the chart's place, with the photo on top. */
+.team-stage.is-tree,
+.team-stage.is-tree.has-selection {
+    min-height: 100svh;
+}
+
+.team-stage.is-tree.has-selection .team-heading {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+
+.team-stage.is-tree .member-profile {
+    position: relative;
+    top: auto;
+    left: auto;
+    z-index: 3;
+    margin: 40px auto 90px;
+    transform: none;
+}
+
+.profile-photo {
+    display: block;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 22px;
+    overflow: hidden;
+    border: 3px solid rgba(121, 207, 255, 0.6);
+    border-radius: 50%;
+    background: #0b355b;
+}
+
+.profile-photo img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.profile-tree-enter-active {
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.profile-tree-enter-from {
+    opacity: 0;
+    transform: translateY(18px) !important;
+}
+
 @keyframes member-float {
     0% {
         transform: translate(-50%, -50%) translate3d(var(--drift-x-a), var(--drift-y-a), 0) rotate(var(--drift-rotate));
@@ -504,7 +574,7 @@ function clearSelection(): void {
 }
 
 @media (max-width: 760px) {
-    .team-stage {
+    .team-stage:not(.is-tree) {
         min-height: 1120px;
     }
 

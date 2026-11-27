@@ -12,6 +12,8 @@ export type TeamMember = {
     /** Extra managers ("Riporta anche a"): drawn with a lighter line. */
     alsoParentIds?: string[];
     department?: string;
+    /** "area" (update 80): a plain box in the org chart, no photo. */
+    kind?: "person" | "area";
 };
 
 /**

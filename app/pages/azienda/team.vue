@@ -24,6 +24,7 @@ const { imageUrl } = useCmsImage();
 
 type CmsMember = {
     id: number;
+    kind?: "person" | "area";
     name: string;
     role: string;
     bio: string;
@@ -52,6 +53,7 @@ const members = computed<TeamMember[]>(() => {
         parentId: person.reportsTo ? `cms-${person.reportsTo}` : null,
         alsoParentIds: (person.alsoReportsTo ?? []).map((id) => `cms-${id}`),
         department: person.department || "",
+        kind: person.kind === "area" ? "area" : "person",
     }));
 });
 
