@@ -106,7 +106,7 @@
  * Content: CMS → Pagine → Prodotti (one child page per product).
  * Set on the Prodotti page in the CMS: which categories the bar shows and in
  * what order ("Ordine delle categorie") and the cards per row. The order of the
- * products is the page order in the CMS. (Grouping into sections: removed, update 74.)
+ * products is alphabetical by name (update 79). (Grouping into sections: removed, update 74.)
  */
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useSeoMeta } from "#app";
@@ -163,6 +163,9 @@ const items = computed(() =>
         width: Number(p.card_image?.width) || 0,
         height: Number(p.card_image?.height) || 0,
     }))
+    // Alphabetical by name (update 79), in the page's language: accents ignored,
+    // numbers in order ("Sensore 2" before "Sensore 10").
+    .sort((a, b) => a.title.localeCompare(b.title, locale.value, { sensitivity: "base", numeric: true }))
 );
 
 // Categories in the order set in the CMS, with their name in this language.
@@ -276,7 +279,7 @@ function mediaStyle(item: { fit: string; width: number; height: number }): Recor
     return style;
 }
 
-// One grid, always in the page order of the CMS (update 74): choosing categories
+// One grid, products in alphabetical order (update 79); choosing categories
 // no longer splits the page into sections; the bar does the filtering.
 const visible = computed(() => (isFiltering.value ? filtered.value : items.value));
 
