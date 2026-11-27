@@ -1,5 +1,5 @@
 <template>
-    <div class="org-branch" :class="{ 'is-root': level === 0 }">
+    <div class="org-branch" :class="{ 'is-root': level === 0, 'is-column': columnMode }">
         <!-- A person: pill with the photo on the left, role and name on the right.
              An area: a plain box with its name. -->
         <component
@@ -21,7 +21,16 @@
             </span>
         </component>
 
-        <template v-if="kids.length">
+        <!-- People with nobody under them, below a manager: stacked in a column
+             on a dotted line (update 81), so the chart stays narrow enough to
+             fit the page. -->
+        <div v-if="columnMode" class="org-column">
+            <div v-for="kid in kids" :key="kid.id" class="org-col-item">
+                <TeamOrgNode :member="kid" :reports-of="reportsOf" :by-id="byId" :label-mode="labelMode" :narrow="narrow" :level="level + 1" @select="(m) => emit('select', m)" />
+            </div>
+        </div>
+
+        <template v-else-if="kids.length">
             <span class="org-stem" aria-hidden="true"></span>
 
             <!-- Many boxes with nothing under them (e.g. the areas): two staggered
@@ -40,7 +49,7 @@
             </div>
 
             <div v-else class="org-kids" :class="{ 'is-single': kids.length === 1 }">
-                <div v-for="kid in kids" :key="kid.id" class="org-kid">
+                <div v-for="kid in kids" :key="kid.id" class="org-kid" :class="{ 'holds-column': isColumn(kid, level + 1) }">
                     <TeamOrgNode :member="kid" :reports-of="reportsOf" :by-id="byId" :label-mode="labelMode" :narrow="narrow" :level="level + 1" @select="(m) => emit('select', m)" />
                 </div>
             </div>
@@ -72,7 +81,16 @@ const { t } = useI18n();
 const kids = computed(() => (props.reportsOf[props.member.id] ?? []).map((id) => props.byId.get(id)!).filter(Boolean));
 const isArea = computed(() => props.member.kind === "area");
 const isLeaf = (m: TeamMember) => !(props.reportsOf[m.id] ?? []).length;
-const staggered = computed(() => kids.value.length > 3 && kids.value.every(isLeaf));
+const kidsOf = (m: TeamMember) => (props.reportsOf[m.id] ?? []).map((id) => props.byId.get(id)!).filter(Boolean);
+// Many areas with nobody under them: two staggered rows, as in the slide.
+const isStaggered = (list: TeamMember[]) => list.length > 3 && list.every((m) => isLeaf(m) && m.kind === "area");
+// Below the top of the chart, people with nobody under them stack in a column.
+const isColumn = (m: TeamMember, level: number) => {
+    const list = kidsOf(m);
+    return !props.narrow && level >= 1 && list.length > 0 && list.every(isLeaf) && !isStaggered(list);
+};
+const staggered = computed(() => isStaggered(kids.value));
+const columnMode = computed(() => isColumn(props.member, props.level));
 
 const staggerStyle = computed(() => {
     const n = kids.value.length;
@@ -114,11 +132,11 @@ function initials(name: string): string {
     z-index: 1;
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 14px;
     box-sizing: border-box;
-    width: 340px;
-    min-height: 84px;
-    padding: 8px 22px 8px 8px;
+    width: 300px;
+    min-height: 78px;
+    padding: 7px 18px 7px 7px;
     border: 0;
     border-radius: 46px 12px 12px 46px;
     color: #fff;
@@ -160,8 +178,8 @@ function initials(name: string): string {
 
 .org-photo {
     flex: none;
-    width: 76px;
-    height: 76px;
+    width: 66px;
+    height: 66px;
     overflow: hidden;
     border: 4px solid rgba(255, 255, 255, 0.9);
     border-radius: 50%;
@@ -212,7 +230,7 @@ function initials(name: string): string {
     justify-self: start;
     margin-top: 2px;
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: 8px;
     background: rgba(2, 7, 18, 0.25);
     font-size: 0.64rem;
     font-weight: 700;
@@ -237,7 +255,7 @@ function initials(name: string): string {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: var(--gap-y) 18px 0;
+    padding: var(--gap-y) 10px 0;
 }
 
 /* Vertical line down to each card, and the shared horizontal line. */
@@ -245,7 +263,7 @@ function initials(name: string): string {
     content: "";
     position: absolute;
     top: 0;
-    left: 50%;
+    left: var(--anchor, 50%);
     height: var(--gap-y);
     border-left: 2px dotted var(--line);
 }
@@ -259,8 +277,56 @@ function initials(name: string): string {
     border-top: 2px dotted var(--line);
 }
 
-.org-kid:first-child::after { left: 50%; }
-.org-kid:last-child::after { right: 50%; }
+.org-kid:first-child::after { left: var(--anchor, 50%); }
+.org-kid:last-child::after { right: calc(100% - var(--anchor, 50%)); }
+
+/* A person whose team is a column: the line comes down to the middle of the
+   card, which sits at the left of its branch. */
+.org-kid.holds-column {
+    --anchor: 160px; /* 10px padding + half of the 300px card */
+    align-items: flex-start;
+}
+
+.org-branch.is-column {
+    align-items: flex-start;
+}
+
+.org-column {
+    display: grid;
+    gap: 12px;
+    padding: 14px 0 0 64px;
+}
+
+.org-col-item {
+    position: relative;
+}
+
+/* The dotted line down from the manager's photo, and a short line to each card. */
+.org-col-item::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    bottom: 0;
+    left: -24px;
+    border-left: 2px dotted var(--line);
+}
+
+.org-col-item:first-child::before {
+    top: -14px;
+}
+
+.org-col-item:last-child::before {
+    bottom: 50%;
+}
+
+.org-col-item::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -24px;
+    width: 24px;
+    border-top: 2px dotted var(--line);
+}
 .org-kids.is-single .org-kid::after { display: none; }
 
 /* Staggered boxes: n boxes on n + 1 columns, every box two columns wide,
